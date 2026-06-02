@@ -375,6 +375,18 @@ class AiVec1VectorIndexBuilder {
     return 'ai_vec1_index_$digest';
   }
 
+  static String tableNameForBook({
+    required String providerId,
+    required String embeddingModel,
+    required int embeddingDim,
+    required int bookId,
+  }) {
+    final key =
+        '$providerId\u001f$embeddingModel\u001f$embeddingDim\u001f$bookId';
+    final digest = sha1.convert(utf8.encode(key)).toString().substring(0, 16);
+    return 'ai_vec1_book_index_$digest';
+  }
+
   Future<AiVec1VectorIndexAvailability> inspectAvailability(
     Database db,
   ) async {
@@ -518,6 +530,7 @@ ORDER BY chunk_id ASC
 ''',
         [providerId, embeddingModel, embeddingDim],
       );
+      final vectorRowsByBook = <int, List<Map<String, Object?>>>{};
       var groupRowsWritten = 0;
       for (final row in vectorRows) {
         if (shouldCancel?.call() == true) {
@@ -528,6 +541,7 @@ ORDER BY chunk_id ASC
         final bookId = (row['book_id'] as num?)?.toInt();
         final blob = row['embedding_blob'];
         if (chunkId == null || bookId == null || blob == null) continue;
+        vectorRowsByBook.putIfAbsent(bookId, () => []).add(row);
         final inserted = await db.insert(
           tableName,
           {
@@ -544,6 +558,50 @@ ORDER BY chunk_id ASC
         }
         if (shouldCancel?.call() == true) {
           cancelled = true;
+          break;
+        }
+      }
+
+      if (cancelled) {
+        break;
+      }
+
+      for (final entry in vectorRowsByBook.entries) {
+        if (shouldCancel?.call() == true) {
+          cancelled = true;
+          break;
+        }
+        final bookTableName = tableNameForBook(
+          providerId: providerId,
+          embeddingModel: embeddingModel,
+          embeddingDim: embeddingDim,
+          bookId: entry.key,
+        );
+        await db.execute(
+          'CREATE VIRTUAL TABLE IF NOT EXISTS $bookTableName '
+          'USING vec1(embedding, chunk_id, book_id)',
+        );
+        await db.delete(bookTableName);
+        for (final row in entry.value) {
+          if (shouldCancel?.call() == true) {
+            cancelled = true;
+            break;
+          }
+          final chunkId = (row['chunk_id'] as num?)?.toInt();
+          final blob = row['embedding_blob'];
+          if (chunkId == null || blob == null) continue;
+          await db.insert(
+            bookTableName,
+            {
+              'rowid': chunkId,
+              'embedding': blob,
+              'chunk_id': chunkId,
+              'book_id': entry.key,
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+        if (cancelled) {
           break;
         }
       }
@@ -594,12 +652,20 @@ ORDER BY chunk_id ASC
     required String providerId,
     required String embeddingModel,
     required int embeddingDim,
+    int? bookId,
   }) async {
-    final tableName = tableNameFor(
-      providerId: providerId,
-      embeddingModel: embeddingModel,
-      embeddingDim: embeddingDim,
-    );
+    final tableName = bookId == null
+        ? tableNameFor(
+            providerId: providerId,
+            embeddingModel: embeddingModel,
+            embeddingDim: embeddingDim,
+          )
+        : tableNameForBook(
+            providerId: providerId,
+            embeddingModel: embeddingModel,
+            embeddingDim: embeddingDim,
+            bookId: bookId,
+          );
     if (!await _tableExists(db, tableName)) {
       return true;
     }
@@ -613,12 +679,13 @@ LEFT JOIN $tableName ann ON ann.chunk_id = v.chunk_id
 WHERE COALESCE(v.provider_id, '') = ?
   AND COALESCE(v.embedding_model, '') = ?
   AND v.embedding_dim = ?
+  AND (? IS NULL OR v.book_id = ?)
   AND b.chunk_count > 0
   AND COALESCE(b.index_status, 'succeeded') = 'succeeded'
   AND ann.chunk_id IS NULL
 LIMIT 1
 ''',
-        [providerId, embeddingModel, embeddingDim],
+        [providerId, embeddingModel, embeddingDim, bookId, bookId],
       );
       return rows.isNotEmpty;
     } catch (_) {
@@ -716,12 +783,21 @@ WHERE COALESCE(provider_id, '') = ?
       embeddingModel: key.embeddingModel,
       embeddingDim: key.embeddingDim,
     );
-    if (!await _tableExists(db, tableName)) {
-      await _deleteMeta(db, AiVec1VectorIndexBuilder.backendId, key);
-      return;
-    }
+    final bookTableName = AiVec1VectorIndexBuilder.tableNameForBook(
+      providerId: key.providerId,
+      embeddingModel: key.embeddingModel,
+      embeddingDim: key.embeddingDim,
+      bookId: bookId,
+    );
 
     try {
+      if (await _tableExists(db, bookTableName)) {
+        await db.delete(bookTableName);
+      }
+      if (!await _tableExists(db, tableName)) {
+        await _deleteMeta(db, AiVec1VectorIndexBuilder.backendId, key);
+        return;
+      }
       await db.delete(tableName, where: 'book_id = ?', whereArgs: [bookId]);
       final count = await _countRows(
         db,
@@ -856,22 +932,32 @@ class AiVec1VectorSearchBackend implements AiVectorSearchBackend {
     int? bookId,
   }) async {
     if (queryVector.isEmpty) return const [];
-    if (bookId != null) {
-      // The current Vec1 table is global per provider/model/dimension. Applying
-      // a book filter after global ANN top-k can hide nearer rows inside the
-      // requested book, so book-scoped recall must use the native/exact path
-      // until a per-book or partition-aware ANN table exists.
-      return const [];
-    }
     const builder = AiVec1VectorIndexBuilder();
     if (!await builder.isAvailable(db)) return const [];
 
-    final tableName = AiVec1VectorIndexBuilder.tableNameFor(
-      providerId: providerId,
-      embeddingModel: embeddingModel,
-      embeddingDim: queryVector.length,
-    );
+    final tableName = bookId == null
+        ? AiVec1VectorIndexBuilder.tableNameFor(
+            providerId: providerId,
+            embeddingModel: embeddingModel,
+            embeddingDim: queryVector.length,
+          )
+        : AiVec1VectorIndexBuilder.tableNameForBook(
+            providerId: providerId,
+            embeddingModel: embeddingModel,
+            embeddingDim: queryVector.length,
+            bookId: bookId,
+          );
     if (!await builder._tableExists(db, tableName)) return const [];
+    if (bookId != null &&
+        await builder.hasMissingIndexedBookVectors(
+          db,
+          providerId: providerId,
+          embeddingModel: embeddingModel,
+          embeddingDim: queryVector.length,
+          bookId: bookId,
+        )) {
+      return const [];
+    }
 
     final safeLimit = limit.clamp(1, 500);
     final queryBlob = AiVectorCodec.encodeFloat32(queryVector);
@@ -1032,6 +1118,21 @@ class AiAnnThenNativeThenExactVectorSearchBackend
     int? bookId,
   }) async {
     if (bookId != null) {
+      try {
+        final annRows = await annBackend.searchRows(
+          db,
+          queryVector: queryVector,
+          providerId: providerId,
+          embeddingModel: embeddingModel,
+          limit: limit,
+          onlyIndexed: onlyIndexed,
+          maxScanRows: maxScanRows,
+          bookId: bookId,
+        );
+        if (annRows.isNotEmpty) return annRows;
+      } catch (_) {
+        // Book-scoped ANN is optional; keep the bounded fallback alive.
+      }
       return nativeThenExactBackend.searchRows(
         db,
         queryVector: queryVector,

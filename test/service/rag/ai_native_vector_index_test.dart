@@ -184,6 +184,39 @@ void main() {
     expect(a, isNot(c));
   });
 
+  test('vec1 book table name is stable per provider model dimension and book',
+      () {
+    final global = AiVec1VectorIndexBuilder.tableNameFor(
+      providerId: 'provider/a',
+      embeddingModel: 'Qwen/Qwen3-Embedding-8B',
+      embeddingDim: 4096,
+    );
+    final a = AiVec1VectorIndexBuilder.tableNameForBook(
+      providerId: 'provider/a',
+      embeddingModel: 'Qwen/Qwen3-Embedding-8B',
+      embeddingDim: 4096,
+      bookId: 34,
+    );
+    final b = AiVec1VectorIndexBuilder.tableNameForBook(
+      providerId: 'provider/a',
+      embeddingModel: 'Qwen/Qwen3-Embedding-8B',
+      embeddingDim: 4096,
+      bookId: 34,
+    );
+    final c = AiVec1VectorIndexBuilder.tableNameForBook(
+      providerId: 'provider/a',
+      embeddingModel: 'Qwen/Qwen3-Embedding-8B',
+      embeddingDim: 4096,
+      bookId: 35,
+    );
+
+    expect(a, b);
+    expect(a, startsWith('ai_vec1_book_index_'));
+    expect(a, isNot(contains('/')));
+    expect(a, isNot(global));
+    expect(a, isNot(c));
+  });
+
   test('vec1 backend uses per-model virtual table and hydrates winners',
       () async {
     final tableName = AiVec1VectorIndexBuilder.tableNameFor(
@@ -237,6 +270,65 @@ void main() {
     expect(db.sqlLog.last, contains('ai_chunks'));
   });
 
+  test('vec1 backend uses per-book table for book-scoped recall', () async {
+    final globalTable = AiVec1VectorIndexBuilder.tableNameFor(
+      providerId: 'provider-a',
+      embeddingModel: 'model-a',
+      embeddingDim: 2,
+    );
+    final bookTable = AiVec1VectorIndexBuilder.tableNameForBook(
+      providerId: 'provider-a',
+      embeddingModel: 'model-a',
+      embeddingDim: 2,
+      bookId: 34,
+    );
+    final db = _RecordingVec1Database(
+      tableNames: {bookTable},
+      vectorRowsByTable: {
+        bookTable: [
+          {'chunk_id': 42, 'local_vector_score': 0.98},
+        ],
+      },
+      hydratedRows: [
+        {
+          'chunk_id': 42,
+          'book_id': 34,
+          'chapter_href': 'book-scope.xhtml',
+          'chapter_title': 'Book Scope',
+          'chunk_index': 0,
+          'start_char': 0,
+          'end_char': 9,
+          'text': 'book text',
+          'raw_text': 'book text',
+          'context_text': 'book text',
+          'embedding_input_hash': 'hash',
+          'context_version': 0,
+          'context_created_at': 0,
+          'embedding_blob': AiVectorCodec.encodeFloat32(const [1, 0]),
+          'embedding_json': '[1,0]',
+          'embedding_norm': 1.0,
+          'embedding_model': 'model-a',
+          'provider_id': 'provider-a',
+          'index_version': 12,
+        }
+      ],
+    );
+
+    final hits = await const AiVec1VectorSearchBackend().searchRows(
+      db,
+      queryVector: const [1, 0],
+      providerId: 'provider-a',
+      embeddingModel: 'model-a',
+      limit: 1,
+      bookId: 34,
+    );
+
+    expect(hits, hasLength(1));
+    expect(hits.single['chapter_href'], 'book-scope.xhtml');
+    expect(db.sqlLog.any((sql) => sql.contains('$bookTable(')), true);
+    expect(db.sqlLog.any((sql) => sql.contains('$globalTable(')), false);
+  });
+
   test('vec1 builder rebuilds per-model tables from native shadow rows',
       () async {
     final tableName = AiVec1VectorIndexBuilder.tableNameFor(
@@ -253,11 +345,18 @@ void main() {
     expect(result.tablesBuilt, 1);
     expect(result.rowsWritten, 2);
     expect(
-        db.executeLog.single, contains('CREATE VIRTUAL TABLE IF NOT EXISTS'));
-    expect(db.executeLog.single, contains(tableName));
-    expect(db.executeLog.single, contains('USING vec1'));
-    expect(db.deleteLog.single, tableName);
+      db.executeLog.first,
+      contains('CREATE VIRTUAL TABLE IF NOT EXISTS'),
+    );
+    expect(db.executeLog.first, contains(tableName));
+    expect(db.executeLog.first, contains('USING vec1'));
+    expect(db.executeLog, hasLength(2));
+    expect(db.deleteLog, contains(tableName));
     expect(db.insertLog.where((e) => e.table == tableName), hasLength(2));
+    expect(
+      db.insertLog.where((e) => e.table == db.bookTableName),
+      hasLength(2),
+    );
     expect(
       db.insertLog
           .where((e) => e.table == 'ai_vector_index_meta')
@@ -316,13 +415,13 @@ void main() {
     expect(status.canBuild, true);
   });
 
-  test('ann then native backend skips global ANN for book-scoped recall',
+  test('ann then native backend uses book-scoped ANN before fallback',
       () async {
     final ann = _StaticVectorBackend([
       {
-        'chunk_id': 1,
-        'book_id': 99,
-        'chapter_href': 'global-ann.xhtml',
+        'chunk_id': 7,
+        'book_id': 34,
+        'chapter_href': 'book-scoped-ann.xhtml',
         'local_vector_score': 1.0,
       }
     ]);
@@ -351,10 +450,11 @@ void main() {
       bookId: 34,
     );
 
-    expect(ann.calls, 0);
-    expect(native.calls, 1);
-    expect(native.bookIds, [34]);
-    expect(hits.single['chapter_href'], 'book-scoped-native.xhtml');
+    expect(ann.calls, 1);
+    expect(ann.bookIds, [34]);
+    expect(native.calls, 0);
+    expect(native.bookIds, isEmpty);
+    expect(hits.single['chapter_href'], 'book-scoped-ann.xhtml');
   });
 
   test('ann then native backend prefers complete vec1 rows before fallback',
@@ -745,13 +845,19 @@ class _RecordingNativeVectorDatabase implements Database {
 
 class _RecordingVec1Database implements Database {
   _RecordingVec1Database({
-    required this.tableName,
-    required this.vectorRows,
+    String? tableName,
+    List<Map<String, Object?>>? vectorRows,
+    Set<String>? tableNames,
+    Map<String, List<Map<String, Object?>>>? vectorRowsByTable,
     required this.hydratedRows,
-  });
+  })  : tableNames = tableNames ?? {tableName!},
+        vectorRowsByTable = vectorRowsByTable ??
+            {
+              tableName!: vectorRows ?? const <Map<String, Object?>>[],
+            };
 
-  final String tableName;
-  final List<Map<String, Object?>> vectorRows;
+  final Set<String> tableNames;
+  final Map<String, List<Map<String, Object?>>> vectorRowsByTable;
   final List<Map<String, Object?>> hydratedRows;
   final sqlLog = <String>[];
   final argsLog = <List<Object?>?>[];
@@ -769,11 +875,17 @@ class _RecordingVec1Database implements Database {
       ];
     }
     if (sql.contains('sqlite_master')) {
-      return [
-        {'name': tableName}
-      ];
+      final name = arguments?.isNotEmpty == true ? arguments!.first : null;
+      return tableNames.contains(name)
+          ? [
+              {'name': name}
+            ]
+          : const [];
     }
-    if (sql.contains('$tableName(')) return vectorRows;
+    if (sql.contains('LEFT JOIN')) return const [];
+    for (final entry in vectorRowsByTable.entries) {
+      if (sql.contains('${entry.key}(')) return entry.value;
+    }
     return hydratedRows;
   }
 
@@ -782,9 +894,16 @@ class _RecordingVec1Database implements Database {
 }
 
 class _RecordingVec1BuildDatabase implements Database {
-  _RecordingVec1BuildDatabase({required this.tableName});
+  _RecordingVec1BuildDatabase({required this.tableName})
+      : bookTableName = AiVec1VectorIndexBuilder.tableNameForBook(
+          providerId: 'provider-a',
+          embeddingModel: 'model-a',
+          embeddingDim: 2,
+          bookId: 1,
+        );
 
   final String tableName;
+  final String bookTableName;
   final executeLog = <String>[];
   final deleteLog = <String>[];
   final insertLog = <_RecordedInsert>[];

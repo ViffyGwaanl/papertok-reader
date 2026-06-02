@@ -44,6 +44,7 @@ class AiVectorRecallOverlapGate {
     required int limit,
     bool onlyIndexed = true,
     int maxScanRows = 5000,
+    int? bookId,
   }) async {
     final safeLimit = limit.clamp(1, 500);
     final candidateRows = await _candidateBackend.searchRows(
@@ -54,6 +55,7 @@ class AiVectorRecallOverlapGate {
       limit: safeLimit,
       onlyIndexed: onlyIndexed,
       maxScanRows: maxScanRows,
+      bookId: bookId,
     );
     final exactRows = await _exactBackend.searchRows(
       db,
@@ -63,6 +65,7 @@ class AiVectorRecallOverlapGate {
       limit: safeLimit,
       onlyIndexed: onlyIndexed,
       maxScanRows: maxScanRows,
+      bookId: bookId,
     );
 
     final candidateChunkIds = _chunkIds(candidateRows).take(safeLimit).toList();

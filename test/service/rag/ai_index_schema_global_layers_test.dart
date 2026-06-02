@@ -152,6 +152,12 @@ void main() {
       embeddingModel: 'm',
       embeddingDim: 2,
     );
+    final bookAnnTable = AiVec1VectorIndexBuilder.tableNameForBook(
+      providerId: 'p',
+      embeddingModel: 'm',
+      embeddingDim: 2,
+      bookId: 7,
+    );
     await sqlite.execute('''
 CREATE TABLE $annTable (
   rowid INTEGER PRIMARY KEY,
@@ -160,7 +166,21 @@ CREATE TABLE $annTable (
   book_id INTEGER
 )
 ''');
+    await sqlite.execute('''
+CREATE TABLE $bookAnnTable (
+  rowid INTEGER PRIMARY KEY,
+  embedding BLOB,
+  chunk_id INTEGER,
+  book_id INTEGER
+)
+''');
     await sqlite.insert(annTable, {
+      'rowid': chunkId,
+      'embedding': AiVectorCodec.encodeFloat32(const [1, 0]),
+      'chunk_id': chunkId,
+      'book_id': 7,
+    });
+    await sqlite.insert(bookAnnTable, {
       'rowid': chunkId,
       'embedding': AiVectorCodec.encodeFloat32(const [1, 0]),
       'chunk_id': chunkId,
@@ -189,6 +209,86 @@ CREATE TABLE $annTable (
     expect(await count('ai_graph_nodes'), 0);
     expect(await count('ai_vector_index_rows'), 0);
     expect(await count(annTable), 0);
+    expect(await count(bookAnnTable), 0);
+    final metaRows = await sqlite.query('ai_vector_index_meta');
+    expect(metaRows, isEmpty);
+  });
+
+  test('clearBook removes orphaned per-book ANN sidecar rows', () async {
+    final db = AiIndexDatabase.forTesting(
+      path: inMemoryDatabasePath,
+      factory: databaseFactoryFfi,
+    );
+    addTearDown(db.close);
+
+    final sqlite = await db.database;
+    await sqlite.insert('ai_book_index', {
+      'book_id': 7,
+      'book_md5': 'md5-7',
+      'provider_id': 'p',
+      'embedding_model': 'm',
+      'chunk_count': 1,
+      'created_at': 0,
+      'updated_at': 0,
+      'index_status': 'succeeded',
+    });
+    final chunkId = await sqlite.insert('ai_chunks', {
+      'book_id': 7,
+      'chapter_href': 'Text/ch.xhtml',
+      'chapter_title': 'Chapter',
+      'chunk_index': 0,
+      'start_char': 0,
+      'end_char': 10,
+      'text': 'vector sidecar evidence',
+      'embedding_json': '[1,0]',
+      'embedding_blob': AiVectorCodec.encodeFloat32(const [1, 0]),
+      'embedding_dim': 2,
+      'embedding_norm': 1.0,
+      'created_at': 0,
+    });
+    await sqlite.insert('ai_vector_index_rows', {
+      'chunk_id': chunkId,
+      'book_id': 7,
+      'provider_id': 'p',
+      'embedding_model': 'm',
+      'embedding_dim': 2,
+      'embedding_blob': AiVectorCodec.encodeFloat32(const [1, 0]),
+    });
+    final bookAnnTable = AiVec1VectorIndexBuilder.tableNameForBook(
+      providerId: 'p',
+      embeddingModel: 'm',
+      embeddingDim: 2,
+      bookId: 7,
+    );
+    await sqlite.execute('''
+CREATE TABLE $bookAnnTable (
+  rowid INTEGER PRIMARY KEY,
+  embedding BLOB,
+  chunk_id INTEGER,
+  book_id INTEGER
+)
+''');
+    await sqlite.insert(bookAnnTable, {
+      'rowid': chunkId,
+      'embedding': AiVectorCodec.encodeFloat32(const [1, 0]),
+      'chunk_id': chunkId,
+      'book_id': 7,
+    });
+    await sqlite.insert('ai_vector_index_meta', {
+      'id': 'vec1-ann::p::m::2',
+      'backend': AiVec1VectorIndexBuilder.backendId,
+      'provider_id': 'p',
+      'embedding_model': 'm',
+      'embedding_dim': 2,
+      'index_status': 'ready',
+      'row_count': 1,
+    });
+
+    await db.clearBook(7);
+
+    final sidecarRows =
+        await sqlite.rawQuery('SELECT COUNT(*) AS c FROM $bookAnnTable');
+    expect((sidecarRows.first['c'] as num).toInt(), 0);
     final metaRows = await sqlite.query('ai_vector_index_meta');
     expect(metaRows, isEmpty);
   });
@@ -207,6 +307,15 @@ CREATE TABLE $annTable (
       embeddingModel: 'm',
       embeddingDim: 2,
     );
+    final bookAnnTables = {
+      for (final bookId in [7, 8])
+        bookId: AiVec1VectorIndexBuilder.tableNameForBook(
+          providerId: 'p',
+          embeddingModel: 'm',
+          embeddingDim: 2,
+          bookId: bookId,
+        ),
+    };
     await sqlite.execute('''
 CREATE TABLE $annTable (
   rowid INTEGER PRIMARY KEY,
@@ -215,6 +324,16 @@ CREATE TABLE $annTable (
   book_id INTEGER
 )
 ''');
+    for (final table in bookAnnTables.values) {
+      await sqlite.execute('''
+CREATE TABLE $table (
+  rowid INTEGER PRIMARY KEY,
+  embedding BLOB,
+  chunk_id INTEGER,
+  book_id INTEGER
+)
+''');
+    }
 
     for (final bookId in [7, 8]) {
       await sqlite.insert('ai_book_index', {
@@ -255,6 +374,12 @@ CREATE TABLE $annTable (
         'chunk_id': chunkId,
         'book_id': bookId,
       });
+      await sqlite.insert(bookAnnTables[bookId]!, {
+        'rowid': chunkId,
+        'embedding': AiVectorCodec.encodeFloat32(const [1, 0]),
+        'chunk_id': chunkId,
+        'book_id': bookId,
+      });
     }
     await sqlite.insert('ai_vector_index_meta', {
       'id': 'legacy-native-meta',
@@ -286,6 +411,8 @@ CREATE TABLE $annTable (
     expect(await count('ai_chunks'), 1);
     expect(await count('ai_vector_index_rows'), 1);
     expect(await count(annTable), 1);
+    expect(await count(bookAnnTables[7]!), 0);
+    expect(await count(bookAnnTables[8]!), 1);
     final metaRows = await sqlite.query(
       'ai_vector_index_meta',
       orderBy: 'backend ASC',

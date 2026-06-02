@@ -659,6 +659,81 @@ void main() {
     );
   });
 
+  test('current book semantic search deduplicates ANN and FTS chunk hits',
+      () async {
+    final fixture = await _openSearchFixture();
+    final db = fixture.db;
+
+    await _insertBook(db, bookId: 34, chunkCount: 2);
+    final duplicateId = await _insertChunk(
+      db,
+      bookId: 34,
+      chunkIndex: 0,
+      text: 'needle duplicate candidate',
+      rawText: 'duplicate raw',
+      vector: const [1, 0],
+    );
+    final ftsOnlyId = await _insertChunk(
+      db,
+      bookId: 34,
+      chunkIndex: 1,
+      text: 'needle fts only candidate',
+      rawText: 'fts only raw',
+      vector: const [0, 1],
+    );
+
+    final backend = _CurrentBookRecordingVectorBackend(
+      rows: [
+        {
+          'chunk_id': duplicateId,
+          'book_id': 34,
+          'chapter_href': 'Text/book34-ch0.xhtml',
+          'chapter_title': 'Book 34 Chapter 0',
+          'chunk_index': 0,
+          'start_char': 0,
+          'end_char': 24,
+          'text': 'needle duplicate candidate',
+          'raw_text': 'duplicate raw',
+          'context_text': 'needle duplicate candidate',
+          'embedding_input_hash': 'hash-34-0',
+          'context_version': 1,
+          'context_created_at': 3,
+          'embedding_blob': AiVectorCodec.encodeFloat32(const [1, 0]),
+          'embedding_json': '[1,0]',
+          'embedding_norm': 1.0,
+          'embedding_model': 'test-model',
+          'provider_id': 'test-provider',
+          'index_version': 1,
+          'local_vector_score': 0.99,
+        },
+      ],
+    );
+    final service = SemanticSearchCurrentBook(
+      database: fixture.database,
+      vectorSearch: backend,
+      embedQuery: (
+        text, {
+        required model,
+        providerId,
+      }) async =>
+          const [1, 0],
+      vectorScanPageSize: 2,
+      ftsCandidateLimit: 2,
+    );
+
+    final result = await service.search(
+      bookId: 34,
+      query: 'needle',
+      maxResults: 2,
+    );
+
+    final chunkIds =
+        result.evidence.map((item) => item.sourceRef?.chunkId).toList();
+    expect(result.ok, true);
+    expect(chunkIds, [duplicateId, ftsOnlyId]);
+    expect(chunkIds.toSet(), hasLength(2));
+  });
+
   test(
       'current book semantic search keeps synthetic large book scans bounded by FTS candidates',
       () async {

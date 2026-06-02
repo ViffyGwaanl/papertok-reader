@@ -76,6 +76,27 @@ void main() {
     expect(result.overlapRatio, 0.5);
     expect(result.meetsThreshold, false);
   });
+
+  test('passes book scope into candidate and exact backends', () async {
+    final candidate = _StaticVectorBackend([_row(1)]);
+    final exact = _StaticVectorBackend([_row(1)]);
+    final gate = AiVectorRecallOverlapGate(
+      candidateBackend: candidate,
+      exactBackend: exact,
+    );
+
+    await gate.compare(
+      _NoopDatabase(),
+      queryVector: const [1, 0],
+      providerId: 'provider-a',
+      embeddingModel: 'model-a',
+      limit: 1,
+      bookId: 34,
+    );
+
+    expect(candidate.calls.single.bookId, 34);
+    expect(exact.calls.single.bookId, 34);
+  });
 }
 
 Map<String, Object?> _row(int chunkId) => {
@@ -107,6 +128,7 @@ class _StaticVectorBackend implements AiVectorSearchBackend {
         limit: limit,
         onlyIndexed: onlyIndexed,
         maxScanRows: maxScanRows,
+        bookId: bookId,
       ),
     );
     return rows.take(limit).toList(growable: false);
@@ -118,11 +140,13 @@ class _VectorBackendCall {
     required this.limit,
     required this.onlyIndexed,
     required this.maxScanRows,
+    required this.bookId,
   });
 
   final int limit;
   final bool onlyIndexed;
   final int maxScanRows;
+  final int? bookId;
 }
 
 class _NoopDatabase implements Database {

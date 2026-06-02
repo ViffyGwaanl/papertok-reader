@@ -805,6 +805,16 @@ LIMIT ?
     AiCurrentBookVectorCandidate candidate,
     int limit,
   ) {
+    final candidateId = _candidateChunkId(candidate);
+    if (candidateId != null) {
+      for (var i = 0; i < scored.length; i++) {
+        if (_candidateChunkId(scored[i]) != candidateId) continue;
+        if (candidate.score > scored[i].score) {
+          scored[i] = candidate;
+        }
+        return;
+      }
+    }
     if (scored.length < limit) {
       scored.add(candidate);
       return;
@@ -820,6 +830,11 @@ LIMIT ?
     if (candidate.score > minScore) {
       scored[minIndex] = candidate;
     }
+  }
+
+  int? _candidateChunkId(AiCurrentBookVectorCandidate candidate) {
+    return (candidate.row['id'] as num?)?.toInt() ??
+        (candidate.row['chunk_id'] as num?)?.toInt();
   }
 
   AiSemanticSearchResult _cancelledResult({
