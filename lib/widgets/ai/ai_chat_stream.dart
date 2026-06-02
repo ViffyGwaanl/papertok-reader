@@ -627,6 +627,19 @@ enum _MessageMemoryAction {
   addToReviewInbox,
 }
 
+enum _SeminarRunSnapshotSubview {
+  overview('overview'),
+  evidence('evidence'),
+  roles('roles'),
+  disagreements('disagreements'),
+  whiteboard('whiteboard'),
+  summary('summary');
+
+  const _SeminarRunSnapshotSubview(this.id);
+
+  final String id;
+}
+
 class AiChatStreamState extends ConsumerState<AiChatStream> {
   final TextEditingController inputController = TextEditingController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -647,6 +660,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   final Map<String, String> _lastSeminarCardSignatures = {};
   final Map<String, TextEditingController> _seminarCardReplyControllers = {};
   final Map<String, AiSeminarRole> _seminarCardSelectedRoles = {};
+  final Map<String, _SeminarRunSnapshotSubview> _seminarCardSnapshotSubviews =
+      {};
   final Set<String> _seminarCardSubmittingSessionIds = <String>{};
 
   String? _seminarRuntimeScopeId(String? raw) {
@@ -4853,7 +4868,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             if (card.snapshot != null && !card.snapshot!.isEmpty) ...[
               const SizedBox(height: 9),
               openTarget(
-                _buildSeminarRunSnapshot(card.snapshot!),
+                _buildSeminarRunSnapshot(
+                  card.sessionId,
+                  card.snapshot!,
+                ),
                 key: card.sessionId == null
                     ? null
                     : ValueKey('seminar-chat-card-snapshot-${card.sessionId}'),
@@ -5339,7 +5357,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     }
   }
 
-  Widget _buildSeminarRunSnapshot(AiSeminarRunCardSnapshot snapshot) {
+  Widget _buildSeminarRunSnapshot(
+    String? sessionId,
+    AiSeminarRunCardSnapshot snapshot,
+  ) {
     final evidence = snapshot.evidence.take(3).toList(growable: false);
     final roles = snapshot.roleSummaries.take(4).toList(growable: false);
     final synthesis = snapshot.synthesisSummary?.trim();
@@ -5351,10 +5372,40 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         .map((item) => item.trim())
         .where((item) => item.isNotEmpty)
         .toList(growable: false);
+    final availableSubViews = _seminarSnapshotAvailableSubviews(
+      evidence: evidence,
+      roles: roles,
+      synthesis: synthesis,
+      disagreements: disagreements,
+      openQuestions: openQuestions,
+    );
+    final selectedSubview = _seminarSnapshotSelectedSubview(
+      sessionId,
+      availableSubViews,
+    );
+    final showOverview = selectedSubview == _SeminarRunSnapshotSubview.overview;
+    final showEvidence =
+        showOverview || selectedSubview == _SeminarRunSnapshotSubview.evidence;
+    final showRoles =
+        showOverview || selectedSubview == _SeminarRunSnapshotSubview.roles;
+    final showSummary =
+        showOverview || selectedSubview == _SeminarRunSnapshotSubview.summary;
+    final showWhiteboard = showOverview ||
+        selectedSubview == _SeminarRunSnapshotSubview.whiteboard;
+    final showDisagreements =
+        selectedSubview == _SeminarRunSnapshotSubview.disagreements;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (evidence.isNotEmpty) ...[
+        if (sessionId != null && availableSubViews.length > 2) ...[
+          _seminarSnapshotSubviewTabs(
+            sessionId: sessionId,
+            subviews: availableSubViews,
+            selected: selectedSubview,
+          ),
+          const SizedBox(height: 8),
+        ],
+        if (showEvidence && evidence.isNotEmpty) ...[
           _seminarSnapshotHeading(
             Icons.fact_check_outlined,
             _localizedSeminarCardText(
@@ -5365,8 +5416,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           const SizedBox(height: 6),
           for (final item in evidence) _seminarSnapshotEvidenceTile(item),
         ],
-        if (roles.isNotEmpty) ...[
-          if (evidence.isNotEmpty) const SizedBox(height: 10),
+        if (showRoles && roles.isNotEmpty) ...[
+          if (showEvidence && evidence.isNotEmpty) const SizedBox(height: 10),
           _seminarSnapshotHeading(
             Icons.forum_outlined,
             _localizedSeminarCardText(
@@ -5377,8 +5428,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           const SizedBox(height: 6),
           for (final role in roles) _seminarSnapshotRoleTile(role),
         ],
-        if (synthesis != null && synthesis.isNotEmpty) ...[
-          if (evidence.isNotEmpty || roles.isNotEmpty)
+        if (showSummary && synthesis != null && synthesis.isNotEmpty) ...[
+          if ((showEvidence && evidence.isNotEmpty) ||
+              (showRoles && roles.isNotEmpty))
             const SizedBox(height: 10),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -5429,8 +5481,29 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 ),
           ),
         ],
-        if (disagreements.isNotEmpty || openQuestions.isNotEmpty) ...[
-          if (evidence.isNotEmpty || roles.isNotEmpty || synthesis != null)
+        if (showDisagreements && disagreements.isNotEmpty) ...[
+          _seminarSnapshotHeading(
+            Icons.report_problem_outlined,
+            _localizedSeminarCardText(
+              zh: '分歧视图',
+              en: 'Disagreements view',
+            ),
+          ),
+          const SizedBox(height: 6),
+          _seminarSnapshotWhiteboardGroup(
+            icon: Icons.report_problem_outlined,
+            label: _localizedSeminarCardText(
+              zh: '分歧',
+              en: 'Disagreements',
+            ),
+            items: disagreements,
+          ),
+        ],
+        if (showWhiteboard &&
+            (disagreements.isNotEmpty || openQuestions.isNotEmpty)) ...[
+          if ((showEvidence && evidence.isNotEmpty) ||
+              (showRoles && roles.isNotEmpty) ||
+              (showSummary && synthesis != null))
             const SizedBox(height: 10),
           _seminarSnapshotWhiteboardSection(
             disagreements: disagreements,
@@ -5439,6 +5512,81 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         ],
       ],
     );
+  }
+
+  List<_SeminarRunSnapshotSubview> _seminarSnapshotAvailableSubviews({
+    required List<AiSeminarRunCardEvidenceSnapshot> evidence,
+    required List<AiSeminarRunCardRoleSummary> roles,
+    required String? synthesis,
+    required List<String> disagreements,
+    required List<String> openQuestions,
+  }) {
+    return [
+      _SeminarRunSnapshotSubview.overview,
+      if (evidence.isNotEmpty) _SeminarRunSnapshotSubview.evidence,
+      if (roles.isNotEmpty) _SeminarRunSnapshotSubview.roles,
+      if (disagreements.isNotEmpty) _SeminarRunSnapshotSubview.disagreements,
+      if (disagreements.isNotEmpty || openQuestions.isNotEmpty)
+        _SeminarRunSnapshotSubview.whiteboard,
+      if (synthesis != null && synthesis.isNotEmpty)
+        _SeminarRunSnapshotSubview.summary,
+    ];
+  }
+
+  _SeminarRunSnapshotSubview _seminarSnapshotSelectedSubview(
+    String? sessionId,
+    List<_SeminarRunSnapshotSubview> available,
+  ) {
+    final selected =
+        sessionId == null ? null : _seminarCardSnapshotSubviews[sessionId];
+    if (selected != null && available.contains(selected)) return selected;
+    return _SeminarRunSnapshotSubview.overview;
+  }
+
+  Widget _seminarSnapshotSubviewTabs({
+    required String sessionId,
+    required List<_SeminarRunSnapshotSubview> subviews,
+    required _SeminarRunSnapshotSubview selected,
+  }) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final subview in subviews) ...[
+            ChoiceChip(
+              key: ValueKey(
+                'seminar-chat-card-snapshot-tab-${subview.id}-$sessionId',
+              ),
+              label: Text(_seminarSnapshotSubviewLabel(subview)),
+              selected: selected == subview,
+              onSelected: (_) {
+                setState(() {
+                  _seminarCardSnapshotSubviews[sessionId] = subview;
+                });
+              },
+            ),
+            if (subview != subviews.last) const SizedBox(width: 6),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _seminarSnapshotSubviewLabel(_SeminarRunSnapshotSubview subview) {
+    switch (subview) {
+      case _SeminarRunSnapshotSubview.overview:
+        return _localizedSeminarCardText(zh: '全部', en: 'All');
+      case _SeminarRunSnapshotSubview.evidence:
+        return _localizedSeminarCardText(zh: '证据', en: 'Evidence');
+      case _SeminarRunSnapshotSubview.roles:
+        return _localizedSeminarCardText(zh: '角色', en: 'Roles');
+      case _SeminarRunSnapshotSubview.disagreements:
+        return _localizedSeminarCardText(zh: '分歧', en: 'Disputes');
+      case _SeminarRunSnapshotSubview.whiteboard:
+        return _localizedSeminarCardText(zh: '白板', en: 'Whiteboard');
+      case _SeminarRunSnapshotSubview.summary:
+        return _localizedSeminarCardText(zh: '总结', en: 'Summary');
+    }
   }
 
   Widget _seminarSnapshotHeading(IconData icon, String label) {
