@@ -645,6 +645,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   int? _inlineSeminarMaxRounds;
   bool? _inlineSeminarIncludeVerifier;
   final Map<String, String> _lastSeminarCardSignatures = {};
+  final Map<String, TextEditingController> _seminarCardReplyControllers = {};
+  final Map<String, AiSeminarRole> _seminarCardSelectedRoles = {};
+  final Set<String> _seminarCardSubmittingSessionIds = <String>{};
 
   String? _seminarRuntimeScopeId(String? raw) {
     final value = raw?.trim();
@@ -889,6 +892,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       inputController.removeListener(_onDraftInputChanged);
     } catch (_) {}
     inputController.dispose();
+    for (final controller in _seminarCardReplyControllers.values) {
+      controller.dispose();
+    }
     try {
       _scrollController.removeListener(_handleScroll);
     } catch (_) {}
@@ -4750,64 +4756,86 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       );
     }
 
+    Widget openTarget(
+      Widget child, {
+      Key? key,
+    }) {
+      return InkWell(
+        key: key,
+        borderRadius: BorderRadius.circular(6),
+        onTap: openCard,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 3),
+          child: child,
+        ),
+      );
+    }
+
     return Material(
       color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: openCard,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: ClaudePalette.divider(context)),
-            color: ClaudePalette.card(context),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.groups_2_outlined,
-                    size: 18,
-                    color: ClaudePalette.accent(context),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      l10n.aiChatSeminarFeatureTitle,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: ClaudePalette.fg(context),
-                          ),
-                    ),
-                  ),
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    tooltip: l10n.seminarConfigTitle,
-                    icon: const Icon(Icons.tune_outlined, size: 18),
-                    onPressed: () => Navigator.of(context).push(
-                      CupertinoStyleRoute(
-                        page: const AiSeminarConfigPage(),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: ClaudePalette.divider(context)),
+          color: ClaudePalette.card(context),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.groups_2_outlined,
+                  size: 18,
+                  color: ClaudePalette.accent(context),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(6),
+                    onTap: openCard,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Text(
+                        l10n.aiChatSeminarFeatureTitle,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: ClaudePalette.fg(context),
+                            ),
                       ),
                     ),
                   ),
-                  TextButton(
-                    onPressed: openCard,
-                    child: Text(l10n.aiChatSeminarFeatureAction),
+                ),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  tooltip: l10n.seminarConfigTitle,
+                  icon: const Icon(Icons.tune_outlined, size: 18),
+                  onPressed: () => Navigator.of(context).push(
+                    CupertinoStyleRoute(
+                      page: const AiSeminarConfigPage(),
+                    ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 8),
+                ),
+                TextButton(
+                  onPressed: openCard,
+                  child: Text(l10n.aiChatSeminarFeatureAction),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            openTarget(
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
                 children: _seminarMetaChips(card),
               ),
-              if (question.isNotEmpty) ...[
-                const SizedBox(height: 10),
+            ),
+            if (question.isNotEmpty) ...[
+              const SizedBox(height: 7),
+              openTarget(
                 Text(
                   question,
                   maxLines: 3,
@@ -4817,29 +4845,299 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         height: 1.35,
                       ),
                 ),
-              ],
-              if (card.snapshot != null && !card.snapshot!.isEmpty) ...[
-                const SizedBox(height: 12),
+                key: card.sessionId == null
+                    ? null
+                    : ValueKey('seminar-chat-card-question-${card.sessionId}'),
+              ),
+            ],
+            if (card.snapshot != null && !card.snapshot!.isEmpty) ...[
+              const SizedBox(height: 9),
+              openTarget(
                 _buildSeminarRunSnapshot(card.snapshot!),
-              ],
-              if (canSendToReview) ...[
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: FilledButton.icon(
-                    icon: const Icon(Icons.fact_check_outlined, size: 18),
-                    label: Text(l10n.seminarSendToReview),
-                    onPressed: () => _sendActiveSeminarRunCardToReview(
-                      card.sessionId,
-                    ),
+                key: card.sessionId == null
+                    ? null
+                    : ValueKey('seminar-chat-card-snapshot-${card.sessionId}'),
+              ),
+            ],
+            if (_shouldShowSeminarCardComposer(card, runtimeState)) ...[
+              const SizedBox(height: 12),
+              _buildSeminarRunCardComposer(card, runtimeState),
+            ],
+            if (canSendToReview) ...[
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: FilledButton.icon(
+                  icon: const Icon(Icons.fact_check_outlined, size: 18),
+                  label: Text(l10n.seminarSendToReview),
+                  onPressed: () => _sendActiveSeminarRunCardToReview(
+                    card.sessionId,
                   ),
                 ),
-              ],
+              ),
             ],
-          ),
+          ],
         ),
       ),
     );
+  }
+
+  bool _shouldShowSeminarCardComposer(
+    AiSeminarRunCardMeta card,
+    AiSeminarRuntimeState runtimeState,
+  ) {
+    final sessionId = card.sessionId?.trim();
+    if (sessionId == null || sessionId.isEmpty) return false;
+    if (runtimeState.session?.id != sessionId) return false;
+    if (runtimeState.evidenceBundle == null) return false;
+    return runtimeState.status == AiSeminarRunStatus.completed ||
+        runtimeState.directorState?.needsUserInput == true;
+  }
+
+  TextEditingController _seminarCardReplyController(String sessionId) {
+    return _seminarCardReplyControllers.putIfAbsent(
+      sessionId,
+      () => TextEditingController(),
+    );
+  }
+
+  List<AiSeminarRole> _seminarCardAvailableRoles(
+    AiSeminarRunCardMeta card,
+    AiSeminarRuntimeState runtimeState,
+  ) {
+    final sessionRoles = runtimeState.session?.roles;
+    final roles = sessionRoles != null && sessionRoles.isNotEmpty
+        ? sessionRoles
+        : card.roleIds
+            .map(AiSeminarRole.fromString)
+            .nonNulls
+            .toList(growable: false);
+    final effectiveRoles = roles.isEmpty ? AiSeminarRole.defaultRoles : roles;
+    final nonSynthesizerRoles = effectiveRoles
+        .where((role) => role != AiSeminarRole.synthesizer)
+        .toList(growable: false);
+    return nonSynthesizerRoles.isEmpty
+        ? effectiveRoles.toList(growable: false)
+        : nonSynthesizerRoles;
+  }
+
+  AiSeminarRole _seminarCardSelectedRole(
+    String sessionId,
+    List<AiSeminarRole> roles,
+  ) {
+    final fallback = roles.isEmpty ? AiSeminarRole.critical : roles.first;
+    final selected = _seminarCardSelectedRoles[sessionId];
+    if (selected == null || !roles.contains(selected)) {
+      _seminarCardSelectedRoles[sessionId] = fallback;
+      return fallback;
+    }
+    return selected;
+  }
+
+  Widget _buildSeminarRunCardComposer(
+    AiSeminarRunCardMeta card,
+    AiSeminarRuntimeState runtimeState,
+  ) {
+    final sessionId = card.sessionId?.trim();
+    if (sessionId == null || sessionId.isEmpty) return const SizedBox.shrink();
+    final controller = _seminarCardReplyController(sessionId);
+    final roles = _seminarCardAvailableRoles(card, runtimeState);
+    final selectedRole = _seminarCardSelectedRole(sessionId, roles);
+    final isSubmitting = _seminarCardSubmittingSessionIds.contains(sessionId);
+    final canSubmit = controller.text.trim().isNotEmpty && !isSubmitting;
+    final borderColor = ClaudePalette.divider(context);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: borderColor),
+        color: ClaudePalette.accentTint(context).withValues(alpha: 0.45),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.person_outline,
+                  size: 16,
+                  color: ClaudePalette.accent(context),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    _localizedSeminarCardText(
+                      zh: '读者参与',
+                      en: 'Reader turn',
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: ClaudePalette.fg(context),
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _localizedSeminarCardText(
+                zh: '你的输入会作为读者回合记录，可以要求角色继续反驳、重新找证据或整理总结，不会被当成书内证据。',
+                en: 'Your reply is stored as a reader turn. It can steer a role, refresh evidence, or synthesize the run, and is not treated as book evidence.',
+              ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: ClaudePalette.secondary(context),
+                    height: 1.32,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              key: ValueKey('seminar-chat-card-reply-$sessionId'),
+              controller: controller,
+              minLines: 2,
+              maxLines: 4,
+              decoration: InputDecoration(
+                labelText: _localizedSeminarCardText(
+                  zh: '你的研讨回复',
+                  en: 'Your Seminar reply',
+                ),
+                border: const OutlineInputBorder(),
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<AiSeminarRole>(
+              key: ValueKey('seminar-chat-card-role-$sessionId'),
+              initialValue: selectedRole,
+              decoration: InputDecoration(
+                labelText: _localizedSeminarCardText(
+                  zh: '回应角色',
+                  en: 'Target role',
+                ),
+                border: const OutlineInputBorder(),
+              ),
+              items: [
+                for (final role in roles)
+                  DropdownMenuItem(
+                    value: role,
+                    child: Text(_seminarRoleFallbackLabel(role.asString)),
+                  ),
+              ],
+              onChanged: isSubmitting
+                  ? null
+                  : (role) {
+                      if (role == null) return;
+                      setState(() {
+                        _seminarCardSelectedRoles[sessionId] = role;
+                      });
+                    },
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton.icon(
+                  key: ValueKey('seminar-chat-card-ask-role-$sessionId'),
+                  icon: isSubmitting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.record_voice_over_outlined),
+                  label: Text(
+                    _localizedSeminarCardText(
+                      zh: '让所选角色回应',
+                      en: 'Ask selected role',
+                    ),
+                  ),
+                  onPressed: canSubmit
+                      ? () => _submitSeminarCardIntervention(
+                            sessionId: sessionId,
+                            action: AiSeminarUserInterventionAction.askRole,
+                            targetRole:
+                                _seminarCardSelectedRole(sessionId, roles),
+                          )
+                      : null,
+                ),
+                OutlinedButton.icon(
+                  key: ValueKey(
+                    'seminar-chat-card-refresh-evidence-$sessionId',
+                  ),
+                  icon: const Icon(Icons.travel_explore_outlined),
+                  label: Text(
+                    _localizedSeminarCardText(
+                      zh: '重新找证据',
+                      en: 'Refresh evidence',
+                    ),
+                  ),
+                  onPressed: canSubmit
+                      ? () => _submitSeminarCardIntervention(
+                            sessionId: sessionId,
+                            action:
+                                AiSeminarUserInterventionAction.refreshEvidence,
+                          )
+                      : null,
+                ),
+                OutlinedButton.icon(
+                  key: ValueKey('seminar-chat-card-synthesize-$sessionId'),
+                  icon: const Icon(Icons.auto_awesome_outlined),
+                  label: Text(
+                    _localizedSeminarCardText(
+                      zh: '整理总结',
+                      en: 'Synthesize',
+                    ),
+                  ),
+                  onPressed: canSubmit
+                      ? () => _submitSeminarCardIntervention(
+                            sessionId: sessionId,
+                            action: AiSeminarUserInterventionAction.synthesize,
+                          )
+                      : null,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _submitSeminarCardIntervention({
+    required String sessionId,
+    required AiSeminarUserInterventionAction action,
+    AiSeminarRole? targetRole,
+  }) async {
+    final controller = _seminarCardReplyControllers[sessionId];
+    final text = controller?.text.trim() ?? '';
+    if (text.isEmpty || _seminarCardSubmittingSessionIds.contains(sessionId)) {
+      return;
+    }
+    setState(() => _seminarCardSubmittingSessionIds.add(sessionId));
+    try {
+      final notifier = _readSeminarRuntimeNotifier(sessionId);
+      await notifier.recordUserIntervention(
+        text: text,
+        requestedAction: action,
+        targetRole: targetRole,
+      );
+      await notifier.executeDirectorNextStep();
+      if (!mounted) return;
+      controller?.clear();
+      setState(() {});
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    } finally {
+      _seminarCardSubmittingSessionIds.remove(sessionId);
+      if (mounted) setState(() {});
+    }
   }
 
   Future<void> _sendActiveSeminarRunCardToReview(String? sessionId) async {

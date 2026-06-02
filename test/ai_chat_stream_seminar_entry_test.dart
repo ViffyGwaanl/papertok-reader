@@ -326,7 +326,11 @@ void main() {
       expect(find.widgetWithText(TextButton, '重新生成'), findsNothing);
       expect(find.widgetWithText(TextButton, '复制'), findsOneWidget);
 
-      await tester.tap(find.text('AI 研讨会'));
+      await tester.tap(
+        find.byKey(
+          const ValueKey('seminar-chat-card-question-seminar-chat-history'),
+        ),
+      );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
@@ -675,6 +679,117 @@ void main() {
       expect(find.textContaining('已将综合总结和 0 张卡片发送到待审。'), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'Seminar chat card accepts a run-scoped reader turn',
+    (tester) async {
+      tester.view.physicalSize = const Size(900, 1800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      const providerId = 'openai';
+      final providers = [
+        AiProviderMeta(
+          id: providerId,
+          name: 'OpenAI',
+          type: AiProviderType.openaiCompatible,
+          enabled: true,
+          isBuiltIn: true,
+          createdAt: 1,
+          updatedAt: 1,
+        ),
+      ];
+      final prompts = <String>[];
+
+      SharedPreferences.setMockInitialValues({
+        'selectedAiService': providerId,
+        'aiProvidersV1': AiProviderMeta.encodeList(providers),
+        'aiConfig_$providerId': jsonEncode({'model': 'gpt-test'}),
+        'activeAiSkillId': 'paper_analyzer',
+      });
+      await Prefs().initPrefs();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            aiSeminarRuntimeServiceProvider.overrideWithValue(
+              _seminarCardComposerService(prompts),
+            ),
+          ],
+          child: MaterialApp(
+            navigatorKey: navigatorKey,
+            locale: const Locale('zh', 'CN'),
+            localizationsDelegates: L10n.localizationsDelegates,
+            supportedLocales: L10n.supportedLocales,
+            home: const AiChatStream(),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(AiChatStream)),
+      );
+      await container.read(aiChatProvider.future);
+      container
+          .read(aiChatProvider.notifier)
+          .loadHistoryEntry(_seminarCardHistoryEntry());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      await container
+          .read(aiSeminarRuntimeScopedProvider('seminar-chat-history').notifier)
+          .start(
+            AiSeminarSessionContract(
+              id: 'seminar-chat-history',
+              question: '这个概念怎么理解？',
+              bookId: 7,
+              roles: AiSeminarRole.defaultRoles,
+              createdAt: 1000,
+            ),
+          );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+
+      expect(find.byType(AiSeminarRuntimePanel), findsNothing);
+      expect(find.text('读者参与'), findsOneWidget);
+      await tester.enterText(
+        find.byKey(
+          const ValueKey('seminar-chat-card-reply-seminar-chat-history'),
+        ),
+        '请批判者针对此处范围争议继续反驳。',
+      );
+      await tester.pump();
+      await tester.tap(
+        find.byKey(
+          const ValueKey('seminar-chat-card-ask-role-seminar-chat-history'),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final state = container.read(
+        aiSeminarRuntimeScopedProvider('seminar-chat-history'),
+      );
+      expect(state.turns.last.id, 'turn-critical-follow-up');
+      expect(state.turns.last.responseText, 'critical follow-up response');
+      expect(
+        state.directorState!.lastUserIntervention!.requestedAction,
+        AiSeminarUserInterventionAction.askRole,
+      );
+      expect(
+        state.directorState!.lastUserIntervention!.targetRole,
+        AiSeminarRole.critical,
+      );
+      expect(state.directorState!.lastUserIntervention!.isEvidence, false);
+      expect(
+        prompts.last,
+        contains('Reader intervention: 请批判者针对此处范围争议继续反驳。'),
+      );
+      expect(find.text('critical follow-up response'), findsOneWidget);
+    },
+  );
 }
 
 class _MemoryReviewItemStore extends ReviewItemStore {
@@ -904,6 +1019,49 @@ AiSeminarRuntimeService _seminarSnapshotService() {
             AiSeminarRole.supportive => const ['e3'],
             _ => const ['e4'],
           },
+        ),
+      );
+    },
+    now: () => 1000,
+  );
+}
+
+AiSeminarRuntimeService _seminarCardComposerService(List<String> prompts) {
+  final sourceRef = SourceRef(
+    bookId: 7,
+    href: 'Text/ch1.xhtml',
+    cfi: 'epubcfi(/6/8)',
+    jumpLink: 'paperreader://reader/open?bookId=7&cfi=epubcfi%28/6/8%29',
+    sourceTextSnippet: 'The source passage.',
+    sourceKind: SourceRefKind.currentBookRag,
+  );
+  final bundle = AiSeminarEvidenceBundle(
+    query: '这个概念怎么理解？',
+    evidence: [
+      AiSeminarEvidence(
+        id: 'e1',
+        scope: AiSeminarEvidenceScope.currentBook,
+        text: 'The source passage.',
+        sourceRef: sourceRef,
+      ),
+    ],
+  );
+  return AiSeminarRuntimeService(
+    fetchEvidence: (_) async => bundle,
+    streamRole: (invocation, _) async* {
+      prompts.add(invocation.prompt);
+      final isFollowUp = invocation.prompt.contains('Reader intervention:');
+      yield AiSeminarRoleStreamChunk(
+        completedTurn: AiSeminarRoleTurn(
+          id: isFollowUp
+              ? 'turn-${invocation.role.asString}-follow-up'
+              : 'turn-${invocation.role.asString}',
+          role: invocation.role,
+          prompt: invocation.prompt,
+          responseText: isFollowUp
+              ? '${invocation.role.asString} follow-up response'
+              : '${invocation.role.asString} response',
+          evidenceRefIds: const ['e1'],
         ),
       );
     },
