@@ -4965,6 +4965,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     : ValueKey('seminar-chat-card-snapshot-${card.sessionId}'),
               ),
             ],
+            if (_shouldShowSeminarCardResumeBanner(card, runtimeState)) ...[
+              const SizedBox(height: 12),
+              _buildSeminarRunCardResumeBanner(
+                card,
+                runtimeState,
+                onOpen: openCard,
+              ),
+            ],
             if (_shouldShowSeminarCardDisagreementActions(
               card,
               runtimeState,
@@ -4989,6 +4997,101 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 ),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  bool _shouldShowSeminarCardResumeBanner(
+    AiSeminarRunCardMeta card,
+    AiSeminarRuntimeState runtimeState,
+  ) {
+    final sessionId = card.sessionId?.trim();
+    if (sessionId == null || sessionId.isEmpty) return false;
+    return runtimeState.session?.id == sessionId &&
+        runtimeState.canResumeRestoredRunning;
+  }
+
+  Widget _buildSeminarRunCardResumeBanner(
+    AiSeminarRunCardMeta card,
+    AiSeminarRuntimeState runtimeState, {
+    required VoidCallback onOpen,
+  }) {
+    final sessionId = card.sessionId?.trim();
+    if (sessionId == null || sessionId.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final completedRoleCount = runtimeState.turns
+        .where((turn) => turn.responseText.trim().isNotEmpty)
+        .length;
+    final provider = runtimeState.providerDiagnostics;
+    final providerLabel = provider == null || provider.modelId.trim().isEmpty
+        ? ''
+        : ' · ${provider.providerName} / ${provider.modelId}';
+    final detail = _localizedSeminarCardText(
+      zh: '已完成 $completedRoleCount 个角色，打开后确认继续缺失角色$providerLabel。',
+      en: '$completedRoleCount roles completed. Open it to confirm continuing missing roles$providerLabel.',
+    );
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: ClaudePalette.divider(context)),
+        color: ClaudePalette.accentTint(context).withValues(alpha: 0.5),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.restore_outlined,
+              size: 18,
+              color: ClaudePalette.accent(context),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _localizedSeminarCardText(
+                      zh: '可从中断处继续',
+                      en: 'Resumable checkpoint',
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: ClaudePalette.fg(context),
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    detail,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: ClaudePalette.secondary(context),
+                          height: 1.32,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            OutlinedButton.icon(
+              key: ValueKey('seminar-chat-card-resume-$sessionId'),
+              onPressed: onOpen,
+              icon: const Icon(Icons.play_arrow_outlined, size: 18),
+              label: Text(
+                _localizedSeminarCardText(
+                  zh: '打开恢复',
+                  en: 'Open resume',
+                ),
+              ),
+            ),
           ],
         ),
       ),

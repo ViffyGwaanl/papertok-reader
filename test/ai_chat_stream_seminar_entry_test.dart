@@ -341,6 +341,151 @@ void main() {
   );
 
   testWidgets(
+    'persisted Seminar chat card surfaces a resumable checkpoint',
+    (tester) async {
+      const providerId = 'openai';
+      const sessionId = 'seminar-chat-history';
+      final providers = [
+        AiProviderMeta(
+          id: providerId,
+          name: 'OpenAI',
+          type: AiProviderType.openaiCompatible,
+          enabled: true,
+          isBuiltIn: true,
+          createdAt: 1,
+          updatedAt: 1,
+        ),
+      ];
+      final runningState = _resumableSeminarRuntimeState(sessionId);
+
+      SharedPreferences.setMockInitialValues({
+        'selectedAiService': providerId,
+        'aiProvidersV1': AiProviderMeta.encodeList(providers),
+        'aiConfig_$providerId': jsonEncode({'model': 'gpt-test'}),
+        'activeAiSkillId': 'paper_analyzer',
+        '$aiSeminarRuntimeScopedStateV1PrefsPrefix'
+                '${Uri.encodeComponent(sessionId)}':
+            jsonEncode(runningState.toJson()),
+      });
+      await Prefs().initPrefs();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            aiSeminarRuntimeServiceProvider.overrideWithValue(
+              AiSeminarRuntimeService(
+                fetchEvidence: (_) async {
+                  fail('opening the resume card should not refetch evidence');
+                },
+                streamRole: (_, __) async* {
+                  fail('opening the resume card should not call a role model');
+                },
+              ),
+            ),
+          ],
+          child: MaterialApp(
+            navigatorKey: navigatorKey,
+            locale: const Locale('zh', 'CN'),
+            localizationsDelegates: L10n.localizationsDelegates,
+            supportedLocales: L10n.supportedLocales,
+            home: const AiChatStream(),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(AiChatStream)),
+      );
+      await container.read(aiChatProvider.future);
+      container
+          .read(aiChatProvider.notifier)
+          .loadHistoryEntry(_seminarCardHistoryEntry());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.byType(AiSeminarRuntimePanel), findsNothing);
+      expect(find.text('可从中断处继续'), findsOneWidget);
+      expect(find.textContaining('已完成 1 个角色'), findsOneWidget);
+      expect(find.widgetWithText(OutlinedButton, '打开恢复'), findsOneWidget);
+
+      await tester.ensureVisible(
+        find.byKey(
+          const ValueKey('seminar-chat-card-resume-$sessionId'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(
+          const ValueKey('seminar-chat-card-resume-$sessionId'),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byType(AiSeminarRuntimePanel), findsOneWidget);
+      expect(Prefs().activeAiSkillId, 'paper_analyzer');
+    },
+  );
+
+  testWidgets(
+    'persisted Seminar chat card hides resume banner for another checkpoint',
+    (tester) async {
+      const providerId = 'openai';
+      const otherSessionId = 'other-seminar-session';
+      final providers = [
+        AiProviderMeta(
+          id: providerId,
+          name: 'OpenAI',
+          type: AiProviderType.openaiCompatible,
+          enabled: true,
+          isBuiltIn: true,
+          createdAt: 1,
+          updatedAt: 1,
+        ),
+      ];
+
+      SharedPreferences.setMockInitialValues({
+        'selectedAiService': providerId,
+        'aiProvidersV1': AiProviderMeta.encodeList(providers),
+        'aiConfig_$providerId': jsonEncode({'model': 'gpt-test'}),
+        'activeAiSkillId': 'paper_analyzer',
+        '$aiSeminarRuntimeScopedStateV1PrefsPrefix'
+                '${Uri.encodeComponent(otherSessionId)}':
+            jsonEncode(_resumableSeminarRuntimeState(otherSessionId).toJson()),
+      });
+      await Prefs().initPrefs();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            navigatorKey: navigatorKey,
+            locale: const Locale('zh', 'CN'),
+            localizationsDelegates: L10n.localizationsDelegates,
+            supportedLocales: L10n.supportedLocales,
+            home: const AiChatStream(),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(AiChatStream)),
+      );
+      await container.read(aiChatProvider.future);
+      container
+          .read(aiChatProvider.notifier)
+          .loadHistoryEntry(_seminarCardHistoryEntry());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text('AI 研讨会'), findsOneWidget);
+      expect(find.text('可从中断处继续'), findsNothing);
+      expect(find.widgetWithText(OutlinedButton, '打开恢复'), findsNothing);
+    },
+  );
+
+  testWidgets(
     'inline Seminar completion updates persisted chat card snapshot',
     (tester) async {
       const providerId = 'openai';
@@ -1208,6 +1353,60 @@ void _mockPathProvider(String? cachePath) {
                   }
                   return cachePath;
                 });
+}
+
+AiSeminarRuntimeState _resumableSeminarRuntimeState(String sessionId) {
+  final evidenceBundle = AiSeminarEvidenceBundle(
+    query: '这个概念怎么理解？',
+    evidence: [
+      AiSeminarEvidence(
+        id: 'e1',
+        scope: AiSeminarEvidenceScope.currentBook,
+        text: 'The source passage.',
+        sourceRef: SourceRef(
+          bookId: 7,
+          href: 'Text/ch1.xhtml',
+          cfi: 'epubcfi(/6/8)',
+          jumpLink: 'paperreader://reader/open?bookId=7&cfi=epubcfi%28/6/8%29',
+          sourceTextSnippet: 'The source passage.',
+          sourceKind: SourceRefKind.currentBookRag,
+        ),
+      ),
+    ],
+  );
+  final backgroundJob = AiSeminarBackgroundJobSnapshot(
+    id: 'job-$sessionId',
+    sessionId: sessionId,
+    status: AiSeminarBackgroundJobStatus.running,
+    startedAt: 1000,
+    updatedAt: 1001,
+  );
+  return AiSeminarRuntimeState.initial().copyWith(
+    session: AiSeminarSessionContract(
+      id: sessionId,
+      question: '这个概念怎么理解？',
+      bookId: 7,
+      billingContext: const AiSeminarBillingContext(
+        providerId: 'openai',
+        providerName: 'OpenAI',
+        providerType: 'openai',
+        modelId: 'gpt-test',
+      ),
+    ),
+    status: AiSeminarRunStatus.running,
+    evidenceBundle: evidenceBundle,
+    turns: const [
+      AiSeminarRoleTurn(
+        id: 'turn-critical',
+        role: AiSeminarRole.critical,
+        prompt: 'critical prompt',
+        responseText: 'critical response',
+        evidenceRefIds: ['e1'],
+      ),
+    ],
+    backgroundJob: backgroundJob,
+    backgroundJobs: [backgroundJob],
+  );
 }
 
 AiChatHistoryEntry _seminarCardHistoryEntry({
