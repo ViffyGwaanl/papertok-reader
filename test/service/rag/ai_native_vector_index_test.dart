@@ -127,6 +127,40 @@ void main() {
     expect(db.argsLog.last, contains(42));
   });
 
+  test('sqlite vector backend skips unbounded native scan for book scope',
+      () async {
+    final db = _RecordingNativeVectorDatabase(
+      vectorRows: const [
+        {'chunk_id': 42, 'local_vector_score': 0.99},
+      ],
+      hydratedRows: const [
+        {
+          'chunk_id': 42,
+          'book_id': 34,
+          'chapter_href': 'native.xhtml',
+          'local_vector_score': 0.99,
+        }
+      ],
+    );
+
+    final backend = AiSqliteVectorSearchBackend();
+    final hits = await backend.searchRows(
+      db,
+      queryVector: const [1, 0],
+      providerId: 'provider-a',
+      embeddingModel: 'model-a',
+      limit: 1,
+      maxScanRows: 3,
+      bookId: 34,
+    );
+
+    expect(hits, isEmpty);
+    expect(
+      db.sqlLog.any((sql) => sql.contains('vector_full_scan')),
+      false,
+    );
+  });
+
   test('vec1 table name is stable per provider model and dimension', () {
     final a = AiVec1VectorIndexBuilder.tableNameFor(
       providerId: 'provider/a',
@@ -280,6 +314,47 @@ void main() {
     expect(status.nativeRowCount, 2);
     expect(status.annRowCount, 1);
     expect(status.canBuild, true);
+  });
+
+  test('ann then native backend skips global ANN for book-scoped recall',
+      () async {
+    final ann = _StaticVectorBackend([
+      {
+        'chunk_id': 1,
+        'book_id': 99,
+        'chapter_href': 'global-ann.xhtml',
+        'local_vector_score': 1.0,
+      }
+    ]);
+    final native = _StaticVectorBackend([
+      {
+        'chunk_id': 7,
+        'book_id': 34,
+        'chapter_href': 'book-scoped-native.xhtml',
+        'local_vector_score': 0.8,
+      }
+    ]);
+    final backend = AiAnnThenNativeThenExactVectorSearchBackend(
+      annBackend: ann,
+      nativeThenExactBackend: native,
+    );
+
+    final hits = await backend.searchRows(
+      _RecordingNativeVectorDatabase(
+        vectorRows: const [],
+        hydratedRows: const [],
+      ),
+      queryVector: const [1, 0],
+      providerId: 'provider-a',
+      embeddingModel: 'model-a',
+      limit: 1,
+      bookId: 34,
+    );
+
+    expect(ann.calls, 0);
+    expect(native.calls, 1);
+    expect(native.bookIds, [34]);
+    expect(hits.single['chapter_href'], 'book-scoped-native.xhtml');
   });
 
   test('ann then native backend prefers complete vec1 rows before fallback',
@@ -848,6 +923,7 @@ class _ThrowingVectorBackend implements AiVectorSearchBackend {
     required int limit,
     bool onlyIndexed = true,
     int maxScanRows = 5000,
+    int? bookId,
   }) async {
     calls += 1;
     throw StateError('native vector extension unavailable');
@@ -859,6 +935,7 @@ class _StaticVectorBackend implements AiVectorSearchBackend {
 
   final List<Map<String, Object?>> rows;
   int calls = 0;
+  final List<int?> bookIds = [];
 
   @override
   Future<List<Map<String, Object?>>> searchRows(
@@ -869,8 +946,10 @@ class _StaticVectorBackend implements AiVectorSearchBackend {
     required int limit,
     bool onlyIndexed = true,
     int maxScanRows = 5000,
+    int? bookId,
   }) async {
     calls += 1;
+    bookIds.add(bookId);
     return rows;
   }
 }

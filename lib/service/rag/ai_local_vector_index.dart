@@ -18,6 +18,7 @@ class AiLocalVectorIndex {
     required int limit,
     bool onlyIndexed = true,
     int maxScanRows = 5000,
+    int? bookId,
   }) async {
     return _backend.searchRows(
       db,
@@ -27,6 +28,7 @@ class AiLocalVectorIndex {
       limit: limit,
       onlyIndexed: onlyIndexed,
       maxScanRows: maxScanRows,
+      bookId: bookId,
     );
   }
 }

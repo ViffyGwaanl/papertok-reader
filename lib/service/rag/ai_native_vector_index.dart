@@ -853,8 +853,16 @@ class AiVec1VectorSearchBackend implements AiVectorSearchBackend {
     required int limit,
     bool onlyIndexed = true,
     int maxScanRows = 5000,
+    int? bookId,
   }) async {
     if (queryVector.isEmpty) return const [];
+    if (bookId != null) {
+      // The current Vec1 table is global per provider/model/dimension. Applying
+      // a book filter after global ANN top-k can hide nearer rows inside the
+      // requested book, so book-scoped recall must use the native/exact path
+      // until a per-book or partition-aware ANN table exists.
+      return const [];
+    }
     const builder = AiVec1VectorIndexBuilder();
     if (!await builder.isAvailable(db)) return const [];
 
@@ -878,10 +886,11 @@ JOIN ai_book_index b ON b.book_id = vv.book_id
 WHERE (? = 0 OR (
   b.chunk_count > 0 AND COALESCE(b.index_status, 'succeeded') = 'succeeded'
 ))
+  AND (? IS NULL OR vv.book_id = ?)
 ORDER BY vv.distance ASC
 LIMIT ?
 ''',
-      [queryBlob, options, onlyIndexed ? 1 : 0, safeLimit],
+      [queryBlob, options, onlyIndexed ? 1 : 0, bookId, bookId, safeLimit],
     );
     final scoredByChunkId = <int, double>{};
     for (final row in vectorRows) {
@@ -923,8 +932,15 @@ class AiSqliteVectorSearchBackend implements AiVectorSearchBackend {
     required int limit,
     bool onlyIndexed = true,
     int maxScanRows = 5000,
+    int? bookId,
   }) async {
     if (queryVector.isEmpty) return const [];
+    if (bookId != null) {
+      // vector_full_scan currently has no pre-scan book or row-budget guard.
+      // Book-scoped callers need the bounded exact path until the native
+      // adapter can prove partition-aware scanning.
+      return const [];
+    }
     if (!await _hasVectorFullScan(db)) return const [];
     final queryBlob = AiVectorCodec.encodeFloat32(queryVector);
     final safeLimit = limit.clamp(1, 500);
@@ -941,6 +957,7 @@ WHERE COALESCE(v.provider_id, '') = ?
   AND (? = 0 OR (
     b.chunk_count > 0 AND COALESCE(b.index_status, 'succeeded') = 'succeeded'
   ))
+  AND (? IS NULL OR v.book_id = ?)
 ORDER BY distance ASC
 LIMIT ?
 ''',
@@ -949,6 +966,8 @@ LIMIT ?
         providerId,
         embeddingModel,
         onlyIndexed ? 1 : 0,
+        bookId,
+        bookId,
         safeLimit,
       ],
     );
@@ -1010,7 +1029,20 @@ class AiAnnThenNativeThenExactVectorSearchBackend
     required int limit,
     bool onlyIndexed = true,
     int maxScanRows = 5000,
+    int? bookId,
   }) async {
+    if (bookId != null) {
+      return nativeThenExactBackend.searchRows(
+        db,
+        queryVector: queryVector,
+        providerId: providerId,
+        embeddingModel: embeddingModel,
+        limit: limit,
+        onlyIndexed: onlyIndexed,
+        maxScanRows: maxScanRows,
+        bookId: bookId,
+      );
+    }
     try {
       final annRows = await annBackend.searchRows(
         db,
@@ -1020,6 +1052,7 @@ class AiAnnThenNativeThenExactVectorSearchBackend
         limit: limit,
         onlyIndexed: onlyIndexed,
         maxScanRows: maxScanRows,
+        bookId: bookId,
       );
       if (annRows.isNotEmpty) {
         final hasMissingAnnRows =
@@ -1040,6 +1073,7 @@ class AiAnnThenNativeThenExactVectorSearchBackend
           limit: limit,
           onlyIndexed: onlyIndexed,
           maxScanRows: maxScanRows,
+          bookId: bookId,
         );
         return _mergeVectorRows(annRows, fallbackRows, limit: limit);
       }
@@ -1056,6 +1090,7 @@ class AiAnnThenNativeThenExactVectorSearchBackend
       limit: limit,
       onlyIndexed: onlyIndexed,
       maxScanRows: maxScanRows,
+      bookId: bookId,
     );
   }
 }
@@ -1078,6 +1113,7 @@ class AiNativeThenExactVectorSearchBackend implements AiVectorSearchBackend {
     required int limit,
     bool onlyIndexed = true,
     int maxScanRows = 5000,
+    int? bookId,
   }) async {
     try {
       final nativeRows = await nativeBackend.searchRows(
@@ -1088,6 +1124,7 @@ class AiNativeThenExactVectorSearchBackend implements AiVectorSearchBackend {
         limit: limit,
         onlyIndexed: onlyIndexed,
         maxScanRows: maxScanRows,
+        bookId: bookId,
       );
       if (nativeRows.isNotEmpty) {
         final hasMissingShadowRows = await const AiNativeVectorIndexBuilder()
@@ -1103,6 +1140,7 @@ class AiNativeThenExactVectorSearchBackend implements AiVectorSearchBackend {
           limit: limit,
           onlyIndexed: onlyIndexed,
           maxScanRows: maxScanRows,
+          bookId: bookId,
         );
         return _mergeVectorRows(nativeRows, exactRows, limit: limit);
       }
@@ -1119,6 +1157,7 @@ class AiNativeThenExactVectorSearchBackend implements AiVectorSearchBackend {
       limit: limit,
       onlyIndexed: onlyIndexed,
       maxScanRows: maxScanRows,
+      bookId: bookId,
     );
   }
 
@@ -1130,6 +1169,7 @@ class AiNativeThenExactVectorSearchBackend implements AiVectorSearchBackend {
     required int limit,
     required bool onlyIndexed,
     required int maxScanRows,
+    int? bookId,
   }) {
     return exactBackend.searchRows(
       db,
@@ -1139,6 +1179,7 @@ class AiNativeThenExactVectorSearchBackend implements AiVectorSearchBackend {
       limit: limit,
       onlyIndexed: onlyIndexed,
       maxScanRows: maxScanRows,
+      bookId: bookId,
     );
   }
 }

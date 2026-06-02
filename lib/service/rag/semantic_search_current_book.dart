@@ -5,7 +5,9 @@ import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/service/deeplink/paperreader_reader_intent.dart';
 import 'package:papertok_reader/service/rag/ai_embeddings_service.dart';
 import 'package:papertok_reader/service/rag/ai_index_database.dart';
+import 'package:papertok_reader/service/rag/ai_local_vector_index.dart';
 import 'package:papertok_reader/service/rag/ai_vector_codec.dart';
+import 'package:papertok_reader/service/rag/ai_vector_index.dart';
 import 'package:papertok_reader/service/rag/source_ref_adapter.dart';
 import 'package:papertok_reader/service/rag/vector_math.dart';
 import 'package:sqflite/sqflite.dart';
@@ -145,11 +147,15 @@ class SemanticSearchCurrentBook {
     int ftsCandidateLimit = 512,
     int? maxFallbackVectorRows,
     Duration progressMinInterval = const Duration(milliseconds: 160),
+    AiVectorSearchBackend? vectorSearch,
     AiCurrentBookVectorPageScorer? scoreVectorPage,
     @visibleForTesting AiCurrentBookVectorScanObserver? onVectorScanPage,
     @visibleForTesting int Function()? nowMs,
   })  : _db = database ?? AiIndexDatabase.instance,
         _embedQuery = embedQuery ?? _defaultEmbedQuery,
+        _vectorIndex = vectorSearch == null
+            ? const AiLocalVectorIndex()
+            : AiLocalVectorIndex(backend: vectorSearch),
         _vectorScanPageSize = vectorScanPageSize.clamp(1, 512).toInt(),
         _enableFtsCandidatePrefilter = enableFtsCandidatePrefilter,
         _ftsCandidateLimit = ftsCandidateLimit.clamp(1, 2048).toInt(),
@@ -178,6 +184,7 @@ class SemanticSearchCurrentBook {
 
   final AiIndexDatabase _db;
   final AiCurrentBookQueryEmbedder _embedQuery;
+  final AiLocalVectorIndex _vectorIndex;
   final int _vectorScanPageSize;
   final bool _enableFtsCandidatePrefilter;
   final int _ftsCandidateLimit;
@@ -290,6 +297,29 @@ class SemanticSearchCurrentBook {
     final k = maxResults.clamp(1, 10);
     final scored = <AiCurrentBookVectorCandidate>[];
     var scannedRows = 0;
+    final backendRows = await _loadVectorBackendRows(
+      db,
+      bookId: bookId,
+      queryVector: qVec,
+      providerId: effectiveProviderId,
+      embeddingModel: effectiveModel,
+      limit: (k * 24).clamp(24, 120),
+      maxScanRows: _fallbackTotalRows(info.chunkCount),
+    );
+    for (final row in backendRows) {
+      _addScoredCandidate(
+        scored,
+        AiCurrentBookVectorCandidate(
+          row: row,
+          score: _vectorBackendScore(
+            row,
+            queryVector: qVec,
+            queryNorm: qNorm,
+          ),
+        ),
+        k,
+      );
+    }
     final ftsCandidateIds = _enableFtsCandidatePrefilter
         ? await _loadFtsCandidateIds(
             db,
@@ -468,14 +498,16 @@ class SemanticSearchCurrentBook {
         if (cancelled != null) return cancelled;
       }
 
-      if (scannedRows == 0) {
+      if (scannedRows == 0 && scored.isEmpty) {
         totalRows = fallbackTotalRows;
         final cancelled = await scanFullBook();
         if (cancelled != null) return cancelled;
       }
     } else {
-      final cancelled = await scanFullBook();
-      if (cancelled != null) return cancelled;
+      if (scored.isEmpty) {
+        final cancelled = await scanFullBook();
+        if (cancelled != null) return cancelled;
+      }
     }
 
     emitProgress(
@@ -484,7 +516,7 @@ class SemanticSearchCurrentBook {
       force: true,
     );
 
-    if (scannedRows == 0) {
+    if (scored.isEmpty && scannedRows == 0) {
       return AiSemanticSearchResult(
         ok: false,
         bookId: bookId,
@@ -569,6 +601,66 @@ class SemanticSearchCurrentBook {
     final limit = _maxFallbackVectorRows;
     if (limit == null || chunkCount <= limit) return chunkCount;
     return limit;
+  }
+
+  Future<List<Map<String, Object?>>> _loadVectorBackendRows(
+    Database db, {
+    required int bookId,
+    required List<double> queryVector,
+    required String providerId,
+    required String embeddingModel,
+    required int limit,
+    required int maxScanRows,
+  }) async {
+    if (queryVector.isEmpty || limit <= 0) return const [];
+    try {
+      final rows = await _vectorIndex.searchRows(
+        db,
+        queryVector: queryVector,
+        providerId: providerId,
+        embeddingModel: embeddingModel,
+        limit: limit,
+        onlyIndexed: true,
+        maxScanRows: maxScanRows,
+        bookId: bookId,
+      );
+      return rows
+          .where((row) => (row['book_id'] as num?)?.toInt() == bookId)
+          .map(_normalizeVectorBackendRow)
+          .where((row) => (row['id'] as num?)?.toInt() != null)
+          .toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Map<String, Object?> _normalizeVectorBackendRow(Map<String, Object?> row) {
+    final out = Map<String, Object?>.from(row);
+    out['id'] ??= out['chunk_id'];
+    return out;
+  }
+
+  double _vectorBackendScore(
+    Map<String, Object?> row, {
+    required List<double> queryVector,
+    required double queryNorm,
+  }) {
+    final backendScore = (row['local_vector_score'] as num?)?.toDouble();
+    if (backendScore != null && backendScore.isFinite) {
+      return backendScore.clamp(0.0, 1.0).toDouble();
+    }
+    final vector = AiVectorCodec.decodeVector(
+      blob: row['embedding_blob'],
+      jsonText: row['embedding_json']?.toString(),
+    );
+    if (vector == null || vector.isEmpty) return 0;
+    final score = VectorMath.cosineSimilarity(
+      queryVector,
+      vector,
+      aNorm: queryNorm,
+      bNorm: (row['embedding_norm'] as num?)?.toDouble(),
+    );
+    return ((score + 1) / 2).clamp(0.0, 1.0).toDouble();
   }
 
   Future<List<int>?> _loadFtsCandidateIds(

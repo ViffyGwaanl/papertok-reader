@@ -11,6 +11,7 @@ abstract interface class AiVectorSearchBackend {
     required int limit,
     bool onlyIndexed = true,
     int maxScanRows = 5000,
+    int? bookId,
   });
 }
 
@@ -26,6 +27,7 @@ class AiExactVectorSearchBackend implements AiVectorSearchBackend {
     required int limit,
     bool onlyIndexed = true,
     int maxScanRows = 5000,
+    int? bookId,
   }) async {
     if (queryVector.isEmpty) return const [];
     final safeLimit = limit.clamp(1, 500);
@@ -57,10 +59,11 @@ JOIN ai_book_index b ON b.book_id = c.book_id
 WHERE ($indexedFilter)
   AND COALESCE(b.provider_id, '') = ?
   AND COALESCE(b.embedding_model, '') = ?
+  AND (? IS NULL OR c.book_id = ?)
 ORDER BY c.id DESC
 LIMIT ?
 ''',
-      [providerId, embeddingModel, safeScanRows],
+      [providerId, embeddingModel, bookId, bookId, safeScanRows],
     );
 
     final jsonFallbackById = await _loadJsonFallbacksForRows(db, rows);

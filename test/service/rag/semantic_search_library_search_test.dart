@@ -713,6 +713,7 @@ class _FakeVectorBackend implements AiVectorSearchBackend {
     required int limit,
     bool onlyIndexed = true,
     int maxScanRows = 5000,
+    int? bookId,
   }) async {
     calls += 1;
     return rows.take(limit).toList(growable: false);

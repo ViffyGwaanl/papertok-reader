@@ -31,7 +31,7 @@
 | Knowledge Sync / Export | `Settings -> AI -> Knowledge sync/export` | 可导出 manifest、Markdown、HTML report、Anki TSV、sync bundle；可预览远端 bundle，安全冲突进 Review。 | 这是前台安全编排，不是完整后台云同步。 |
 | Custom Skills | `Settings -> AI -> 自定义技能`，再到 `当前技能` 或 AI Chat `+ -> Choose style / 选择风格` 选择；也可从 AI Chat `Choose style` 的自定义 skill 行点 `Custom skills / 自定义技能` 回到配置页。 | 用户可导入受治理的 JSON skill，让 AI 在指定 scene 中追加行为和只读工具；在 AI Chat 里选择风格时也能回到配置页，不必退出当前对话去找 Settings；普通内置 skill 行也可点 `Skill settings / 技能设置` 保存个人提示词补充。 | 写工具、递归 sub-agent、未知字段和禁用 skill 都不会注入运行时；点击配置入口不改变当前 active skill；普通内置 skill 的提示词补充不能覆盖隐私、证据、工具权限和写入确认规则。 |
 | OpenAI Responses 兼容诊断 | `Settings -> AI -> Provider Center` 配置 Responses provider | 官方支持 `previous_response_id` 的 provider 继续走 server-side continuation；拒绝该参数的兼容网关会自动降级重试，并在错误里给出 endpoint/model/参数诊断。 | 只对明确 `previous_response_id` unsupported 的 HTTP 400 重试；非该错误保留原始失败。 |
-| 当前书语义检索保护 | 阅读页搜索、Seminar evidence、`semantic_search_current_book` 工具 | 当前书向量搜索改为分页、串行、可取消、带进度，并优先 bounded FTS/BM25 候选，降低 OOM、发热和掉帧风险。 | 这是保护层，不是真 ANN 向量索引；无候选时只做预算内 fallback 扫描。 |
+| 当前书 Hybrid 召回 | 阅读页搜索、Seminar evidence、`semantic_search_current_book` 工具 | 当前书检索已接入 book-scoped `AiVectorSearchBackend`：先按 `bookId` 调用向量后端；现有全局 Vec1 ANN 和无预算 `vector_full_scan` native path 在当前书场景会跳过，落到带 `bookId + maxScanRows` 的 exact 后端、FTS/BM25 精确候选或预算内分页 fallback。 | 这能降低大书 current-book 搜索的内存和发热风险，但不是移动端 sqlite-vec/Vec1 发布闭环；当前书要用 ANN/native 加速，必须先有 per-book/partition-aware 且可验证预算的后端 gate。 |
 | 书库 Hybrid RAG 召回 | AI Chat、Seminar library fallback、agent tool、ConceptGraph 空态等调用 `semantic_search_library` 的入口 | 书库检索已从“文本 miss 后才走 vector fallback”改成“FTS/BM25 精确召回 + 向量后端语义召回共同进入候选池”，结果可用 `usedVectorRecall` 判断向量是否参与；默认 backend 是 ANN -> native -> exact，Vec1/sqlite-vec function 和对应 ANN 表存在且完整时先用 ANN，只 hydrate winner 正文；不可用或不完整时合并/降级 native/exact，避免漏掉未升级书籍；删除书籍时会清理该书的派生图谱、native shadow vector 和 ANN 行。 | 已有 extension-ready Vec1 路径，但还不是真正发布级 sqlite-vec/ANN：移动端 extension 打包、UI build job 和 provider/model 失效没闭环；ConceptGraph 本地文本入口仍关闭 embedding/vector/rerank，避免外发正文；旧索引缺 blob 时仍保留 JSON fallback。 |
 | 旧索引全局层补建 | `Settings -> AI Index / Library Index` -> `全局层索引` -> `补建` | 用已有 chunk 给旧索引书籍补建 RAPTOR 全局摘要层和当前 GraphRAG 派生层，页面显示进度并可取消。 | 不重新生成 embedding；不是 sqlite-vec/ANN；当前纯中文 graph node 抽取仍需后续增强。 |
 | 旧索引向量层升级 | `Settings -> AI Index / Library Index` -> `向量索引升级` -> `升级`，再点 `ANN 向量索引` -> `构建` | 用已有 embedding 给旧索引书籍补建紧凑 native vector shadow layer，为 sqlite-vec/ANN 后端做迁移准备；页面显示缺失数量、进度和取消；`ANN 向量索引` 会检查 Vec1/sqlite-vec 扩展、ANN group/row 缺口，可用时从 shadow rows 重建 provider/model/dim 隔离的 Vec1 ANN 表。 | 不重嵌入；未加载 Vec1/sqlite-vec 扩展时只显示 ANN 暂不可用并继续 fallback；当前是 extension-ready schema/backend seam，不是已打包的 sqlite-vec/ANN 发布能力。 |
@@ -205,7 +205,7 @@
 做成后的效果：
 
 - 大书和大书库的语义检索更快。
-- 书库搜索由 ANN 做主语义召回、FTS 做精确文本召回；当前书无 FTS 候选时不再需要预算内线性扫描。
+- 书库搜索由 ANN 做主语义召回、FTS 做精确文本召回；当前书在 per-book/partition-aware ANN/native gate 完成后，无 FTS 候选也不再依赖预算内线性扫描。
 - Seminar evidence 和 agent tool 的检索延迟下降。
 
 是否值得优先做：

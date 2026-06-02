@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:papertok_reader/service/rag/ai_index_database.dart';
 import 'package:papertok_reader/service/rag/ai_vector_codec.dart';
+import 'package:papertok_reader/service/rag/ai_vector_index.dart';
 import 'package:papertok_reader/service/rag/semantic_search_current_book.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -122,6 +123,99 @@ void main() {
       scanColumns.expand((columns) => columns),
       isNot(contains('embedding_json')),
     );
+  });
+
+  test(
+      'current book semantic search uses vector backend before fallback page scan',
+      () async {
+    final fixture = await _openSearchFixture();
+    final db = fixture.db;
+
+    await _insertBook(db, bookId: 34, chunkCount: 3);
+    await _insertBook(db, bookId: 99, chunkCount: 1);
+    final winnerId = await _insertChunk(
+      db,
+      bookId: 34,
+      chunkIndex: 0,
+      text: 'background text',
+      rawText: 'native backend winner',
+      vector: const [1, 0],
+    );
+    await _insertChunk(
+      db,
+      bookId: 34,
+      chunkIndex: 1,
+      text: 'needle exact text',
+      rawText: 'fts candidate text',
+      vector: const [0, 1],
+    );
+    await _insertChunk(
+      db,
+      bookId: 99,
+      chunkIndex: 0,
+      text: 'other book text',
+      rawText: 'other book text',
+      vector: const [1, 0],
+    );
+
+    final backend = _CurrentBookRecordingVectorBackend(
+      rows: [
+        {
+          'chunk_id': winnerId,
+          'book_id': 34,
+          'chapter_href': 'Text/book34-ch0.xhtml',
+          'chapter_title': 'Book 34 Chapter 0',
+          'chunk_index': 0,
+          'start_char': 0,
+          'end_char': 15,
+          'text': 'background text',
+          'raw_text': 'native backend winner',
+          'context_text': 'background text',
+          'embedding_input_hash': 'hash-34-0',
+          'context_version': 1,
+          'context_created_at': 3,
+          'embedding_blob': AiVectorCodec.encodeFloat32(const [1, 0]),
+          'embedding_json': '[1,0]',
+          'embedding_norm': 1.0,
+          'embedding_model': 'test-model',
+          'provider_id': 'test-provider',
+          'index_version': 1,
+          'local_vector_score': 0.99,
+        },
+      ],
+    );
+    final scannedIds = <int>[];
+    final service = SemanticSearchCurrentBook(
+      database: fixture.database,
+      vectorSearch: backend,
+      embedQuery: (
+        text, {
+        required model,
+        providerId,
+      }) async =>
+          const [1, 0],
+      vectorScanPageSize: 1,
+      onVectorScanPage: (rows) {
+        scannedIds.addAll(
+          rows.map((row) => (row['id'] as num?)?.toInt()).whereType<int>(),
+        );
+      },
+    );
+
+    final result = await service.search(
+      bookId: 34,
+      query: 'semantic-only',
+      maxResults: 1,
+    );
+
+    expect(result.ok, true);
+    expect(result.evidence.single.text, 'native backend winner');
+    expect(result.evidence.single.sourceRef?.chunkId, winnerId);
+    expect(scannedIds, isEmpty);
+    expect(backend.seenBookIds, [34]);
+    expect(backend.seenProviderIds, ['test-provider']);
+    expect(backend.seenEmbeddingModels, ['test-model']);
+    expect(backend.seenMaxScanRows, [3]);
   });
 
   test('current book vector searches are serialized across direct callers',
@@ -1111,4 +1205,32 @@ Map<String, Object?> _chunkRow({
     'context_created_at': 3,
     'created_at': 3,
   };
+}
+
+class _CurrentBookRecordingVectorBackend implements AiVectorSearchBackend {
+  _CurrentBookRecordingVectorBackend({required this.rows});
+
+  final List<Map<String, Object?>> rows;
+  final List<int?> seenBookIds = [];
+  final List<String> seenProviderIds = [];
+  final List<String> seenEmbeddingModels = [];
+  final List<int> seenMaxScanRows = [];
+
+  @override
+  Future<List<Map<String, Object?>>> searchRows(
+    Database db, {
+    required List<double> queryVector,
+    required String providerId,
+    required String embeddingModel,
+    required int limit,
+    bool onlyIndexed = true,
+    int maxScanRows = 5000,
+    int? bookId,
+  }) async {
+    seenBookIds.add(bookId);
+    seenProviderIds.add(providerId);
+    seenEmbeddingModels.add(embeddingModel);
+    seenMaxScanRows.add(maxScanRows);
+    return rows.take(limit).toList(growable: false);
+  }
 }

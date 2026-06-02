@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/ai_provider_meta.dart';
+import 'package:papertok_reader/page/settings_page/ai_seminar_config.dart';
 import 'package:papertok_reader/page/settings_page/custom_skills.dart';
 import 'package:papertok_reader/service/ai/skills/custom_skill_store.dart';
 import 'package:papertok_reader/widgets/ai/ai_chat_stream.dart';
@@ -151,6 +152,62 @@ void main() {
         Prefs().prefs.getString('aiSkillPromptProfilesV1'),
         contains('methods-versus-evidence checklist'),
       );
+    },
+  );
+
+  testWidgets(
+    'Choose style Seminar row opens Seminar settings without selecting it',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(900, 1400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      const providerId = 'openai';
+      final providers = [
+        AiProviderMeta(
+          id: providerId,
+          name: 'OpenAI',
+          type: AiProviderType.openaiCompatible,
+          enabled: true,
+          isBuiltIn: true,
+          createdAt: 1,
+          updatedAt: 1,
+        ),
+      ];
+
+      SharedPreferences.setMockInitialValues({
+        'selectedAiService': providerId,
+        'aiProvidersV1': AiProviderMeta.encodeList(providers),
+        'aiConfig_$providerId': jsonEncode({'model': 'gpt-test'}),
+        'activeAiSkillId': 'reading_companion',
+      });
+      await Prefs().initPrefs();
+
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(
+            locale: Locale('en'),
+            localizationsDelegates: L10n.localizationsDelegates,
+            supportedLocales: L10n.supportedLocales,
+            home: AiChatStream(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.add_rounded));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Choose style'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Seminar Mode'), findsOneWidget);
+      expect(find.text('Seminar settings'), findsOneWidget);
+
+      await tester.tap(find.text('Seminar settings'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AiSeminarConfigPage), findsOneWidget);
+      expect(find.text('Role prompt profiles'), findsOneWidget);
+      expect(Prefs().activeAiSkillId, 'reading_companion');
     },
   );
 }
