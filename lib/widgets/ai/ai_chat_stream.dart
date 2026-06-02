@@ -4448,6 +4448,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final evidence = snapshot.evidence.take(3).toList(growable: false);
     final roles = snapshot.roleSummaries.take(4).toList(growable: false);
     final synthesis = snapshot.synthesisSummary?.trim();
+    final disagreements = snapshot.disagreements
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList(growable: false);
+    final openQuestions = snapshot.openQuestions
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList(growable: false);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -4524,6 +4532,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                   color: ClaudePalette.fg(context),
                   height: 1.35,
                 ),
+          ),
+        ],
+        if (disagreements.isNotEmpty || openQuestions.isNotEmpty) ...[
+          if (evidence.isNotEmpty || roles.isNotEmpty || synthesis != null)
+            const SizedBox(height: 10),
+          _seminarSnapshotWhiteboardSection(
+            disagreements: disagreements,
+            openQuestions: openQuestions,
           ),
         ],
       ],
@@ -4639,6 +4655,113 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _seminarSnapshotWhiteboardSection({
+    required List<String> disagreements,
+    required List<String> openQuestions,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _seminarSnapshotHeading(
+          Icons.dashboard_customize_outlined,
+          _localizedSeminarCardText(
+            zh: '研讨白板',
+            en: 'Shared whiteboard',
+          ),
+        ),
+        const SizedBox(height: 6),
+        if (disagreements.isNotEmpty)
+          _seminarSnapshotWhiteboardGroup(
+            icon: Icons.report_problem_outlined,
+            label: _localizedSeminarCardText(
+              zh: '分歧',
+              en: 'Disagreements',
+            ),
+            items: disagreements,
+          ),
+        if (openQuestions.isNotEmpty)
+          _seminarSnapshotWhiteboardGroup(
+            icon: Icons.help_outline,
+            label: _localizedSeminarCardText(
+              zh: '开放问题',
+              en: 'Open questions',
+            ),
+            items: openQuestions,
+          ),
+      ],
+    );
+  }
+
+  Widget _seminarSnapshotWhiteboardGroup({
+    required IconData icon,
+    required String label,
+    required List<String> items,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: ClaudePalette.divider(context)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, size: 15, color: ClaudePalette.accent(context)),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: ClaudePalette.fg(context),
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 5),
+              for (final item in items)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '•',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: ClaudePalette.secondary(context),
+                            ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          item,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: ClaudePalette.secondary(context),
+                                    height: 1.32,
+                                  ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

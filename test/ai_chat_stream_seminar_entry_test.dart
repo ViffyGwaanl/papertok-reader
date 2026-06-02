@@ -321,6 +321,66 @@ void main() {
   );
 
   testWidgets(
+    'persisted Seminar chat card shows whiteboard items from snapshot',
+    (tester) async {
+      tester.view.physicalSize = const Size(900, 1800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      const providerId = 'openai';
+      final providers = [
+        AiProviderMeta(
+          id: providerId,
+          name: 'OpenAI',
+          type: AiProviderType.openaiCompatible,
+          enabled: true,
+          isBuiltIn: true,
+          createdAt: 1,
+          updatedAt: 1,
+        ),
+      ];
+
+      SharedPreferences.setMockInitialValues({
+        'selectedAiService': providerId,
+        'aiProvidersV1': AiProviderMeta.encodeList(providers),
+        'aiConfig_$providerId': jsonEncode({'model': 'gpt-test'}),
+        'activeAiSkillId': 'paper_analyzer',
+      });
+      await Prefs().initPrefs();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            navigatorKey: navigatorKey,
+            locale: const Locale('zh', 'CN'),
+            localizationsDelegates: L10n.localizationsDelegates,
+            supportedLocales: L10n.supportedLocales,
+            home: const AiChatStream(),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(AiChatStream)),
+      );
+      await container.read(aiChatProvider.future);
+      container
+          .read(aiChatProvider.notifier)
+          .loadHistoryEntry(_seminarCardHistoryEntry());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.byType(AiSeminarRuntimePanel), findsNothing);
+      expect(find.text('研讨白板'), findsOneWidget);
+      expect(find.text('分歧'), findsOneWidget);
+      expect(find.text('Scope remains disputed.'), findsOneWidget);
+      expect(find.text('开放问题'), findsOneWidget);
+      expect(find.text('What evidence would resolve scope?'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
     'Seminar chat card hides Review handoff for a different active run',
     (tester) async {
       tester.view.physicalSize = const Size(900, 1800);
@@ -643,6 +703,7 @@ AiChatHistoryEntry _seminarCardHistoryEntry({bool includeSnapshot = true}) {
             synthesisSummary:
                 'The group agrees on the mechanism but not the scope.',
             disagreements: ['Scope remains disputed.'],
+            openQuestions: ['What evidence would resolve scope?'],
           )
         : null,
   );
