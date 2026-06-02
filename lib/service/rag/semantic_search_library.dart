@@ -160,9 +160,9 @@ class SemanticSearchLibrary {
         _resolveBookTitles = resolveBookTitles,
         _embedQuery = embedQuery,
         _rerank = rerank,
-        _vectorIndex = AiLocalVectorIndex(
-          backend: vectorSearch ?? const AiExactVectorSearchBackend(),
-        );
+        _vectorIndex = vectorSearch == null
+            ? const AiLocalVectorIndex()
+            : AiLocalVectorIndex(backend: vectorSearch);
 
   final AiIndexDatabase _db;
   final AiLibraryBookTitleResolver? _resolveBookTitles;

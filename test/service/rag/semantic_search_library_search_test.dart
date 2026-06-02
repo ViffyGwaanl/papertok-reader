@@ -163,6 +163,42 @@ LIMIT 1
     expect(result.evidence.single.href, 'Text/semantic.xhtml');
   });
 
+  test('default library vector recall probes ANN and native backends',
+      () async {
+    final recordingDb = _RecordingLibraryVectorDatabase();
+    final aiDb = AiIndexDatabase.forTesting(
+      path: 'recording-library-vector.db',
+      factory: _RecordingDatabaseFactory(recordingDb),
+    );
+    addTearDown(aiDb.close);
+
+    final service = SemanticSearchLibrary(
+      database: aiDb,
+      embedQuery: (q, {required model, providerId}) async => const [1, 0],
+    );
+
+    final result = await service.search(
+      query: 'semantic only',
+      maxResults: 1,
+      allowRerank: false,
+      neighborWindow: 0,
+    );
+
+    expect(result.ok, false);
+    expect(
+      recordingDb.sqlLog.any((sql) => sql.contains('vec1_info()')),
+      true,
+    );
+    expect(
+      recordingDb.sqlLog.any((sql) => sql.contains('vector_full_scan')),
+      true,
+    );
+    expect(
+      recordingDb.sqlLog.any((sql) => sql.contains('ORDER BY c.id DESC')),
+      true,
+    );
+  });
+
   test('local text-only mode does not call embedding or rerank providers',
       () async {
     final aiDb = AiIndexDatabase.forTesting(
@@ -681,6 +717,54 @@ class _FakeVectorBackend implements AiVectorSearchBackend {
     calls += 1;
     return rows.take(limit).toList(growable: false);
   }
+}
+
+class _RecordingDatabaseFactory implements DatabaseFactory {
+  _RecordingDatabaseFactory(this.db);
+
+  final Database db;
+
+  @override
+  Future<Database> openDatabase(
+    String path, {
+    OpenDatabaseOptions? options,
+  }) async {
+    return db;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _RecordingLibraryVectorDatabase implements Database {
+  final sqlLog = <String>[];
+
+  @override
+  Future<List<Map<String, Object?>>> rawQuery(
+    String sql, [
+    List<Object?>? arguments,
+  ]) async {
+    sqlLog.add(sql);
+    if (sql.contains('COUNT(*) AS indexed_books')) {
+      return const [
+        {'indexed_books': 1, 'indexed_chunks': 1},
+      ];
+    }
+    if (sql.contains('SELECT DISTINCT') &&
+        sql.contains('embedding_model') &&
+        sql.contains('FROM ai_book_index')) {
+      return const [
+        {'provider_id': 'p', 'embedding_model': 'test-model'},
+      ];
+    }
+    return const [];
+  }
+
+  @override
+  Future<void> close() async {}
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 Future<void> _insertBook(dynamic db, int bookId) async {
