@@ -59,6 +59,7 @@ PaperTok 当前已经具备这些地基：
 - AI Chat 的 `AI 研讨会` 历史任务卡已能随 `conversationV2` 保存，并在 runtime 状态变化时按 `seminarSessionId` 回写 evidence/role/synthesis snapshot、分歧数、开放问题数和真实可追踪来源数量。
 - 阅读页/外部 `研讨` 入口没有传入 session id 时，AI Chat 会生成 `seminar-chat-*`，并把同一 `seminarSessionId` 的任务卡写入当前 `conversationV2`，让进程死亡后的恢复路径不只依赖临时内嵌面板。
 - completed AI Chat Seminar 历史任务卡已接入首片 run-scoped `读者参与` composer，用户可在同一张卡里输入回复，并选择让所选角色回应、重新找证据或整理总结；这些动作复用现有 Seminar runtime 的 user-turn ledger，不触发普通 AI Chat 单轮回复。
+- completed AI Chat Seminar 历史任务卡如果已有 disagreement 且仍匹配当前 scoped runtime，会显示 `分歧继续讨论` 快捷区；用户可以默认让 critical 围绕该分歧追加反驳 turn，如果本场没有启用 critical，则退回到当前可用角色回应；也可以围绕该分歧重新找 evidence 并重跑讨论。这是 OpenMAIC-style 多轮交锋的首片交互，不是完整 contradiction scanner。
 
 当前还不是完整 OpenMAIC-style Chat Seminar：
 
@@ -66,8 +67,8 @@ PaperTok 当前已经具备这些地基：
 - 外部/阅读页入口没有传入 session id 时，AI Chat 会生成 `seminar-chat-*`，避免 embedded Seminar 回落到 legacy global runtime，并写入同 session 的 AI Chat 任务卡作为用户可见恢复锚点。
 - scoped 本机恢复缓存使用 `aiSeminarRuntimeStateV1:<seminarSessionId>`，普通 prefs backup 会跳过 global 与 scoped runtime cache；Settings 独立入口仍保留旧 global runtime key。
 - scoped state 只隔离状态，不放开并行模型调用；不同 scoped runtime 的 Seminar model stream 由本机 coordinator 串行化。
-- 历史任务卡已有只读 snapshot、卡内送审首片和 completed 卡片内 `读者参与` composer，但还不是包含完整白板、送审详情子视图、分歧 tab 和 schema migration 的完整结构化 Chat message part。
-- 还没有完整 contradiction gap scan 和针锋相对的 rebuttal turn。
+- 历史任务卡已有只读 snapshot、白板正文首片、卡内送审首片、completed 卡片内 `读者参与` composer 和分歧快捷继续讨论入口，但还不是包含送审详情子视图、分歧 tab 和 schema migration 的完整结构化 Chat message part。
+- 还没有完整 contradiction gap scan 和 Director 自动选择的针锋相对 rebuttal loop；当前是用户从卡片分歧快捷区显式触发反驳或重找 evidence。
 - 角色配置还缺空 prompt 显式提示、角色级证据过滤、角色级预算和真实角色工具调用 loop；当前证据提示会合并到整场 evidence bundle，不是每个角色独立检索。
 - 独立详情页仍未迁移到同一个 scoped runtime store；从 card 跳详情页仍属于兼容/调试路径，不是完整 run detail。
 - `seminar_mode` 仍是普通 AI Chat prompt 风格，不等同于真正的 `AiSeminarRuntime`；文案和入口需要持续区分。
@@ -77,10 +78,10 @@ PaperTok 当前已经具备这些地基：
 
 | TaskID | Goal | Acceptance |
 | --- | --- | --- |
-| E01-C05-T11 | 把 AI Chat Seminar run card 升级为完整 message part。 | 已完成证据、角色、分歧、白板、总结、送审首片和 completed 卡片内读者参与首片；剩余是送审详情子视图、分歧 tab、message part schema migration；不把 Seminar 卡片当普通 assistant 回答生成知识卡或记忆。 |
+| E01-C05-T11 | 把 AI Chat Seminar run card 升级为完整 message part。 | 已完成证据、角色、分歧、白板、总结、送审首片、completed 卡片内读者参与首片和分歧快捷继续讨论首片；剩余是送审详情子视图、分歧 tab、message part schema migration；不把 Seminar 卡片当普通 assistant 回答生成知识卡或记忆。 |
 | E01-C05-T12 | 增加 role profile governance v2。 | 已完成 Settings 全局默认和 AI Chat 本次 run 第一片：角色显示名、custom prompt、启用状态、会话证据提示和只读工具白名单可保存并注入新 run；secret-like prompt、写工具、联网工具、unknown tool 和递归 sub-agent 被拒绝。剩余验收是空 prompt 显式提示、角色级证据过滤、角色级预算和真实角色工具调用 loop。 |
-| E01-C05-T13 | 接入 contradiction gap scan 和 rebuttal turn。 | 分歧必须绑定两个以上 role turns 和 evidence ids；Director 可选择重找证据或让指定角色反驳；预算耗尽进入用户确认。 |
-| E01-C05-T14 | 把用户插话接入 Chat run composer。 | 首片已完成：completed Chat run card 内可问某角色、重找证据、整理总结；输入只写 user-turn ledger，不进入 formal evidence。剩余是 running/askUser cue 下的完整 message part 路由。 |
+| E01-C05-T13 | 接入 contradiction gap scan 和 rebuttal turn。 | 首片已完成：completed Chat run card 可从第一条分歧默认让 critical 反驳，critical 未启用时退回当前可用角色；剩余是分歧绑定两个以上 role turns/evidence ids、Director 自动选择重找证据或让指定角色反驳、预算耗尽进入用户确认。 |
+| E01-C05-T14 | 把用户插话接入 Chat run composer。 | 首片已完成：completed Chat run card 内可问某角色、围绕分歧默认让 critical 反驳或退回当前可用角色、围绕分歧重找证据、手动重找证据或整理总结；输入只写 user-turn ledger，不进入 formal evidence。剩余是 running/askUser cue 下的完整 message part 路由。 |
 | E01-C05-T15 | 实现 per-run runtime state 隔离。 | 第一片已完成：AI Chat inline panel、历史任务卡 snapshot、卡内送审、卡内读者参与 composer 和 scoped 恢复缓存按 `seminarSessionId` 隔离；剩余是独立详情页迁移到同一 store。 |
 | E01-C05-T16 | 区分 `seminar_mode` prompt 风格和 `AiSeminarRuntime` 多角色研讨。 | UI 文案、设置入口和历史卡都不把普通多视角回复风格描述成多 agent runtime；旧 skill 保留降级用途。 |
 | E01-C05-T17 | 做 PaperTok evidence board action protocol。 | role turn 可以产生 `claim / counterclaim / evidence_request / open_question / review_candidate`；每个 formal claim 必须绑定 SourceRef 或保持 draft。 |

@@ -790,6 +790,232 @@ void main() {
       expect(find.text('critical follow-up response'), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'Seminar chat card continues directly from a disagreement',
+    (tester) async {
+      tester.view.physicalSize = const Size(900, 1800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      const providerId = 'openai';
+      final providers = [
+        AiProviderMeta(
+          id: providerId,
+          name: 'OpenAI',
+          type: AiProviderType.openaiCompatible,
+          enabled: true,
+          isBuiltIn: true,
+          createdAt: 1,
+          updatedAt: 1,
+        ),
+      ];
+      final prompts = <String>[];
+
+      SharedPreferences.setMockInitialValues({
+        'selectedAiService': providerId,
+        'aiProvidersV1': AiProviderMeta.encodeList(providers),
+        'aiConfig_$providerId': jsonEncode({'model': 'gpt-test'}),
+        'activeAiSkillId': 'paper_analyzer',
+      });
+      await Prefs().initPrefs();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            aiSeminarRuntimeServiceProvider.overrideWithValue(
+              _seminarCardDisagreementService(prompts),
+            ),
+          ],
+          child: MaterialApp(
+            navigatorKey: navigatorKey,
+            locale: const Locale('zh', 'CN'),
+            localizationsDelegates: L10n.localizationsDelegates,
+            supportedLocales: L10n.supportedLocales,
+            home: const AiChatStream(),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(AiChatStream)),
+      );
+      await container.read(aiChatProvider.future);
+      container
+          .read(aiChatProvider.notifier)
+          .loadHistoryEntry(_seminarCardHistoryEntry());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      await container
+          .read(aiSeminarRuntimeScopedProvider('seminar-chat-history').notifier)
+          .start(
+            AiSeminarSessionContract(
+              id: 'seminar-chat-history',
+              question: '这个概念怎么理解？',
+              bookId: 7,
+              roles: AiSeminarRole.defaultRoles,
+              maxRounds: 1,
+              createdAt: 1000,
+            ),
+          );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+
+      expect(find.text('分歧继续讨论'), findsOneWidget);
+      expect(find.text('Scope remains disputed.'), findsAtLeastNWidgets(1));
+      await tester.tap(
+        find.byKey(
+          const ValueKey(
+            'seminar-chat-card-ask-critical-disagreement-seminar-chat-history',
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final state = container.read(
+        aiSeminarRuntimeScopedProvider('seminar-chat-history'),
+      );
+      expect(state.turns.last.id, 'turn-critical-follow-up');
+      expect(state.turns.last.responseText, 'critical follow-up response');
+      expect(
+        state.directorState!.lastUserIntervention!.requestedAction,
+        AiSeminarUserInterventionAction.askRole,
+      );
+      expect(
+        state.directorState!.lastUserIntervention!.targetRole,
+        AiSeminarRole.critical,
+      );
+      expect(
+        state.directorState!.lastUserIntervention!.text,
+        '围绕分歧继续反驳：Scope remains disputed.',
+      );
+      expect(state.directorState!.lastUserIntervention!.isEvidence, false);
+      expect(
+        prompts.last,
+        contains('Reader intervention: 围绕分歧继续反驳：Scope remains disputed.'),
+      );
+    },
+  );
+
+  testWidgets(
+    'Seminar chat card refreshes evidence directly from a disagreement',
+    (tester) async {
+      tester.view.physicalSize = const Size(900, 1800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      const providerId = 'openai';
+      final providers = [
+        AiProviderMeta(
+          id: providerId,
+          name: 'OpenAI',
+          type: AiProviderType.openaiCompatible,
+          enabled: true,
+          isBuiltIn: true,
+          createdAt: 1,
+          updatedAt: 1,
+        ),
+      ];
+      final prompts = <String>[];
+      final evidenceFetches = <String>[];
+
+      SharedPreferences.setMockInitialValues({
+        'selectedAiService': providerId,
+        'aiProvidersV1': AiProviderMeta.encodeList(providers),
+        'aiConfig_$providerId': jsonEncode({'model': 'gpt-test'}),
+        'activeAiSkillId': 'paper_analyzer',
+      });
+      await Prefs().initPrefs();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            aiSeminarRuntimeServiceProvider.overrideWithValue(
+              _seminarCardDisagreementRefreshService(
+                prompts,
+                evidenceFetches,
+              ),
+            ),
+          ],
+          child: MaterialApp(
+            navigatorKey: navigatorKey,
+            locale: const Locale('zh', 'CN'),
+            localizationsDelegates: L10n.localizationsDelegates,
+            supportedLocales: L10n.supportedLocales,
+            home: const AiChatStream(),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(AiChatStream)),
+      );
+      await container.read(aiChatProvider.future);
+      container
+          .read(aiChatProvider.notifier)
+          .loadHistoryEntry(_seminarCardHistoryEntry());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      await container
+          .read(aiSeminarRuntimeScopedProvider('seminar-chat-history').notifier)
+          .start(
+            AiSeminarSessionContract(
+              id: 'seminar-chat-history',
+              question: '这个概念怎么理解？',
+              bookId: 7,
+              roles: AiSeminarRole.defaultRoles,
+              maxRounds: 1,
+              createdAt: 1000,
+            ),
+          );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+
+      expect(evidenceFetches, ['e1']);
+      expect(find.text('分歧继续讨论'), findsOneWidget);
+      await tester.tap(
+        find.byKey(
+          const ValueKey(
+            'seminar-chat-card-refresh-disagreement-seminar-chat-history',
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final state = container.read(
+        aiSeminarRuntimeScopedProvider('seminar-chat-history'),
+      );
+      expect(evidenceFetches, ['e1', 'e2']);
+      expect(state.evidenceBundle!.evidence.map((item) => item.id), ['e2']);
+      expect(state.turns.map((turn) => turn.id), [
+        'turn-critical-e2',
+        'turn-supportive-e2',
+        'turn-synthesizer-e2',
+      ]);
+      expect(
+        state.directorState!.lastUserIntervention!.requestedAction,
+        AiSeminarUserInterventionAction.refreshEvidence,
+      );
+      expect(
+        state.directorState!.lastUserIntervention!.text,
+        '围绕分歧重新找证据：Scope remains disputed.',
+      );
+      expect(state.directorState!.lastUserIntervention!.isEvidence, false);
+      expect(state.synthesis!.summary, 'synthesizer response using e2');
+      expect(
+        prompts.last,
+        contains('Evidence ids: e2'),
+      );
+    },
+  );
 }
 
 class _MemoryReviewItemStore extends ReviewItemStore {
@@ -1062,6 +1288,118 @@ AiSeminarRuntimeService _seminarCardComposerService(List<String> prompts) {
               ? '${invocation.role.asString} follow-up response'
               : '${invocation.role.asString} response',
           evidenceRefIds: const ['e1'],
+        ),
+      );
+    },
+    now: () => 1000,
+  );
+}
+
+AiSeminarRuntimeService _seminarCardDisagreementService(List<String> prompts) {
+  final sourceRef = SourceRef(
+    bookId: 7,
+    href: 'Text/ch1.xhtml',
+    cfi: 'epubcfi(/6/8)',
+    jumpLink: 'paperreader://reader/open?bookId=7&cfi=epubcfi%28/6/8%29',
+    sourceTextSnippet: 'The source passage.',
+    sourceKind: SourceRefKind.currentBookRag,
+  );
+  final bundle = AiSeminarEvidenceBundle(
+    query: '这个概念怎么理解？',
+    evidence: [
+      AiSeminarEvidence(
+        id: 'e1',
+        scope: AiSeminarEvidenceScope.currentBook,
+        text: 'The source passage.',
+        sourceRef: sourceRef,
+      ),
+    ],
+  );
+  return AiSeminarRuntimeService(
+    fetchEvidence: (_) async => bundle,
+    streamRole: (invocation, _) async* {
+      prompts.add(invocation.prompt);
+      final isFollowUp = invocation.prompt.contains('Reader intervention:');
+      yield AiSeminarRoleStreamChunk(
+        completedTurn: AiSeminarRoleTurn(
+          id: isFollowUp
+              ? 'turn-${invocation.role.asString}-follow-up'
+              : 'turn-${invocation.role.asString}',
+          role: invocation.role,
+          prompt: invocation.prompt,
+          responseText: isFollowUp
+              ? '${invocation.role.asString} follow-up response'
+              : '${invocation.role.asString} response',
+          evidenceRefIds: const ['e1'],
+          whiteboardEntries: [
+            if (!isFollowUp && invocation.role == AiSeminarRole.critical)
+              const AiSeminarWhiteboardEntry(
+                id: 'disagreement-1',
+                kind: AiSeminarWhiteboardKind.disagreement,
+                text: 'Scope remains disputed.',
+                role: AiSeminarRole.critical,
+                evidenceRefIds: ['e1'],
+              ),
+          ],
+        ),
+      );
+    },
+    now: () => 1000,
+  );
+}
+
+AiSeminarRuntimeService _seminarCardDisagreementRefreshService(
+  List<String> prompts,
+  List<String> evidenceFetches,
+) {
+  SourceRef sourceRef(String id) {
+    return SourceRef(
+      bookId: 7,
+      href: 'Text/ch$id.xhtml',
+      cfi: 'epubcfi(/6/$id)',
+      jumpLink: 'paperreader://reader/open?bookId=7&cfi=epubcfi%28/6/$id%29',
+      sourceTextSnippet: 'The $id source passage.',
+      sourceKind: SourceRefKind.currentBookRag,
+    );
+  }
+
+  return AiSeminarRuntimeService(
+    fetchEvidence: (_) async {
+      final id = evidenceFetches.isEmpty ? 'e1' : 'e2';
+      evidenceFetches.add(id);
+      return AiSeminarEvidenceBundle(
+        query: '这个概念怎么理解？',
+        evidence: [
+          AiSeminarEvidence(
+            id: id,
+            scope: AiSeminarEvidenceScope.currentBook,
+            text: 'The $id source passage.',
+            sourceRef: sourceRef(id),
+          ),
+        ],
+      );
+    },
+    streamRole: (invocation, _) async* {
+      prompts.add(invocation.prompt);
+      final evidenceId = invocation.evidenceBundle.evidence.single.id;
+      yield AiSeminarRoleStreamChunk(
+        completedTurn: AiSeminarRoleTurn(
+          id: 'turn-${invocation.role.asString}-$evidenceId',
+          role: invocation.role,
+          prompt: invocation.prompt,
+          responseText:
+              '${invocation.role.asString} response using $evidenceId',
+          evidenceRefIds: [evidenceId],
+          whiteboardEntries: [
+            if (evidenceId == 'e1' && invocation.role == AiSeminarRole.critical)
+              const AiSeminarWhiteboardEntry(
+                id: 'disagreement-1',
+                kind: AiSeminarWhiteboardKind.disagreement,
+                text: 'Scope remains disputed.',
+                role: AiSeminarRole.critical,
+                evidenceRefIds: ['e1'],
+              ),
+          ],
         ),
       );
     },

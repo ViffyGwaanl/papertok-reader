@@ -4859,6 +4859,13 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     : ValueKey('seminar-chat-card-snapshot-${card.sessionId}'),
               ),
             ],
+            if (_shouldShowSeminarCardDisagreementActions(
+              card,
+              runtimeState,
+            )) ...[
+              const SizedBox(height: 12),
+              _buildSeminarRunCardDisagreementActions(card, runtimeState),
+            ],
             if (_shouldShowSeminarCardComposer(card, runtimeState)) ...[
               const SizedBox(height: 12),
               _buildSeminarRunCardComposer(card, runtimeState),
@@ -4892,6 +4899,16 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     if (runtimeState.evidenceBundle == null) return false;
     return runtimeState.status == AiSeminarRunStatus.completed ||
         runtimeState.directorState?.needsUserInput == true;
+  }
+
+  bool _shouldShowSeminarCardDisagreementActions(
+    AiSeminarRunCardMeta card,
+    AiSeminarRuntimeState runtimeState,
+  ) {
+    if (!_shouldShowSeminarCardComposer(card, runtimeState)) return false;
+    final snapshot = card.snapshot;
+    if (snapshot == null) return false;
+    return snapshot.disagreements.any((item) => item.trim().isNotEmpty);
   }
 
   TextEditingController _seminarCardReplyController(String sessionId) {
@@ -5107,6 +5124,144 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     );
   }
 
+  Widget _buildSeminarRunCardDisagreementActions(
+    AiSeminarRunCardMeta card,
+    AiSeminarRuntimeState runtimeState,
+  ) {
+    final sessionId = card.sessionId?.trim();
+    final snapshot = card.snapshot;
+    if (sessionId == null || sessionId.isEmpty || snapshot == null) {
+      return const SizedBox.shrink();
+    }
+    final disagreement = snapshot.disagreements
+        .map((item) => item.trim())
+        .firstWhere((item) => item.isNotEmpty, orElse: () => '');
+    if (disagreement.isEmpty) return const SizedBox.shrink();
+    final roles = _seminarCardAvailableRoles(card, runtimeState);
+    final targetRole = roles.contains(AiSeminarRole.critical)
+        ? AiSeminarRole.critical
+        : _seminarCardSelectedRole(sessionId, roles);
+    final isSubmitting = _seminarCardSubmittingSessionIds.contains(sessionId);
+    final targetLabel = _seminarRoleFallbackLabel(targetRole.asString);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: ClaudePalette.divider(context)),
+        color: Theme.of(context)
+            .colorScheme
+            .tertiaryContainer
+            .withValues(alpha: 0.42),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.report_problem_outlined,
+                  size: 16,
+                  color: ClaudePalette.accent(context),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    _localizedSeminarCardText(
+                      zh: '分歧继续讨论',
+                      en: 'Continue from disagreement',
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: ClaudePalette.fg(context),
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              disagreement,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: ClaudePalette.secondary(context),
+                    height: 1.32,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton.icon(
+                  key: ValueKey(
+                    'seminar-chat-card-ask-critical-disagreement-$sessionId',
+                  ),
+                  icon: isSubmitting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.record_voice_over_outlined),
+                  label: Text(
+                    targetRole == AiSeminarRole.critical
+                        ? _localizedSeminarCardText(
+                            zh: '让批判者反驳',
+                            en: 'Ask Critical to rebut',
+                          )
+                        : _localizedSeminarCardText(
+                            zh: '让$targetLabel回应',
+                            en: 'Ask $targetLabel to respond',
+                          ),
+                  ),
+                  onPressed: isSubmitting
+                      ? null
+                      : () => _submitSeminarCardInterventionText(
+                            sessionId: sessionId,
+                            text: _localizedSeminarCardText(
+                              zh: '围绕分歧继续反驳：$disagreement',
+                              en: 'Continue the rebuttal around this disagreement: $disagreement',
+                            ),
+                            action: AiSeminarUserInterventionAction.askRole,
+                            targetRole: targetRole,
+                          ),
+                ),
+                OutlinedButton.icon(
+                  key: ValueKey(
+                    'seminar-chat-card-refresh-disagreement-$sessionId',
+                  ),
+                  icon: const Icon(Icons.travel_explore_outlined),
+                  label: Text(
+                    _localizedSeminarCardText(
+                      zh: '围绕分歧重找证据',
+                      en: 'Refresh evidence for this',
+                    ),
+                  ),
+                  onPressed: isSubmitting
+                      ? null
+                      : () => _submitSeminarCardInterventionText(
+                            sessionId: sessionId,
+                            text: _localizedSeminarCardText(
+                              zh: '围绕分歧重新找证据：$disagreement',
+                              en: 'Refresh evidence around this disagreement: $disagreement',
+                            ),
+                            action:
+                                AiSeminarUserInterventionAction.refreshEvidence,
+                          ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _submitSeminarCardIntervention({
     required String sessionId,
     required AiSeminarUserInterventionAction action,
@@ -5114,20 +5269,38 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   }) async {
     final controller = _seminarCardReplyControllers[sessionId];
     final text = controller?.text.trim() ?? '';
-    if (text.isEmpty || _seminarCardSubmittingSessionIds.contains(sessionId)) {
+    await _submitSeminarCardInterventionText(
+      sessionId: sessionId,
+      text: text,
+      action: action,
+      targetRole: targetRole,
+      onSuccess: () => controller?.clear(),
+    );
+  }
+
+  Future<void> _submitSeminarCardInterventionText({
+    required String sessionId,
+    required String text,
+    required AiSeminarUserInterventionAction action,
+    AiSeminarRole? targetRole,
+    VoidCallback? onSuccess,
+  }) async {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty ||
+        _seminarCardSubmittingSessionIds.contains(sessionId)) {
       return;
     }
     setState(() => _seminarCardSubmittingSessionIds.add(sessionId));
     try {
       final notifier = _readSeminarRuntimeNotifier(sessionId);
       await notifier.recordUserIntervention(
-        text: text,
+        text: trimmed,
         requestedAction: action,
         targetRole: targetRole,
       );
       await notifier.executeDirectorNextStep();
       if (!mounted) return;
-      controller?.clear();
+      onSuccess?.call();
       setState(() {});
     } catch (error) {
       if (!mounted) return;
