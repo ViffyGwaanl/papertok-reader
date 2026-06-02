@@ -95,6 +95,7 @@ class AiMultiTabChatState extends State<AiMultiTabChat> {
 
   void openSeminar({
     String? question,
+    String? sessionId,
     int? bookId,
     SourceRef? sourceRef,
   }) {
@@ -104,6 +105,7 @@ class AiMultiTabChatState extends State<AiMultiTabChat> {
     if (chatState != null) {
       chatState.openInlineSeminar(
         question: question,
+        sessionId: sessionId,
         bookId: bookId,
         sourceRef: sourceRef,
       );
@@ -112,6 +114,7 @@ class AiMultiTabChatState extends State<AiMultiTabChat> {
     _pendingSeminarOpen = _PendingSeminarOpen(
       tabId: tab.id,
       question: question,
+      sessionId: sessionId,
       bookId: bookId,
       sourceRef: sourceRef,
     );
@@ -145,6 +148,7 @@ class AiMultiTabChatState extends State<AiMultiTabChat> {
       _pendingSeminarOpen = null;
       chatState.openInlineSeminar(
         question: pending.question,
+        sessionId: pending.sessionId,
         bookId: pending.bookId,
         sourceRef: pending.sourceRef,
       );
@@ -317,12 +321,14 @@ class _PendingSeminarOpen {
   const _PendingSeminarOpen({
     required this.tabId,
     required this.question,
+    required this.sessionId,
     required this.bookId,
     required this.sourceRef,
   });
 
   final int tabId;
   final String? question;
+  final String? sessionId;
   final int? bookId;
   final SourceRef? sourceRef;
 }

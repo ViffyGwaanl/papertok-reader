@@ -60,10 +60,14 @@ PaperTok 当前已经具备这些地基：
 
 当前还不是完整 OpenMAIC-style Chat Seminar：
 
-- 历史任务卡已有只读 snapshot，但还不是包含完整白板、送审子视图、run-scoped composer 子视图和 per-run 多实例隔离的完整结构化 Chat message part。
+- AI Chat 嵌入路径的 per-run runtime state 隔离第一片已接入：`aiSeminarRuntimeScopedProvider` 按 `seminarSessionId` 保存独立 turns/evidence/budget/job id；历史任务卡、inline runtime panel、snapshot 回写和 `发送到待审` 已读取同一 scoped runtime。
+- 外部/阅读页入口没有传入 session id 时，AI Chat 会生成 `seminar-chat-*`，避免 embedded Seminar 回落到 legacy global runtime。
+- scoped 本机恢复缓存使用 `aiSeminarRuntimeStateV1:<seminarSessionId>`，普通 prefs backup 会跳过 global 与 scoped runtime cache；Settings 独立入口仍保留旧 global runtime key。
+- scoped state 只隔离状态，不放开并行模型调用；不同 scoped runtime 的 Seminar model stream 由本机 coordinator 串行化。
+- 历史任务卡已有只读 snapshot，但还不是包含完整白板、送审详情子视图和 run-scoped composer 子视图的完整结构化 Chat message part。
 - 还没有完整 contradiction gap scan 和针锋相对的 rebuttal turn。
 - 角色配置还缺空 prompt 显式提示、角色级证据过滤、角色级预算和真实角色工具调用 loop；当前证据提示会合并到整场 evidence bundle，不是每个角色独立检索。
-- 仍是单个全局 runtime state，不支持同一 AI Chat 中多个 Seminar run 并存。
+- 独立详情页仍未迁移到同一个 scoped runtime store；从 card 跳详情页仍属于兼容/调试路径，不是完整 run detail。
 - `seminar_mode` 仍是普通 AI Chat prompt 风格，不等同于真正的 `AiSeminarRuntime`；文案和入口需要持续区分。
 - OpenMAIC 当前源码没有强制最终总结节点，主要依赖角色自然总结或 Director `END`；PaperTok 必须保留明确的 `synthesizer` 终局节点，因为 Review、KnowledgeCard 和 Spaced Review 都需要结构化输出。
 
@@ -75,7 +79,7 @@ PaperTok 当前已经具备这些地基：
 | E01-C05-T12 | 增加 role profile governance v2。 | 已完成 Settings 全局默认和 AI Chat 本次 run 第一片：角色显示名、custom prompt、启用状态、会话证据提示和只读工具白名单可保存并注入新 run；secret-like prompt、写工具、联网工具、unknown tool 和递归 sub-agent 被拒绝。剩余验收是空 prompt 显式提示、角色级证据过滤、角色级预算和真实角色工具调用 loop。 |
 | E01-C05-T13 | 接入 contradiction gap scan 和 rebuttal turn。 | 分歧必须绑定两个以上 role turns 和 evidence ids；Director 可选择重找证据或让指定角色反驳；预算耗尽进入用户确认。 |
 | E01-C05-T14 | 把用户插话接入 Chat run composer。 | 用户可在同一 Chat run card 内选择继续讨论、问某角色、重找证据、整理总结；输入只写 user-turn ledger，不进入 formal evidence。 |
-| E01-C05-T15 | 实现 per-run runtime state 隔离。 | 同一 AI Chat 会话中多个 Seminar run 不共享 turns/evidence/budget/job id；独立详情页和恢复缓存读取同一 run id。 |
+| E01-C05-T15 | 实现 per-run runtime state 隔离。 | 第一片已完成：AI Chat inline panel、历史任务卡 snapshot、卡内送审和 scoped 恢复缓存按 `seminarSessionId` 隔离；剩余是独立详情页与 run-scoped composer 迁移到同一 store。 |
 | E01-C05-T16 | 区分 `seminar_mode` prompt 风格和 `AiSeminarRuntime` 多角色研讨。 | UI 文案、设置入口和历史卡都不把普通多视角回复风格描述成多 agent runtime；旧 skill 保留降级用途。 |
 | E01-C05-T17 | 做 PaperTok evidence board action protocol。 | role turn 可以产生 `claim / counterclaim / evidence_request / open_question / review_candidate`；每个 formal claim 必须绑定 SourceRef 或保持 draft。 |
 

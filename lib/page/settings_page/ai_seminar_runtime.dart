@@ -76,6 +76,41 @@ class AiSeminarRuntimePage extends ConsumerWidget {
   }
 }
 
+String? _seminarRuntimeScopeIdFrom(String? raw) {
+  final value = raw?.trim();
+  return value == null || value.isEmpty ? null : value;
+}
+
+AiSeminarRuntimeState _watchSeminarRuntimeState(
+  WidgetRef ref,
+  String? runtimeScopeId,
+) {
+  final scopeId = _seminarRuntimeScopeIdFrom(runtimeScopeId);
+  return scopeId == null
+      ? ref.watch(aiSeminarRuntimeProvider)
+      : ref.watch(aiSeminarRuntimeScopedProvider(scopeId));
+}
+
+AiSeminarRuntimeState _readSeminarRuntimeState(
+  WidgetRef ref,
+  String? runtimeScopeId,
+) {
+  final scopeId = _seminarRuntimeScopeIdFrom(runtimeScopeId);
+  return scopeId == null
+      ? ref.read(aiSeminarRuntimeProvider)
+      : ref.read(aiSeminarRuntimeScopedProvider(scopeId));
+}
+
+AiSeminarRuntimeNotifier _readSeminarRuntimeNotifier(
+  WidgetRef ref,
+  String? runtimeScopeId,
+) {
+  final scopeId = _seminarRuntimeScopeIdFrom(runtimeScopeId);
+  return scopeId == null
+      ? ref.read(aiSeminarRuntimeProvider.notifier)
+      : ref.read(aiSeminarRuntimeScopedProvider(scopeId).notifier);
+}
+
 class AiSeminarRuntimePanel extends ConsumerStatefulWidget {
   const AiSeminarRuntimePanel({
     super.key,
@@ -120,6 +155,10 @@ class _AiSeminarRuntimePanelState extends ConsumerState<AiSeminarRuntimePanel> {
   bool _autoStarted = false;
   bool _discardedMismatchedEntryState = false;
 
+  String? get _runtimeScopeId => widget.embedded
+      ? _seminarRuntimeScopeIdFrom(widget.initialSessionId)
+      : null;
+
   @override
   void initState() {
     super.initState();
@@ -162,32 +201,33 @@ class _AiSeminarRuntimePanelState extends ConsumerState<AiSeminarRuntimePanel> {
     _autoStarted = true;
     final question = _questionController.text.trim();
     if (question.isEmpty) return;
-    final diagnostics = ref.read(aiSeminarRuntimeProvider).providerDiagnostics;
+    final diagnostics =
+        _readSeminarRuntimeState(ref, _runtimeScopeId).providerDiagnostics;
     final now = DateTime.now().millisecondsSinceEpoch;
     final initialSessionId = widget.initialSessionId?.trim();
-    await ref.read(aiSeminarRuntimeProvider.notifier).start(
-          AiSeminarSessionContract(
-            id: initialSessionId == null || initialSessionId.isEmpty
-                ? 'seminar-$now'
-                : initialSessionId,
-            question: question,
-            bookId: widget.initialSourceRef?.bookId ?? widget.bookId,
-            sourceRefs: [
-              if (widget.initialSourceRef != null) widget.initialSourceRef!,
-            ],
-            roles: _selectedRoles,
-            maxRounds: _maxRoundsFromInput(),
-            budgetPolicy: _budgetPolicyFromInputs(diagnostics),
-            roleProfiles: _roleProfiles,
-            createdAt: now,
-          ),
-        );
+    await _readSeminarRuntimeNotifier(ref, _runtimeScopeId).start(
+      AiSeminarSessionContract(
+        id: initialSessionId == null || initialSessionId.isEmpty
+            ? 'seminar-$now'
+            : initialSessionId,
+        question: question,
+        bookId: widget.initialSourceRef?.bookId ?? widget.bookId,
+        sourceRefs: [
+          if (widget.initialSourceRef != null) widget.initialSourceRef!,
+        ],
+        roles: _selectedRoles,
+        maxRounds: _maxRoundsFromInput(),
+        budgetPolicy: _budgetPolicyFromInputs(diagnostics),
+        roleProfiles: _roleProfiles,
+        createdAt: now,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    final rawState = ref.watch(aiSeminarRuntimeProvider);
+    final rawState = _watchSeminarRuntimeState(ref, _runtimeScopeId);
     final hasMismatchedEntryState = _hasMismatchedEntryState(rawState);
     if (hasMismatchedEntryState) {
       _scheduleDiscardMismatchedEntryState();
@@ -259,14 +299,14 @@ class _AiSeminarRuntimePanelState extends ConsumerState<AiSeminarRuntimePanel> {
                 icon: const Icon(Icons.refresh),
                 label: Text(l10n.commonRetry),
                 onPressed: () =>
-                    ref.read(aiSeminarRuntimeProvider.notifier).retry(),
+                    _readSeminarRuntimeNotifier(ref, _runtimeScopeId).retry(),
               ),
             if (state.canCancel)
               OutlinedButton.icon(
                 icon: const Icon(Icons.stop_circle_outlined),
                 label: Text(l10n.commonCancel),
                 onPressed: () =>
-                    ref.read(aiSeminarRuntimeProvider.notifier).cancel(),
+                    _readSeminarRuntimeNotifier(ref, _runtimeScopeId).cancel(),
               ),
           ],
         ),
@@ -277,11 +317,15 @@ class _AiSeminarRuntimePanelState extends ConsumerState<AiSeminarRuntimePanel> {
           _SeminarUserInterventionSection(
             state: state,
             promptedByDirector: true,
+            runtimeScopeId: _runtimeScopeId,
           ),
         ],
         if (_shouldShowJobQueue(state.backgroundJobs)) ...[
           const SizedBox(height: 12),
-          _BackgroundJobsSection(jobs: state.backgroundJobs),
+          _BackgroundJobsSection(
+            jobs: state.backgroundJobs,
+            runtimeScopeId: _runtimeScopeId,
+          ),
         ],
         const SizedBox(height: 12),
         _EvidenceSection(state: state),
@@ -290,12 +334,16 @@ class _AiSeminarRuntimePanelState extends ConsumerState<AiSeminarRuntimePanel> {
         const SizedBox(height: 12),
         _WhiteboardSection(entries: state.whiteboardEntries),
         const SizedBox(height: 12),
-        _SynthesisSection(state: state),
+        _SynthesisSection(
+          state: state,
+          runtimeScopeId: _runtimeScopeId,
+        ),
         if (_shouldShowContinuationComposer(state)) ...[
           const SizedBox(height: 12),
           _SeminarUserInterventionSection(
             state: state,
             promptedByDirector: false,
+            runtimeScopeId: _runtimeScopeId,
           ),
         ],
       ],
@@ -316,6 +364,7 @@ class _AiSeminarRuntimePanelState extends ConsumerState<AiSeminarRuntimePanel> {
         children: [
           _EmbeddedSeminarHeader(
             state: state,
+            runtimeScopeId: _runtimeScopeId,
             onClose: widget.onClose,
             onOpenFullPage: widget.onOpenFullPage,
           ),
@@ -422,7 +471,8 @@ class _AiSeminarRuntimePanelState extends ConsumerState<AiSeminarRuntimePanel> {
     _discardedMismatchedEntryState = true;
     Future.microtask(() {
       if (!mounted) return;
-      ref.read(aiSeminarRuntimeProvider.notifier).discardLocalRuntimeState();
+      _readSeminarRuntimeNotifier(ref, _runtimeScopeId)
+          .discardLocalRuntimeState();
     });
   }
 
@@ -462,11 +512,13 @@ class _AiSeminarRuntimePanelState extends ConsumerState<AiSeminarRuntimePanel> {
 class _EmbeddedSeminarHeader extends ConsumerWidget {
   const _EmbeddedSeminarHeader({
     required this.state,
+    required this.runtimeScopeId,
     required this.onClose,
     required this.onOpenFullPage,
   });
 
   final AiSeminarRuntimeState state;
+  final String? runtimeScopeId;
   final VoidCallback? onClose;
   final VoidCallback? onOpenFullPage;
 
@@ -506,14 +558,14 @@ class _EmbeddedSeminarHeader extends ConsumerWidget {
                 tooltip: l10n.commonRetry,
                 icon: const Icon(Icons.refresh),
                 onPressed: () =>
-                    ref.read(aiSeminarRuntimeProvider.notifier).retry(),
+                    _readSeminarRuntimeNotifier(ref, runtimeScopeId).retry(),
               ),
             if (state.canCancel)
               IconButton(
                 tooltip: l10n.commonCancel,
                 icon: const Icon(Icons.stop_circle_outlined),
                 onPressed: () =>
-                    ref.read(aiSeminarRuntimeProvider.notifier).cancel(),
+                    _readSeminarRuntimeNotifier(ref, runtimeScopeId).cancel(),
               ),
             if (onOpenFullPage != null)
               IconButton(
@@ -905,10 +957,12 @@ class _SeminarUserInterventionSection extends ConsumerStatefulWidget {
   const _SeminarUserInterventionSection({
     required this.state,
     required this.promptedByDirector,
+    required this.runtimeScopeId,
   });
 
   final AiSeminarRuntimeState state;
   final bool promptedByDirector;
+  final String? runtimeScopeId;
 
   @override
   ConsumerState<_SeminarUserInterventionSection> createState() =>
@@ -1083,16 +1137,16 @@ class _SeminarUserInterventionSectionState
   }) async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
-    await ref.read(aiSeminarRuntimeProvider.notifier).recordUserIntervention(
-          text: text,
-          requestedAction: action,
-          targetRole: targetRole,
-        );
+    await _readSeminarRuntimeNotifier(ref, widget.runtimeScopeId)
+        .recordUserIntervention(
+      text: text,
+      requestedAction: action,
+      targetRole: targetRole,
+    );
     if (action == AiSeminarUserInterventionAction.askRole ||
         action == AiSeminarUserInterventionAction.refreshEvidence ||
         action == AiSeminarUserInterventionAction.synthesize) {
-      await ref
-          .read(aiSeminarRuntimeProvider.notifier)
+      await _readSeminarRuntimeNotifier(ref, widget.runtimeScopeId)
           .executeDirectorNextStep();
     }
     if (!mounted) return;
@@ -1110,9 +1164,13 @@ String _runtimeText(
 }
 
 class _BackgroundJobsSection extends StatelessWidget {
-  const _BackgroundJobsSection({required this.jobs});
+  const _BackgroundJobsSection({
+    required this.jobs,
+    required this.runtimeScopeId,
+  });
 
   final List<AiSeminarBackgroundJobSnapshot> jobs;
+  final String? runtimeScopeId;
 
   @override
   Widget build(BuildContext context) {
@@ -1150,9 +1208,9 @@ class _BackgroundJobsSection extends StatelessWidget {
                     builder: (context, ref, _) => IconButton(
                       tooltip: l10n.seminarCancelQueued,
                       icon: const Icon(Icons.close),
-                      onPressed: () => ref
-                          .read(aiSeminarRuntimeProvider.notifier)
-                          .cancelBackgroundJob(job.id),
+                      onPressed: () =>
+                          _readSeminarRuntimeNotifier(ref, runtimeScopeId)
+                              .cancelBackgroundJob(job.id),
                     ),
                   )
                 : null,
@@ -1441,9 +1499,13 @@ class _WhiteboardSection extends StatelessWidget {
 }
 
 class _SynthesisSection extends ConsumerWidget {
-  const _SynthesisSection({required this.state});
+  const _SynthesisSection({
+    required this.state,
+    required this.runtimeScopeId,
+  });
 
   final AiSeminarRuntimeState state;
+  final String? runtimeScopeId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1480,9 +1542,9 @@ class _SynthesisSection extends ConsumerWidget {
                 ? () async {
                     final messenger = ScaffoldMessenger.of(context);
                     try {
-                      final result = await ref
-                          .read(aiSeminarRuntimeProvider.notifier)
-                          .sendToReview();
+                      final result =
+                          await _readSeminarRuntimeNotifier(ref, runtimeScopeId)
+                              .sendToReview();
                       messenger.showSnackBar(
                         SnackBar(
                           content: Text(

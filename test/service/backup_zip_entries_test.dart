@@ -147,7 +147,7 @@ void main() {
 
     test('does not include local seminar runtime recovery cache', () async {
       SharedPreferences.setMockInitialValues({
-        'aiSeminarRuntimeStateV1': jsonEncode({
+        aiSeminarRuntimeStateV1PrefsKey: jsonEncode({
           'status': 'completed',
           'session': {
             'id': 's1',
@@ -162,6 +162,22 @@ void main() {
             },
           ],
         }),
+        '${aiSeminarRuntimeScopedStateV1PrefsPrefix}seminar-chat-s2':
+            jsonEncode({
+          'status': 'completed',
+          'session': {
+            'id': 's2',
+            'question': 'private scoped seminar question',
+          },
+          'turns': [
+            {
+              'id': 'turn-supportive',
+              'role': 'supportive',
+              'prompt': 'private scoped prompt',
+              'responseText': 'private scoped role answer',
+            },
+          ],
+        }),
       });
 
       final sp = await SharedPreferences.getInstance();
@@ -169,9 +185,20 @@ void main() {
 
       final backup = await Prefs().buildPrefsBackupMap();
 
-      expect(backup.containsKey('aiSeminarRuntimeStateV1'), isFalse);
+      expect(backup.containsKey(aiSeminarRuntimeStateV1PrefsKey), isFalse);
+      expect(
+        backup.containsKey(
+          '${aiSeminarRuntimeScopedStateV1PrefsPrefix}seminar-chat-s2',
+        ),
+        isFalse,
+      );
       expect(jsonEncode(backup), isNot(contains('private seminar question')));
       expect(jsonEncode(backup), isNot(contains('private role answer')));
+      expect(
+        jsonEncode(backup),
+        isNot(contains('private scoped seminar question')),
+      );
+      expect(jsonEncode(backup), isNot(contains('private scoped role answer')));
     });
   });
 }

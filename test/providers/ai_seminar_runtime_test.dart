@@ -129,6 +129,125 @@ void main() {
     );
   }
 
+  test('scoped Seminar runtime providers isolate run state', () async {
+    configureProvider();
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(service()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container
+        .read(aiSeminarRuntimeScopedProvider('seminar-run-a').notifier)
+        .start(
+          AiSeminarSessionContract(
+            id: 'seminar-run-a',
+            question: 'Explain run A.',
+          ),
+        );
+    await container
+        .read(aiSeminarRuntimeScopedProvider('seminar-run-b').notifier)
+        .start(
+          AiSeminarSessionContract(
+            id: 'seminar-run-b',
+            question: 'Explain run B.',
+          ),
+        );
+
+    final runA = container.read(
+      aiSeminarRuntimeScopedProvider('seminar-run-a'),
+    );
+    final runB = container.read(
+      aiSeminarRuntimeScopedProvider('seminar-run-b'),
+    );
+    final legacy = container.read(aiSeminarRuntimeProvider);
+
+    expect(runA.session?.id, 'seminar-run-a');
+    expect(runA.session?.question, 'Explain run A.');
+    expect(runA.status, AiSeminarRunStatus.completed);
+    expect(runA.turns, hasLength(3));
+    expect(runB.session?.id, 'seminar-run-b');
+    expect(runB.session?.question, 'Explain run B.');
+    expect(runB.status, AiSeminarRunStatus.completed);
+    expect(runB.turns, hasLength(3));
+    expect(legacy.session, isNull);
+    expect(legacy.status, AiSeminarRunStatus.draft);
+  });
+
+  test('scoped Seminar runtime providers serialize model runs', () async {
+    configureProvider();
+    final firstRoleStarted = Completer<void>();
+    final releaseFirstRole = Completer<void>();
+    final secondRoleStarted = Completer<void>();
+    final runtimeService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async => bundle(),
+      streamRole: (invocation, _) async* {
+        if (invocation.session.id == 'seminar-run-a' &&
+            invocation.role == AiSeminarRole.critical) {
+          if (!firstRoleStarted.isCompleted) firstRoleStarted.complete();
+          await releaseFirstRole.future;
+        }
+        if (invocation.session.id == 'seminar-run-b' &&
+            invocation.role == AiSeminarRole.critical) {
+          if (!secondRoleStarted.isCompleted) secondRoleStarted.complete();
+        }
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.session.id}-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText:
+                '${invocation.session.id} ${invocation.role.asString}',
+            evidenceRefIds: const ['e1'],
+          ),
+        );
+      },
+      now: () => 1000,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(runtimeService),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final firstStart = container
+        .read(aiSeminarRuntimeScopedProvider('seminar-run-a').notifier)
+        .start(
+          AiSeminarSessionContract(
+            id: 'seminar-run-a',
+            question: 'Explain run A.',
+          ),
+        );
+    await firstRoleStarted.future;
+
+    final secondStart = container
+        .read(aiSeminarRuntimeScopedProvider('seminar-run-b').notifier)
+        .start(
+          AiSeminarSessionContract(
+            id: 'seminar-run-b',
+            question: 'Explain run B.',
+          ),
+        );
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+
+    expect(secondRoleStarted.isCompleted, isFalse);
+
+    releaseFirstRole.complete();
+    await secondRoleStarted.future;
+    await Future.wait([firstStart, secondStart]);
+
+    expect(
+      container.read(aiSeminarRuntimeScopedProvider('seminar-run-a')).status,
+      AiSeminarRunStatus.completed,
+    );
+    expect(
+      container.read(aiSeminarRuntimeScopedProvider('seminar-run-b')).status,
+      AiSeminarRunStatus.completed,
+    );
+  });
+
   test('start captures evidence role turns whiteboard and synthesis', () async {
     configureProvider();
     final container = ProviderContainer(

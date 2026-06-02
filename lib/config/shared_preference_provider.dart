@@ -59,10 +59,17 @@ const int prefsBackupSchemaVersion = 1;
 const String _prefsBackupEntryTypeKey = 'type';
 const String _prefsBackupEntryValueKey = 'value';
 const String aiSeminarRuntimeStateV1PrefsKey = 'aiSeminarRuntimeStateV1';
+const String aiSeminarRuntimeScopedStateV1PrefsPrefix =
+    '$aiSeminarRuntimeStateV1PrefsKey:';
 
 const Set<String> _prefsImportSkipKeys = {
   aiSeminarRuntimeStateV1PrefsKey,
 };
+
+bool _isAiSeminarRuntimeCacheKey(String key) {
+  return _prefsImportSkipKeys.contains(key) ||
+      key.startsWith(aiSeminarRuntimeScopedStateV1PrefsPrefix);
+}
 
 class Prefs extends ChangeNotifier {
   late SharedPreferences prefs;
@@ -232,7 +239,7 @@ class Prefs extends ChangeNotifier {
     };
     for (final String key in prefs.getKeys()) {
       // Skip ephemeral caches.
-      if (_prefsImportSkipKeys.contains(key) ||
+      if (_isAiSeminarRuntimeCacheKey(key) ||
           key.startsWith(_aiModelsCacheV1Prefix) ||
           key.startsWith(_mcpToolsCacheV1Prefix) ||
           key.startsWith(_mcpServerSecretV1Prefix)) {
@@ -271,7 +278,7 @@ class Prefs extends ChangeNotifier {
     for (final MapEntry<String, dynamic> entry in backup.entries) {
       final String key = entry.key;
       if (key == prefsBackupVersionKey ||
-          _prefsImportSkipKeys.contains(key) ||
+          _isAiSeminarRuntimeCacheKey(key) ||
           key.startsWith(_aiModelsCacheV1Prefix) ||
           key.startsWith(_mcpToolsCacheV1Prefix) ||
           key.startsWith(_mcpServerSecretV1Prefix)) {

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -64,15 +65,105 @@ final aiSeminarKnowledgeCardStoreProvider = Provider<KnowledgeCardStore>((ref) {
   return KnowledgeCardStore();
 });
 
-final aiSeminarRuntimeProvider =
-    StateNotifierProvider<AiSeminarRuntimeNotifier, AiSeminarRuntimeState>(
-  (ref) => AiSeminarRuntimeNotifier(
+String _seminarRuntimeStatePrefsKeyFor(String? runtimeScopeId) {
+  final scopeId = runtimeScopeId?.trim();
+  if (scopeId == null || scopeId.isEmpty) {
+    return aiSeminarRuntimeStateV1PrefsKey;
+  }
+  return '$aiSeminarRuntimeScopedStateV1PrefsPrefix'
+      '${Uri.encodeComponent(scopeId)}';
+}
+
+AiSeminarRuntimeNotifier _createAiSeminarRuntimeNotifier(
+  Ref ref, {
+  String? runtimeScopeId,
+}) {
+  return AiSeminarRuntimeNotifier(
     ref.watch(aiSeminarRuntimeServiceProvider),
     ref.watch(aiSeminarReviewItemStoreProvider),
     ref.watch(aiSeminarKnowledgeCardStoreProvider),
     ref.watch(aiSeminarProviderContextServiceProvider),
+    runtimeStatePrefsKey: _seminarRuntimeStatePrefsKeyFor(runtimeScopeId),
+  );
+}
+
+final aiSeminarRuntimeScopedProvider = StateNotifierProvider.family<
+    AiSeminarRuntimeNotifier, AiSeminarRuntimeState, String>(
+  (ref, runtimeScopeId) => _createAiSeminarRuntimeNotifier(
+    ref,
+    runtimeScopeId: runtimeScopeId,
   ),
 );
+
+final aiSeminarRuntimeProvider =
+    StateNotifierProvider<AiSeminarRuntimeNotifier, AiSeminarRuntimeState>(
+  (ref) => _createAiSeminarRuntimeNotifier(ref),
+);
+
+final _seminarRuntimeRunCoordinator = _AiSeminarRuntimeRunCoordinator();
+
+class _AiSeminarRuntimeRunWaiter {
+  _AiSeminarRuntimeRunWaiter(this.ownerId);
+
+  final String ownerId;
+  final Completer<_AiSeminarRuntimeRunLease> completer =
+      Completer<_AiSeminarRuntimeRunLease>();
+}
+
+class _AiSeminarRuntimeRunLease {
+  _AiSeminarRuntimeRunLease(this._coordinator, this._ownerId);
+
+  final _AiSeminarRuntimeRunCoordinator _coordinator;
+  final String _ownerId;
+  bool _released = false;
+
+  void release() {
+    if (_released) return;
+    _released = true;
+    _coordinator.release(_ownerId);
+  }
+}
+
+class _AiSeminarRuntimeRunCoordinator {
+  final Queue<_AiSeminarRuntimeRunWaiter> _waiters =
+      Queue<_AiSeminarRuntimeRunWaiter>();
+  String? _activeOwnerId;
+  int _activeDepth = 0;
+
+  Future<_AiSeminarRuntimeRunLease> acquire(String ownerId) {
+    if (_activeOwnerId == ownerId) {
+      _activeDepth += 1;
+      return Future.value(_AiSeminarRuntimeRunLease(this, ownerId));
+    }
+    if (_activeOwnerId == null && _waiters.isEmpty) {
+      _activeOwnerId = ownerId;
+      _activeDepth = 1;
+      return Future.value(_AiSeminarRuntimeRunLease(this, ownerId));
+    }
+    final waiter = _AiSeminarRuntimeRunWaiter(ownerId);
+    _waiters.add(waiter);
+    return waiter.completer.future;
+  }
+
+  void release(String ownerId) {
+    if (_activeOwnerId != ownerId) return;
+    _activeDepth -= 1;
+    if (_activeDepth > 0) return;
+    if (_waiters.isEmpty) {
+      _activeOwnerId = null;
+      _activeDepth = 0;
+      return;
+    }
+    final next = _waiters.removeFirst();
+    _activeOwnerId = next.ownerId;
+    _activeDepth = 1;
+    if (!next.completer.isCompleted) {
+      next.completer.complete(
+        _AiSeminarRuntimeRunLease(this, next.ownerId),
+      );
+    }
+  }
+}
 
 class AiSeminarReviewHandoffResult {
   const AiSeminarReviewHandoffResult({
@@ -406,9 +497,12 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     this._service,
     this._reviewStore,
     this._knowledgeCardStore,
-    this._providerContext,
-  ) : super(
-          _initialState(_providerContext),
+    this._providerContext, {
+    required String runtimeStatePrefsKey,
+  })  : _runtimeStatePrefsKey = runtimeStatePrefsKey,
+        _runtimeRunOwnerId = 'seminar-runtime-${_nextRuntimeOwnerId++}',
+        super(
+          _initialState(_providerContext, runtimeStatePrefsKey),
         ) {
     if (state.restoredFromLocalCache &&
         state.status == AiSeminarRunStatus.running) {
@@ -420,8 +514,11 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
   final ReviewItemStore _reviewStore;
   final KnowledgeCardStore _knowledgeCardStore;
   final AiSeminarProviderContextService _providerContext;
+  final String _runtimeStatePrefsKey;
+  final String _runtimeRunOwnerId;
   AiSeminarCancellationToken? _activeToken;
   int _generation = 0;
+  static int _nextRuntimeOwnerId = 1;
   static const String _providerInvoiceNotConnectedReason =
       'Provider invoice import is not connected for this run.';
 
@@ -462,6 +559,30 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
   }
 
   Future<void> _runResolvedSession(
+    AiSeminarSessionContract resolvedSession,
+    AiSeminarBackgroundJobSnapshot backgroundJob,
+    AiSeminarProviderDiagnostics providerDiagnostics, {
+    AiSeminarRuntimeCheckpoint? checkpoint,
+    AiSeminarDirectorState? directorStateSeed,
+    bool startQueuedAfterCompletion = true,
+  }) async {
+    final lease =
+        await _seminarRuntimeRunCoordinator.acquire(_runtimeRunOwnerId);
+    try {
+      await _runResolvedSessionWithLease(
+        resolvedSession,
+        backgroundJob,
+        providerDiagnostics,
+        checkpoint: checkpoint,
+        directorStateSeed: directorStateSeed,
+        startQueuedAfterCompletion: startQueuedAfterCompletion,
+      );
+    } finally {
+      lease.release();
+    }
+  }
+
+  Future<void> _runResolvedSessionWithLease(
     AiSeminarSessionContract resolvedSession,
     AiSeminarBackgroundJobSnapshot backgroundJob,
     AiSeminarProviderDiagnostics providerDiagnostics, {
@@ -873,6 +994,40 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       session,
       intervention.targetRole,
     );
+    await _runUserDirectedRoleStep(
+      session: session,
+      evidenceBundle: evidenceBundle,
+      intervention: intervention,
+      targetRole: targetRole,
+    );
+  }
+
+  Future<void> _runUserDirectedRoleStep({
+    required AiSeminarSessionContract session,
+    required AiSeminarEvidenceBundle evidenceBundle,
+    required AiSeminarUserIntervention intervention,
+    required AiSeminarRole targetRole,
+  }) async {
+    final lease =
+        await _seminarRuntimeRunCoordinator.acquire(_runtimeRunOwnerId);
+    try {
+      await _runUserDirectedRoleStepWithLease(
+        session: session,
+        evidenceBundle: evidenceBundle,
+        intervention: intervention,
+        targetRole: targetRole,
+      );
+    } finally {
+      lease.release();
+    }
+  }
+
+  Future<void> _runUserDirectedRoleStepWithLease({
+    required AiSeminarSessionContract session,
+    required AiSeminarEvidenceBundle evidenceBundle,
+    required AiSeminarUserIntervention intervention,
+    required AiSeminarRole targetRole,
+  }) async {
     final generation = ++_generation;
     final token = AiSeminarCancellationToken();
     _activeToken?.cancel();
@@ -1023,7 +1178,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     _activeToken = null;
     _generation += 1;
     try {
-      await Prefs().prefs.remove(aiSeminarRuntimeStateV1PrefsKey);
+      await Prefs().prefs.remove(_runtimeStatePrefsKey);
     } catch (_) {
       // Best-effort local recovery cache cleanup.
     }
@@ -1123,11 +1278,11 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     try {
       if (!mounted) return;
       if (state.session == null && state.status == AiSeminarRunStatus.draft) {
-        await Prefs().prefs.remove(aiSeminarRuntimeStateV1PrefsKey);
+        await Prefs().prefs.remove(_runtimeStatePrefsKey);
         return;
       }
       await Prefs().prefs.setString(
-            aiSeminarRuntimeStateV1PrefsKey,
+            _runtimeStatePrefsKey,
             jsonEncode(state.toJson()),
           );
     } catch (_) {
@@ -1483,16 +1638,17 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
 
   static AiSeminarRuntimeState _initialState(
     AiSeminarProviderContextService providerContext,
+    String runtimeStatePrefsKey,
   ) {
     final diagnostics = providerContext.resolve();
-    final raw = Prefs().prefs.getString(aiSeminarRuntimeStateV1PrefsKey);
+    final raw = Prefs().prefs.getString(runtimeStatePrefsKey);
     if (raw == null || raw.trim().isEmpty) {
       return AiSeminarRuntimeState.initial(providerDiagnostics: diagnostics);
     }
     try {
       final decoded = jsonDecode(raw);
       if (decoded is! Map) {
-        Prefs().prefs.remove(aiSeminarRuntimeStateV1PrefsKey);
+        Prefs().prefs.remove(runtimeStatePrefsKey);
         return AiSeminarRuntimeState.initial(providerDiagnostics: diagnostics);
       }
       final decodedState = AiSeminarRuntimeState.fromJson(
@@ -1547,7 +1703,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
             backgroundJobs: repairedJobs,
             clearError: true,
           );
-          _rewriteLocalRecoveryCache(resumable);
+          _rewriteLocalRecoveryCache(resumable, runtimeStatePrefsKey);
           return resumable;
         }
         final backgroundJob = _markBackgroundJob(
@@ -1627,7 +1783,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
               'AI Seminar was interrupted before it could finish. Retry to run it again.',
           completedAt: completedAt,
         );
-        _rewriteLocalRecoveryCache(interrupted);
+        _rewriteLocalRecoveryCache(interrupted, runtimeStatePrefsKey);
         return interrupted;
       }
       if (restored.backgroundJobs.any((job) => !job.status.isTerminal)) {
@@ -1643,21 +1799,24 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
           ),
           backgroundJobs: interruptedPendingJobs,
         );
-        _rewriteLocalRecoveryCache(repaired);
+        _rewriteLocalRecoveryCache(repaired, runtimeStatePrefsKey);
         return repaired;
       }
       return restored;
     } catch (_) {
-      Prefs().prefs.remove(aiSeminarRuntimeStateV1PrefsKey);
+      Prefs().prefs.remove(runtimeStatePrefsKey);
       return AiSeminarRuntimeState.initial(providerDiagnostics: diagnostics);
     }
   }
 
-  static void _rewriteLocalRecoveryCache(AiSeminarRuntimeState state) {
+  static void _rewriteLocalRecoveryCache(
+    AiSeminarRuntimeState state,
+    String runtimeStatePrefsKey,
+  ) {
     try {
       unawaited(
         Prefs().prefs.setString(
-              aiSeminarRuntimeStateV1PrefsKey,
+              runtimeStatePrefsKey,
               jsonEncode(state.toJson()),
             ),
       );

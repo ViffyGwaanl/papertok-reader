@@ -393,7 +393,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.byType(AiSeminarRuntimePanel), findsOneWidget);
-      await container.read(aiSeminarRuntimeProvider.notifier).start(
+      await container
+          .read(aiSeminarRuntimeScopedProvider('seminar-chat-history').notifier)
+          .start(
             AiSeminarSessionContract(
               id: 'seminar-chat-history',
               question: '这个概念怎么理解？',
@@ -545,7 +547,10 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      await container.read(aiSeminarRuntimeProvider.notifier).start(
+      await container
+          .read(
+              aiSeminarRuntimeScopedProvider('other-seminar-session').notifier)
+          .start(
             AiSeminarSessionContract(
               id: 'other-seminar-session',
               question: '另一个研讨',
@@ -629,7 +634,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      await container.read(aiSeminarRuntimeProvider.notifier).start(
+      await container
+          .read(aiSeminarRuntimeScopedProvider('seminar-chat-history').notifier)
+          .start(
             AiSeminarSessionContract(
               id: 'seminar-chat-history',
               question: '这个概念怎么理解？',

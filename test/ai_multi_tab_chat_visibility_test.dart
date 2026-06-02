@@ -112,6 +112,10 @@ void main() {
       find.text('Explain the source-grounded disagreement.'),
       findsAtLeastNWidgets(1),
     );
+    final panel = tester
+        .widget<AiSeminarRuntimePanel>(find.byType(AiSeminarRuntimePanel));
+    expect(panel.embedded, isTrue);
+    expect(panel.initialSessionId, startsWith('seminar-chat-'));
   });
 
   testWidgets('closing a streaming tab cancels its generation subscription',

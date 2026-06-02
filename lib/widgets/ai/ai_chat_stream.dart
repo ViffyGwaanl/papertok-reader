@@ -644,7 +644,37 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   List<AiSeminarRoleProfile>? _inlineSeminarRoleProfiles;
   int? _inlineSeminarMaxRounds;
   bool? _inlineSeminarIncludeVerifier;
-  String? _lastInlineSeminarCardSignature;
+  final Map<String, String> _lastSeminarCardSignatures = {};
+
+  String? _seminarRuntimeScopeId(String? raw) {
+    final value = raw?.trim();
+    return value == null || value.isEmpty ? null : value;
+  }
+
+  String _newSeminarChatSessionId() {
+    return 'seminar-chat-${DateTime.now().microsecondsSinceEpoch}';
+  }
+
+  AiSeminarRuntimeState _watchSeminarRuntimeState(String? sessionId) {
+    final scopeId = _seminarRuntimeScopeId(sessionId);
+    return scopeId == null
+        ? ref.watch(aiSeminarRuntimeProvider)
+        : ref.watch(aiSeminarRuntimeScopedProvider(scopeId));
+  }
+
+  AiSeminarRuntimeState _readSeminarRuntimeState(String? sessionId) {
+    final scopeId = _seminarRuntimeScopeId(sessionId);
+    return scopeId == null
+        ? ref.read(aiSeminarRuntimeProvider)
+        : ref.read(aiSeminarRuntimeScopedProvider(scopeId));
+  }
+
+  AiSeminarRuntimeNotifier _readSeminarRuntimeNotifier(String? sessionId) {
+    final scopeId = _seminarRuntimeScopeId(sessionId);
+    return scopeId == null
+        ? ref.read(aiSeminarRuntimeProvider.notifier)
+        : ref.read(aiSeminarRuntimeScopedProvider(scopeId).notifier);
+  }
 
   void _onDraftInputChanged() {
     if (_suppressDraftSync) return;
@@ -2722,8 +2752,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final sourceRef = _draftSourceRefSeedText == inputController.text
         ? _draftSourceRef
         : null;
-    final seminarSessionId =
-        'seminar-chat-${DateTime.now().millisecondsSinceEpoch}';
+    final seminarSessionId = _newSeminarChatSessionId();
     unawaited(
       ref.read(aiChatProvider.notifier).appendSeminarRunCard(
             question: question,
@@ -2751,7 +2780,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       _inlineSeminarRoleProfiles = runConfig?.roleProfiles;
       _inlineSeminarMaxRounds = runConfig?.maxRounds;
       _inlineSeminarIncludeVerifier = runConfig?.includeVerifier;
-      _lastInlineSeminarCardSignature = null;
+      _lastSeminarCardSignatures.remove(seminarSessionId);
     });
   }
 
@@ -2767,25 +2796,36 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     if (!mounted) return;
     final reading = ref.read(currentReadingProvider);
     final trimmedQuestion = question?.trim();
+    final normalizedSessionId = sessionId?.trim();
+    final resolvedSessionId =
+        normalizedSessionId == null || normalizedSessionId.isEmpty
+            ? _newSeminarChatSessionId()
+            : normalizedSessionId;
     setState(() {
       _inlineSeminarVisible = true;
       _inlineSeminarQuestion =
           trimmedQuestion == null || trimmedQuestion.isEmpty
               ? null
               : trimmedQuestion;
-      _inlineSeminarSessionId =
-          sessionId?.trim().isEmpty == true ? null : sessionId?.trim();
+      _inlineSeminarSessionId = resolvedSessionId;
       _inlineSeminarBookId = sourceRef?.bookId ?? bookId ?? reading.book?.id;
       _inlineSeminarSourceRef = sourceRef;
       _inlineSeminarRoleProfiles = roleProfiles;
       _inlineSeminarMaxRounds = maxRounds;
       _inlineSeminarIncludeVerifier = includeVerifier;
-      _lastInlineSeminarCardSignature = null;
+      _lastSeminarCardSignatures.remove(resolvedSessionId);
     });
   }
 
   void _syncInlineSeminarRunCard(AiSeminarRuntimeState state) {
-    final sessionId = _inlineSeminarSessionId?.trim();
+    _syncSeminarRunCardSnapshot(_inlineSeminarSessionId, state);
+  }
+
+  void _syncSeminarRunCardSnapshot(
+    String? rawSessionId,
+    AiSeminarRuntimeState state,
+  ) {
+    final sessionId = rawSessionId?.trim();
     if (sessionId == null || sessionId.isEmpty) return;
     final runtimeSession = state.session;
     if (runtimeSession == null || runtimeSession.id != sessionId) return;
@@ -2802,15 +2842,18 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       'sourceRefCount': sourceRefCount,
       'snapshot': snapshot?.toJson(),
     });
-    if (signature == _lastInlineSeminarCardSignature) return;
-    _lastInlineSeminarCardSignature = signature;
+    if (signature == _lastSeminarCardSignatures[sessionId]) return;
+    _lastSeminarCardSignatures[sessionId] = signature;
     unawaited(
-      ref.read(aiChatProvider.notifier).updateSeminarRunCardSnapshot(
-            seminarSessionId: sessionId,
-            status: state.status.asString,
-            sourceRefCount: sourceRefCount,
-            snapshot: snapshot,
-          ),
+      Future<bool>.microtask(() {
+        if (!mounted) return false;
+        return ref.read(aiChatProvider.notifier).updateSeminarRunCardSnapshot(
+              seminarSessionId: sessionId,
+              status: state.status.asString,
+              sourceRefCount: sourceRefCount,
+              snapshot: snapshot,
+            );
+      }),
     );
   }
 
@@ -3613,10 +3656,22 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       );
       _suppressDraftSync = false;
     });
-    ref.listen<AiSeminarRuntimeState>(aiSeminarRuntimeProvider, (_, next) {
-      if (!mounted) return;
-      _syncInlineSeminarRunCard(next);
-    });
+    final inlineSeminarScopeId =
+        _seminarRuntimeScopeId(_inlineSeminarSessionId);
+    if (inlineSeminarScopeId == null) {
+      ref.listen<AiSeminarRuntimeState>(aiSeminarRuntimeProvider, (_, next) {
+        if (!mounted) return;
+        _syncInlineSeminarRunCard(next);
+      });
+    } else {
+      ref.listen<AiSeminarRuntimeState>(
+        aiSeminarRuntimeScopedProvider(inlineSeminarScopeId),
+        (_, next) {
+          if (!mounted) return;
+          _syncInlineSeminarRunCard(next);
+        },
+      );
+    }
 
     final quickPrompts = _getQuickPrompts(context);
     final chatIsStreaming = ref.watch(aiChatStreamingProvider);
@@ -4663,7 +4718,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   Widget _buildSeminarRunCard(AiSeminarRunCardMeta card) {
     final l10n = L10n.of(context);
     final question = card.question.trim();
-    final runtimeState = ref.watch(aiSeminarRuntimeProvider);
+    final runtimeState = _watchSeminarRuntimeState(card.sessionId);
+    _syncSeminarRunCardSnapshot(card.sessionId, runtimeState);
     final canSendToReview = card.sessionId != null &&
         runtimeState.session?.id == card.sessionId &&
         runtimeState.canSendToReview;
@@ -4775,7 +4831,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   Future<void> _sendActiveSeminarRunCardToReview(String? sessionId) async {
     final l10n = L10n.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    final runtimeState = ref.read(aiSeminarRuntimeProvider);
+    final runtimeState = _readSeminarRuntimeState(sessionId);
     if (sessionId == null ||
         runtimeState.session?.id != sessionId ||
         !runtimeState.canSendToReview) {
@@ -4783,7 +4839,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     }
     try {
       final result =
-          await ref.read(aiSeminarRuntimeProvider.notifier).sendToReview();
+          await _readSeminarRuntimeNotifier(sessionId).sendToReview();
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(
