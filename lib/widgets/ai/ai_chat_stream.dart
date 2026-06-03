@@ -7066,7 +7066,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         ? _seminarReviewCandidateCardItems(activeSynthesis)
         : const <_SeminarReviewPreviewItem>[];
     final reviewQuestions = canPreviewHandoff
-        ? _seminarReviewQuestions(activeSynthesis.candidateReviewQuestions)
+        ? _seminarReviewQuestionItems(activeSynthesis)
         : const <_SeminarReviewPreviewItem>[];
     final candidateCardCount =
         canPreviewHandoff ? activeSynthesis.candidateCards.length : 0;
@@ -7158,6 +7158,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     zh: '知识卡候选明细',
                     en: 'KnowledgeCard candidate details',
                   ),
+                  evidenceLabel: _localizedSeminarCardText(
+                    zh: '候选证据',
+                    en: 'Candidate evidence',
+                  ),
                   items: candidateCardItems,
                 ),
               ],
@@ -7177,6 +7181,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                   label: _localizedSeminarCardText(
                     zh: '复习候选明细',
                     en: 'Spaced Review candidate details',
+                  ),
+                  evidenceLabel: _localizedSeminarCardText(
+                    zh: '综合证据',
+                    en: 'Synthesis evidence',
                   ),
                   items: reviewQuestions,
                 ),
@@ -7233,22 +7241,47 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         .toList(growable: false);
   }
 
-  List<_SeminarReviewPreviewItem> _seminarReviewQuestions(
-    List<String> questions,
+  List<_SeminarReviewPreviewItem> _seminarReviewQuestionItems(
+    AiSeminarSynthesis synthesis,
   ) {
+    final evidenceById = <String, AiSeminarEvidence>{
+      for (final item in synthesis.evidence)
+        if (item.id.trim().isNotEmpty) item.id.trim(): item,
+    };
+    final synthesisEvidenceRefs = synthesis.evidenceRefIds
+        .map((id) => evidenceById[id.trim()])
+        .whereType<AiSeminarEvidence>()
+        .where((item) => item.isTraceable)
+        .take(2)
+        .map(
+          (item) => AiSeminarRunCardEvidenceSnapshot(
+            id: item.id,
+            title: _seminarEvidenceSnapshotTitle(item),
+            snippet: _seminarEvidenceSnapshotSnippet(item),
+            sourceRef: item.sourceRef,
+          ),
+        )
+        .where((item) => !item.isEmpty)
+        .toList(growable: false);
     final seen = <String>{};
     final items = <_SeminarReviewPreviewItem>[];
-    for (final raw in questions) {
+    for (final raw in synthesis.candidateReviewQuestions) {
       final question = raw.trim();
       if (question.isEmpty) continue;
       if (!seen.add(question.toLowerCase())) continue;
-      items.add(_SeminarReviewPreviewItem(text: question));
+      items.add(
+        _SeminarReviewPreviewItem(
+          text: question,
+          evidenceRefs: synthesisEvidenceRefs,
+        ),
+      );
     }
     return items;
   }
 
   Widget _seminarSnapshotReviewItems({
     required String label,
+    required String evidenceLabel,
     required List<_SeminarReviewPreviewItem> items,
   }) {
     final visibleItems = items.take(3).toList(growable: false);
@@ -7298,10 +7331,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _seminarSnapshotDetailLabel(
-                            _localizedSeminarCardText(
-                              zh: '候选证据',
-                              en: 'Candidate evidence',
-                            ),
+                            evidenceLabel,
                           ),
                           const SizedBox(height: 5),
                           for (final evidence in item.evidenceRefs)

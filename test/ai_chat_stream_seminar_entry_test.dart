@@ -1419,6 +1419,8 @@ void main() {
       expect(find.text('Additional source passage 4.'), findsOneWidget);
       expect(find.text('复习候选：1 项'), findsOneWidget);
       expect(find.text('What boundary should be reviewed?'), findsOneWidget);
+      expect(find.text('综合证据'), findsOneWidget);
+      expect(find.text('The source passage.'), findsOneWidget);
       expect(find.text('普通学习保存请优先使用知识卡、复习或我的图谱。'), findsOneWidget);
 
       await tester.tap(find.text('异常送审'));
