@@ -65,7 +65,7 @@ draft -> pending -> approved/dismissed -> applied
 | TaskID | Goal | Depends On | Output Artifact | Acceptance |
 | --- | --- | --- | --- | --- |
 | E03-C01-T01 | 定义 KnowledgeCard schema | E00 Ready | card contract | 字段、状态、归属、sourceRefs 明确。 |
-| E03-C01-T02 | 接入 KnowledgeCard runtime model/store | E03-C01-T01 | `lib/models/knowledge_card.dart`, `KnowledgeCardStore` | AI-generated card 默认 draft/pending，applied 无 traceable evidence 会降级。 |
+| E03-C01-T02 | 接入 KnowledgeCard runtime model/store | E03-C01-T01 | `lib/models/knowledge_card.dart`, `KnowledgeCardStore` | AI-generated card 普通入口默认 draft；pending 只用于显式兼容 Review、异常、低置信或来源断裂 handoff；applied 无 traceable evidence 会降级。 |
 | E03-C02-T01 | 定义 producer matrix | E03-C01-T01 | producer table | 每个来源有输入、输出、失败策略。 |
 | E03-C03-T01 | 定义重复检测策略 | E03-C01-T01 | dedupe spec | 同一段文字重复生成不产生重复正式卡。 |
 | E03-C03-T02 | 接入 duplicate candidate guard | E03-C03-T01 | `KnowledgeCardStore.upsertCandidate` | 同 source hash、book anchor 或 normalized quote 不制造重复卡，不覆盖用户 note。 |
@@ -94,7 +94,7 @@ draft -> pending -> approved/dismissed -> applied
 最小端到端验收：
 
 ```text
-选中文本 -> 生成 KnowledgeCard draft -> Review approve -> 进入复习项 -> 点击 source -> 跳回原文
+选中文本 -> 生成 KnowledgeCard draft -> 当前页确认加入复习或保存 -> 点击 source -> 跳回原文
 ```
 
 ## 7. Non-Goals
