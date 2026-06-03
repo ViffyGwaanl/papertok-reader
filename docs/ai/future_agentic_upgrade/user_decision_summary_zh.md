@@ -96,13 +96,13 @@
 - 独立 Seminar runtime 已支持 evidence、角色输出、共享白板、synthesis、Review handoff、budget、job 状态和本机恢复。
 - Seminar settings 已支持每个默认角色的显示名、custom prompt、启用状态、会话证据提示和允许的只读工具；新 session 会把这些设置注入角色 prompt，session JSON 和恢复缓存会保留 profile；当前可见证据提示只开放 current book/library，并合并到整场 evidence bundle；关闭角色后新 run 会跳过该角色，全部关闭时降级为 synthesizer；写工具、联网工具、unknown tool 和递归 `spawn_sub_agent` 会被过滤。
 - 阅读页选中文本入口能带入真实 SourceRef。
-- completed AI Chat Seminar 历史卡已显示 `读者参与`，用户可在同一张卡里输入回复，点名某个角色回应、重新找证据或整理总结；输入只写 user-turn ledger，不进入 formal evidence。
+- completed 或 Director `askUser` 的 AI Chat Seminar 历史卡已显示 `读者参与`；`askUser` 时卡内会提示 `主持人正在等待你的回应` 并贴近显示第一条开放问题。用户可在同一张卡里输入回复，点名某个角色回应、重新找证据或整理总结；输入只写 user-turn ledger，不进入 formal evidence。
 - completed AI Chat Seminar 历史卡如果已有分歧，会显示 `分歧继续讨论`，用户可以不用复制分歧文本，默认让 critical 反驳；如果本场没有启用 critical，则退回到当前可用角色回应；也可围绕该分歧重新找 evidence。
 - AI Chat Seminar 历史卡的 snapshot 已有第一片子视图：用户可在 `全部 / 证据 / 角色 / 分歧 / 白板 / 总结` 之间切换；切到 `分歧` 时只聚焦分歧正文，切到 `证据` 时只看证据快照。
 
 还要做什么：
 
-- 把当前带 snapshot、白板正文首片、首片异常送审按钮、异常送审内容计数、候选明细、知识卡候选证据摘录和复习候选综合证据、completed 卡内低负担保存动作、completed 卡内读者参与 composer、分歧快捷继续讨论入口、snapshot 子视图首片和 AI Chat scoped runtime 的历史任务卡继续升级为完整 AI Chat message part / run 卡片，补齐完整异常送审详情表、完整 contradiction 详情 tab、message part schema migration 和独立详情页 scoped store。
+- 把当前带 snapshot、白板正文首片、首片异常送审按钮、异常送审内容计数、候选明细、知识卡候选证据摘录和复习候选综合证据、completed 卡内低负担保存动作、completed / askUser 卡内读者参与 composer、分歧快捷继续讨论入口、snapshot 子视图首片和 AI Chat scoped runtime 的历史任务卡继续升级为完整 AI Chat message part / run 卡片，补齐完整异常送审详情表、完整 contradiction 详情 tab、message part schema migration 和独立详情页 scoped store。
 - 让 `DirectorState` 从已接入的可恢复账本和 next-intent policy 升级为真实调度器输入：根据已发言角色、分歧、证据刷新次数、用户插话和下一步 intent 决定继续找证据、让某个角色反驳、向用户提问或总结。
 - 补齐角色 profile 治理的剩余部分：默认角色仍是 `critical/supportive/synthesizer/verifier`；显示名、custom prompt、启用状态、会话证据提示和只读工具范围已有 Settings 全局默认；后续还要增加 AI Chat 单次 run 临时配置、空 prompt 显式提示、角色级证据过滤、角色级预算和真实角色工具调用闭环。
 - 增加多轮机制：第一轮观点后做 contradiction scan；证据不足或角色冲突时重新检索，再进入反驳轮，最后 synthesis。

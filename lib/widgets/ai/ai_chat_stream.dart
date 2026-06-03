@@ -5537,6 +5537,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final isSubmitting = _seminarCardSubmittingSessionIds.contains(sessionId);
     final canSubmit = controller.text.trim().isNotEmpty && !isSubmitting;
     final borderColor = ClaudePalette.divider(context);
+    final isAwaitingReader = runtimeState.directorState?.needsUserInput == true;
+    final askUserQuestion =
+        isAwaitingReader ? _seminarCardFirstOpenQuestion(runtimeState) : null;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -5575,15 +5578,36 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             ),
             const SizedBox(height: 6),
             Text(
-              _localizedSeminarCardText(
-                zh: '你的输入会作为读者回合记录，可以要求角色继续反驳、重新找证据或整理总结，不会被当成书内证据。',
-                en: 'Your reply is stored as a reader turn. It can steer a role, refresh evidence, or synthesize the run, and is not treated as book evidence.',
-              ),
+              isAwaitingReader
+                  ? _localizedSeminarCardText(
+                      zh: '主持人正在等待你的回应',
+                      en: 'The Director is waiting for your reply',
+                    )
+                  : _localizedSeminarCardText(
+                      zh: '你的输入会作为读者回合记录，可以要求角色继续反驳、重新找证据或整理总结，不会被当成书内证据。',
+                      en: 'Your reply is stored as a reader turn. It can steer a role, refresh evidence, or synthesize the run, and is not treated as book evidence.',
+                    ),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: ClaudePalette.secondary(context),
+                    color: isAwaitingReader
+                        ? ClaudePalette.fg(context)
+                        : ClaudePalette.secondary(context),
+                    fontWeight:
+                        isAwaitingReader ? FontWeight.w700 : FontWeight.w400,
                     height: 1.32,
                   ),
             ),
+            if (askUserQuestion != null) ...[
+              const SizedBox(height: 3),
+              Text(
+                askUserQuestion,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: ClaudePalette.secondary(context),
+                      height: 1.32,
+                    ),
+              ),
+            ],
             const SizedBox(height: 8),
             TextField(
               key: ValueKey('seminar-chat-card-reply-$sessionId'),
@@ -5696,6 +5720,19 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         ),
       ),
     );
+  }
+
+  String? _seminarCardFirstOpenQuestion(AiSeminarRuntimeState runtimeState) {
+    final entries = <AiSeminarWhiteboardEntry>[
+      ...runtimeState.whiteboardEntries,
+      for (final turn in runtimeState.turns) ...turn.whiteboardEntries,
+    ];
+    for (final entry in entries) {
+      if (entry.kind != AiSeminarWhiteboardKind.openQuestion) continue;
+      final text = entry.text.trim();
+      if (text.isNotEmpty) return text;
+    }
+    return null;
   }
 
   Widget _buildSeminarRunCardDisagreementActions(

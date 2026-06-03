@@ -2253,6 +2253,132 @@ void main() {
   );
 
   testWidgets(
+    'Seminar chat card surfaces a Director askUser reader turn',
+    (tester) async {
+      tester.view.physicalSize = const Size(900, 1800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      const providerId = 'openai';
+      final providers = [
+        AiProviderMeta(
+          id: providerId,
+          name: 'OpenAI',
+          type: AiProviderType.openaiCompatible,
+          enabled: true,
+          isBuiltIn: true,
+          createdAt: 1,
+          updatedAt: 1,
+        ),
+      ];
+      final prompts = <String>[];
+
+      SharedPreferences.setMockInitialValues({
+        'selectedAiService': providerId,
+        'aiProvidersV1': AiProviderMeta.encodeList(providers),
+        'aiConfig_$providerId': jsonEncode({'model': 'gpt-test'}),
+        'activeAiSkillId': 'paper_analyzer',
+      });
+      await Prefs().initPrefs();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            aiSeminarRuntimeServiceProvider.overrideWithValue(
+              _seminarCardAskUserService(prompts),
+            ),
+          ],
+          child: MaterialApp(
+            navigatorKey: navigatorKey,
+            locale: const Locale('zh', 'CN'),
+            localizationsDelegates: L10n.localizationsDelegates,
+            supportedLocales: L10n.supportedLocales,
+            home: const AiChatStream(),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(AiChatStream)),
+      );
+      await container.read(aiChatProvider.future);
+      container
+          .read(aiChatProvider.notifier)
+          .loadHistoryEntry(_seminarCardHistoryEntry());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      await container
+          .read(aiSeminarRuntimeScopedProvider('seminar-chat-history').notifier)
+          .start(
+            AiSeminarSessionContract(
+              id: 'seminar-chat-history',
+              question: '这个概念怎么理解？',
+              bookId: 7,
+              roles: AiSeminarRole.defaultRoles,
+              createdAt: 1000,
+            ),
+          );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+
+      final askUserState = container.read(
+        aiSeminarRuntimeScopedProvider('seminar-chat-history'),
+      );
+      expect(askUserState.status, AiSeminarRunStatus.completed);
+      expect(
+        askUserState.directorState!.nextIntent,
+        AiSeminarDirectorNextIntent.askUser,
+      );
+      expect(askUserState.directorState!.needsUserInput, true);
+      expect(find.byType(AiSeminarRuntimePanel), findsNothing);
+      expect(find.text('读者参与'), findsOneWidget);
+      expect(find.text('主持人正在等待你的回应'), findsOneWidget);
+      expect(
+        find.text('Which interpretation should the reader test next?'),
+        findsAtLeastNWidgets(1),
+      );
+
+      await tester.enterText(
+        find.byKey(
+          const ValueKey('seminar-chat-card-reply-seminar-chat-history'),
+        ),
+        '我想先让批判者回应这个开放问题。',
+      );
+      await tester.pump();
+      await tester.tap(
+        find.byKey(
+          const ValueKey('seminar-chat-card-ask-role-seminar-chat-history'),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final state = container.read(
+        aiSeminarRuntimeScopedProvider('seminar-chat-history'),
+      );
+      expect(state.turns.last.id, 'turn-critical-follow-up');
+      expect(state.turns.last.responseText, 'critical follow-up response');
+      expect(
+        state.directorState!.lastUserIntervention!.requestedAction,
+        AiSeminarUserInterventionAction.askRole,
+      );
+      expect(
+        state.directorState!.lastUserIntervention!.targetRole,
+        AiSeminarRole.critical,
+      );
+      expect(state.directorState!.lastUserIntervention!.isEvidence, false);
+      expect(
+        prompts.last,
+        contains('Reader intervention: 我想先让批判者回应这个开放问题。'),
+      );
+      expect(find.text('critical follow-up response'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
     'Seminar chat card continues directly from a disagreement',
     (tester) async {
       tester.view.physicalSize = const Size(900, 1800);
@@ -3027,6 +3153,59 @@ AiSeminarRuntimeService _seminarSnapshotService({
                 text: 'What boundary should be reviewed?',
                 role: AiSeminarRole.synthesizer,
                 evidenceRefIds: ['e4'],
+              ),
+          ],
+        ),
+      );
+    },
+    now: () => 1000,
+  );
+}
+
+AiSeminarRuntimeService _seminarCardAskUserService(List<String> prompts) {
+  final sourceRef = SourceRef(
+    bookId: 7,
+    href: 'Text/ch1.xhtml',
+    cfi: 'epubcfi(/6/8)',
+    jumpLink: 'paperreader://reader/open?bookId=7&cfi=epubcfi%28/6/8%29',
+    sourceTextSnippet: 'The source passage.',
+    sourceKind: SourceRefKind.currentBookRag,
+  );
+  final bundle = AiSeminarEvidenceBundle(
+    query: '这个概念怎么理解？',
+    evidence: [
+      AiSeminarEvidence(
+        id: 'e1',
+        scope: AiSeminarEvidenceScope.currentBook,
+        text: 'The source passage.',
+        sourceRef: sourceRef,
+      ),
+    ],
+  );
+  return AiSeminarRuntimeService(
+    fetchEvidence: (_) async => bundle,
+    streamRole: (invocation, _) async* {
+      prompts.add(invocation.prompt);
+      final isFollowUp = invocation.prompt.contains('Reader intervention:');
+      yield AiSeminarRoleStreamChunk(
+        completedTurn: AiSeminarRoleTurn(
+          id: isFollowUp
+              ? 'turn-${invocation.role.asString}-follow-up'
+              : 'turn-${invocation.role.asString}',
+          role: invocation.role,
+          prompt: invocation.prompt,
+          responseText: isFollowUp
+              ? '${invocation.role.asString} follow-up response'
+              : '${invocation.role.asString} response',
+          evidenceRefIds: const ['e1'],
+          whiteboardEntries: [
+            if (!isFollowUp && invocation.role == AiSeminarRole.synthesizer)
+              const AiSeminarWhiteboardEntry(
+                id: 'open-question-1',
+                kind: AiSeminarWhiteboardKind.openQuestion,
+                text: 'Which interpretation should the reader test next?',
+                role: AiSeminarRole.synthesizer,
+                evidenceRefIds: ['e1'],
               ),
           ],
         ),
