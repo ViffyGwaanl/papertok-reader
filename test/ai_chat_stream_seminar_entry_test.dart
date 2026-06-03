@@ -1354,7 +1354,7 @@ void main() {
         ProviderScope(
           overrides: [
             aiSeminarRuntimeServiceProvider.overrideWithValue(
-              _seminarSnapshotService(),
+              _seminarSnapshotService(includeReviewCandidates: true),
             ),
             aiSeminarReviewItemStoreProvider.overrideWithValue(reviewStore),
             aiSeminarKnowledgeCardStoreProvider.overrideWithValue(cardStore),
@@ -1413,8 +1413,10 @@ void main() {
       expect(find.text('可追踪证据：3 条'), findsOneWidget);
       expect(find.text('异常送审内容'), findsOneWidget);
       expect(find.text('综合总结：1 项'), findsOneWidget);
-      expect(find.text('知识卡候选：0 项'), findsOneWidget);
-      expect(find.text('复习候选：0 项'), findsOneWidget);
+      expect(find.text('知识卡候选：1 项'), findsOneWidget);
+      expect(find.text('Exception card candidate'), findsOneWidget);
+      expect(find.text('复习候选：1 项'), findsOneWidget);
+      expect(find.text('What boundary should be reviewed?'), findsOneWidget);
       expect(find.text('普通学习保存请优先使用知识卡、复习或我的图谱。'), findsOneWidget);
 
       await tester.tap(find.text('异常送审'));
@@ -1435,9 +1437,17 @@ void main() {
       expect(synthesis.payload['summary'], 'synthesizer response');
       expect(synthesis.sourceRefs, isNotEmpty);
       expect(synthesis.sourceRefs.every((ref) => ref.hasEvidence), true);
-      expect(seminarCards, isEmpty);
+      expect(
+        pendingItems.map((item) => item.sourceType).toSet(),
+        containsAll({
+          ReviewItemSourceType.seminarSynthesis,
+          ReviewItemSourceType.knowledgeCard,
+          ReviewItemSourceType.flashcardCandidate,
+        }),
+      );
+      expect(seminarCards.single.title, 'Exception card candidate');
       expect(appliedItems, isEmpty);
-      expect(find.textContaining('已将综合总结和 0 张卡片送入异常待审。'), findsOneWidget);
+      expect(find.textContaining('已将综合总结和 1 张卡片送入异常待审。'), findsOneWidget);
     },
   );
 
@@ -2937,7 +2947,9 @@ AiChatHistoryEntry _seminarCardHistoryEntry({
   );
 }
 
-AiSeminarRuntimeService _seminarSnapshotService() {
+AiSeminarRuntimeService _seminarSnapshotService({
+  bool includeReviewCandidates = false,
+}) {
   final sourceRefs = List<SourceRef>.generate(
     5,
     (index) => SourceRef(
@@ -2992,6 +3004,25 @@ AiSeminarRuntimeService _seminarSnapshotService() {
                 text: 'Scope remains disputed.',
                 role: AiSeminarRole.critical,
                 evidenceRefIds: ['e1'],
+              ),
+            if (includeReviewCandidates &&
+                invocation.role == AiSeminarRole.synthesizer)
+              const AiSeminarWhiteboardEntry(
+                id: 'candidate-card-1',
+                kind: AiSeminarWhiteboardKind.candidateCard,
+                text: 'Exception card candidate',
+                role: AiSeminarRole.synthesizer,
+                evidenceRefIds: ['e4'],
+                conceptRefs: ['Exception concept'],
+              ),
+            if (includeReviewCandidates &&
+                invocation.role == AiSeminarRole.synthesizer)
+              const AiSeminarWhiteboardEntry(
+                id: 'review-question-1',
+                kind: AiSeminarWhiteboardKind.reviewSuggestion,
+                text: 'What boundary should be reviewed?',
+                role: AiSeminarRole.synthesizer,
+                evidenceRefIds: ['e4'],
               ),
           ],
         ),

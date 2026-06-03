@@ -7062,11 +7062,15 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final canPreviewHandoff = activeSynthesis != null &&
         activeSynthesis.readyForReview &&
         activeSynthesis.hasTraceableHandoff;
+    final candidateCardTitles = canPreviewHandoff
+        ? _seminarReviewCandidateCardTitles(activeSynthesis.candidateCards)
+        : const <String>[];
+    final reviewQuestions = canPreviewHandoff
+        ? _seminarReviewQuestions(activeSynthesis.candidateReviewQuestions)
+        : const <String>[];
     final candidateCardCount =
         canPreviewHandoff ? activeSynthesis.candidateCards.length : 0;
-    final flashcardCandidateCount = canPreviewHandoff
-        ? _seminarReviewQuestionCount(activeSynthesis.candidateReviewQuestions)
-        : 0;
+    final flashcardCandidateCount = reviewQuestions.length;
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
@@ -7147,6 +7151,16 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       : 'KnowledgeCard candidates: $candidateCardCount items',
                 ),
               ),
+              if (candidateCardTitles.isNotEmpty) ...[
+                const SizedBox(height: 3),
+                _seminarSnapshotReviewItems(
+                  label: _localizedSeminarCardText(
+                    zh: '知识卡候选明细',
+                    en: 'KnowledgeCard candidate details',
+                  ),
+                  items: candidateCardTitles,
+                ),
+              ],
               const SizedBox(height: 4),
               _seminarSnapshotReviewLine(
                 Icons.quiz_outlined,
@@ -7157,6 +7171,16 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       : 'Spaced Review candidates: $flashcardCandidateCount items',
                 ),
               ),
+              if (reviewQuestions.isNotEmpty) ...[
+                const SizedBox(height: 3),
+                _seminarSnapshotReviewItems(
+                  label: _localizedSeminarCardText(
+                    zh: '复习候选明细',
+                    en: 'Spaced Review candidate details',
+                  ),
+                  items: reviewQuestions,
+                ),
+              ],
             ],
             const SizedBox(height: 6),
             Text(
@@ -7175,14 +7199,83 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     );
   }
 
-  int _seminarReviewQuestionCount(List<String> questions) {
+  List<String> _seminarReviewCandidateCardTitles(
+    List<AiSeminarWhiteboardEntry> cards,
+  ) {
+    return cards
+        .map((card) => card.text.trim())
+        .where((title) => title.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  List<String> _seminarReviewQuestions(List<String> questions) {
     final seen = <String>{};
+    final items = <String>[];
     for (final raw in questions) {
       final question = raw.trim();
       if (question.isEmpty) continue;
-      seen.add(question.toLowerCase());
+      if (!seen.add(question.toLowerCase())) continue;
+      items.add(question);
     }
-    return seen.length;
+    return items;
+  }
+
+  Widget _seminarSnapshotReviewItems({
+    required String label,
+    required List<String> items,
+  }) {
+    final visibleItems = items.take(3).toList(growable: false);
+    final remainingCount = items.length - visibleItems.length;
+    return Padding(
+      padding: const EdgeInsets.only(left: 21),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _seminarSnapshotDetailLabel(label),
+          const SizedBox(height: 3),
+          for (final item in visibleItems)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 3),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '•',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: ClaudePalette.secondary(context),
+                        ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      item,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: ClaudePalette.secondary(context),
+                            height: 1.32,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (remainingCount > 0)
+            Text(
+              _localizedSeminarCardText(
+                zh: '还有 $remainingCount 项',
+                en: remainingCount == 1
+                    ? '1 more item'
+                    : '$remainingCount more items',
+              ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: ClaudePalette.secondary(context),
+                    height: 1.3,
+                  ),
+            ),
+        ],
+      ),
+    );
   }
 
   Widget _seminarSnapshotReviewLine(IconData icon, String text) {
