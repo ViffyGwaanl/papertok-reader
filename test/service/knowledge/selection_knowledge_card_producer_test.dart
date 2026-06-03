@@ -28,7 +28,7 @@ void main() {
     if (tempRoot.existsSync()) tempRoot.deleteSync(recursive: true);
   });
 
-  test('selected reader text becomes a pending KnowledgeCard review item',
+  test('selected reader text defaults to a draft KnowledgeCard without Review',
       () async {
     final result = await producer.createFromSelection(
       bookId: 42,
@@ -40,9 +40,10 @@ void main() {
     );
 
     expect(result.inserted, true);
-    expect(result.addedToReviewInbox, true);
+    expect(result.addedToReviewInbox, false);
+    expect(result.reviewItem, isNull);
     expect(result.card.origin, KnowledgeCardOrigin.selection);
-    expect(result.card.reviewState, KnowledgeCardReviewState.pending);
+    expect(result.card.reviewState, KnowledgeCardReviewState.draft);
     expect(result.card.quote, 'Argument mapping helps readers compare claims.');
     expect(result.card.sourceRefs.single.bookId, 42);
     expect(result.card.sourceRefs.single.cfi, 'epubcfi(/6/4)');
@@ -51,14 +52,59 @@ void main() {
     final cards = await cardStore.list();
     expect(cards, hasLength(1));
     expect(cards.single.id, result.card.id);
+    expect(await reviewStore.list(), isEmpty);
+  });
+
+  test('selected reader text can be explicitly sent to Review', () async {
+    final result = await producer.createFromSelection(
+      bookId: 42,
+      cfi: 'epubcfi(/6/4)',
+      selectedText: 'Argument mapping helps readers compare claims.',
+      chapterTitle: 'Chapter 2',
+      bookTitle: 'Thinking With Books',
+      createReviewItem: true,
+      now: 100,
+    );
 
     final reviewItems = await reviewStore.list(
       status: ReviewItemStatus.pending,
       sourceType: ReviewItemSourceType.knowledgeCard,
     );
+
+    expect(result.inserted, true);
+    expect(result.addedToReviewInbox, true);
+    expect(result.card.reviewState, KnowledgeCardReviewState.pending);
     expect(reviewItems, hasLength(1));
     expect(reviewItems.single.sourceId, result.card.id);
     expect(reviewItems.single.sourceRefs.single.canJumpBack, true);
+  });
+
+  test('selected reader text can be saved as draft without Review', () async {
+    final result = await producer.createFromSelection(
+      bookId: 42,
+      cfi: 'epubcfi(/6/4)',
+      selectedText: 'Argument mapping helps readers compare claims.',
+      chapterTitle: 'Chapter 2',
+      bookTitle: 'Thinking With Books',
+      now: 100,
+    );
+
+    expect(result.inserted, true);
+    expect(result.addedToReviewInbox, false);
+    expect(result.reviewItem, isNull);
+    expect(result.card.origin, KnowledgeCardOrigin.selection);
+    expect(result.card.reviewState, KnowledgeCardReviewState.draft);
+    expect(
+        result.card.explanation, contains('Selected passage saved as draft'));
+    expect(result.card.explanation, isNot(contains('review')));
+    expect(result.card.sourceRefs.single.canJumpBack, true);
+
+    final cards = await cardStore.list(
+      reviewState: KnowledgeCardReviewState.draft,
+      origin: KnowledgeCardOrigin.selection,
+    );
+    expect(cards, hasLength(1));
+    expect(await reviewStore.list(), isEmpty);
   });
 
   test('duplicate selected text reuses existing card without duplicate inbox',
@@ -82,15 +128,10 @@ void main() {
 
     expect(second.inserted, false);
     expect(second.duplicateOfId, first.card.id);
-    expect(second.addedToReviewInbox, true);
+    expect(second.addedToReviewInbox, false);
+    expect(second.reviewItem, isNull);
     expect(await cardStore.list(), hasLength(1));
-    expect(
-      await reviewStore.list(
-        status: ReviewItemStatus.pending,
-        sourceType: ReviewItemSourceType.knowledgeCard,
-      ),
-      hasLength(1),
-    );
+    expect(await reviewStore.list(), isEmpty);
   });
 
   test('duplicate approved card is not re-added to pending review', () async {
@@ -100,6 +141,7 @@ void main() {
       selectedText: 'Argument mapping helps readers compare claims.',
       chapterTitle: 'Chapter 2',
       bookTitle: 'Thinking With Books',
+      createReviewItem: true,
       now: 100,
     );
     final approvedReviewItem = await reviewStore.approve(
@@ -114,6 +156,7 @@ void main() {
       selectedText: 'Argument mapping helps readers compare claims.',
       chapterTitle: 'Chapter 2',
       bookTitle: 'Thinking With Books',
+      createReviewItem: true,
       now: 200,
     );
 

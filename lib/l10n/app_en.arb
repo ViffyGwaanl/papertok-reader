@@ -107,6 +107,7 @@
   },
   "knowledgeCardAddedToReviewInbox": "Added to Review inbox",
   "knowledgeCardAlreadyInReviewInbox": "Knowledge card already waiting for review",
+  "knowledgeCardSavedInline": "Saved as draft knowledge card",
   "knowledgeCardAlreadySaved": "Knowledge card already saved",
   "knowledgeCardAddFailed": "Could not create knowledge card",
   "contextMenuShare": "Share",

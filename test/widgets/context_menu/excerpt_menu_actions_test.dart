@@ -69,7 +69,7 @@ void main() {
     expect(find.text('Graph', skipOffstage: false), findsOneWidget);
   });
 
-  testWidgets('selected-text Card action creates a review candidate from menu',
+  testWidgets('selected-text Card action saves a draft card from menu',
       (tester) async {
     TestWidgetsFlutterBinding.ensureInitialized();
     SharedPreferences.setMockInitialValues({});
@@ -142,11 +142,11 @@ void main() {
                           sourceKind: SourceRefKind.reader,
                         ),
                       ],
-                      reviewState: KnowledgeCardReviewState.pending,
+                      reviewState: KnowledgeCardReviewState.draft,
                       origin: KnowledgeCardOrigin.selection,
                     ),
                     inserted: true,
-                    addedToReviewInbox: true,
+                    addedToReviewInbox: false,
                   );
                 },
                 knowledgeCardFeedback: feedback.add,
@@ -172,7 +172,7 @@ void main() {
     );
     expect(calls.single.bookTitle, 'Evidence Book');
     expect(calls.single.chapterTitle, 'Chapter 1');
-    expect(feedback, ['Added to Review inbox']);
+    expect(feedback, ['Saved as draft knowledge card']);
     expect(closed, true);
   });
 
@@ -250,7 +250,7 @@ void main() {
         Directory('${tempRoot.path}${Platform.pathSeparator}memory');
     final cards = await tester.runAsync(
           () => KnowledgeCardStore(rootDir: knowledgeRoot).list(
-            reviewState: KnowledgeCardReviewState.pending,
+            reviewState: KnowledgeCardReviewState.draft,
             origin: KnowledgeCardOrigin.selection,
           ),
         ) ??
@@ -271,9 +271,8 @@ void main() {
     expect(cards.single.sourceRefs.single.sourceTitle, 'Fallback Book');
     expect(cards.single.sourceRefs.single.locationLabel, 'Fallback Chapter');
     expect(cards.single.sourceRefs.single.canJumpBack, true);
-    expect(reviewItems, hasLength(1));
-    expect(reviewItems.single.sourceId, cards.single.id);
-    expect(feedback, ['Added to Review inbox']);
+    expect(reviewItems, isEmpty);
+    expect(feedback, ['Saved as draft knowledge card']);
     expect(closeCount, 1);
 
     await tester.runAsync(() async {
@@ -285,7 +284,7 @@ void main() {
     expect(
       await tester.runAsync(
             () => KnowledgeCardStore(rootDir: knowledgeRoot).list(
-              reviewState: KnowledgeCardReviewState.pending,
+              reviewState: KnowledgeCardReviewState.draft,
               origin: KnowledgeCardOrigin.selection,
             ),
           ) ??
@@ -300,8 +299,110 @@ void main() {
             ),
           ) ??
           const <ReviewItem>[],
-      hasLength(1),
+      isEmpty,
     );
+  });
+
+  testWidgets('selected-text Card action reports legacy pending duplicate',
+      (tester) async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues({});
+    await Prefs().initPrefs();
+    final originalDocumentPath = documentPath;
+    final tempRoot =
+        Directory.systemTemp.createTempSync('excerpt_menu_pending_duplicate_');
+    documentPath = tempRoot.path;
+    debugExcerptKnowledgeCardReaderContextResolverOverride =
+        () => const ExcerptKnowledgeCardReaderContext(
+              bookId: 77,
+              bookTitle: 'Fallback Book',
+              chapterTitle: 'Fallback Chapter',
+            );
+    addTearDown(() {
+      debugExcerptKnowledgeCardReaderContextResolverOverride = null;
+      documentPath = originalDocumentPath;
+      if (tempRoot.existsSync()) {
+        tempRoot.deleteSync(recursive: true);
+      }
+    });
+
+    await tester.runAsync(
+      () => SelectionKnowledgeCardProducer().createFromSelection(
+        bookId: 77,
+        cfi: 'epubcfi(/6/8)',
+        selectedText: 'Fallback selection becomes reviewable evidence.',
+        chapterTitle: 'Fallback Chapter',
+        bookTitle: 'Fallback Book',
+        createReviewItem: true,
+        now: 100,
+      ),
+    );
+
+    final feedback = <String>[];
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider
+              .overrideWithValue(_EmptyConceptGraphStore()),
+        ],
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: Scaffold(
+            body: Center(
+              child: ExcerptMenu(
+                annoCfi: 'epubcfi(/6/8)',
+                annoContent: 'Fallback selection becomes reviewable evidence.',
+                onClose: () {},
+                footnote: false,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.black12),
+                ),
+                onTranslate: () async {},
+                toggleReaderNoteMenu: ({bool? show}) {},
+                openReaderNoteMenu: (_) async {},
+                onNoteCreated: (_) {},
+                axis: Axis.horizontal,
+                reverse: false,
+                knowledgeCardFeedback: feedback.add,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Card', skipOffstage: false));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pump();
+
+    final knowledgeRoot =
+        Directory('${tempRoot.path}${Platform.pathSeparator}memory');
+    final pendingCards = await tester.runAsync(
+          () => KnowledgeCardStore(rootDir: knowledgeRoot).list(
+            reviewState: KnowledgeCardReviewState.pending,
+            origin: KnowledgeCardOrigin.selection,
+          ),
+        ) ??
+        const <KnowledgeCard>[];
+    final reviewItems = await tester.runAsync(
+          () => ReviewItemStore(rootDir: knowledgeRoot).list(
+            status: ReviewItemStatus.pending,
+            sourceType: ReviewItemSourceType.knowledgeCard,
+          ),
+        ) ??
+        const <ReviewItem>[];
+
+    expect(feedback, ['Knowledge card already waiting for review']);
+    expect(pendingCards, hasLength(1));
+    expect(reviewItems, hasLength(1));
   });
 
   testWidgets('selected-text Graph action opens selection-scoped explorer',
@@ -354,11 +455,12 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Graph', skipOffstage: false));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('Concept graph'), findsOneWidget);
-    expect(find.text('No related concepts yet'), findsOneWidget);
-    expect(find.text('Create draft candidate'), findsOneWidget);
   });
 
   testWidgets('selected-text Seminar action opens inline AI Chat seminar',

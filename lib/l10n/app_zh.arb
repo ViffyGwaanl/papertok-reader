@@ -107,6 +107,7 @@
   },
   "knowledgeCardAddedToReviewInbox": "已加入知识待审队列",
   "knowledgeCardAlreadyInReviewInbox": "知识卡已在待审队列",
+  "knowledgeCardSavedInline": "已保存为草稿知识卡",
   "knowledgeCardAlreadySaved": "知识卡已保存",
   "knowledgeCardAddFailed": "创建知识卡失败",
   "contextMenuShare": "分享",

@@ -42,6 +42,7 @@ class ImageAnalysisKnowledgeCardProducer {
     String? contextText,
     String? chapterTitle,
     String? bookTitle,
+    bool createReviewItem = false,
     int? now,
   }) async {
     final normalizedAnalysis = _normalize(analysisText);
@@ -97,7 +98,9 @@ class ImageAnalysisKnowledgeCardProducer {
       quote: sourceSnippet,
       explanation: normalizedAnalysis,
       sourceRefs: [sourceRef],
-      reviewState: KnowledgeCardReviewState.pending,
+      reviewState: createReviewItem
+          ? KnowledgeCardReviewState.pending
+          : KnowledgeCardReviewState.draft,
       origin: KnowledgeCardOrigin.imageAnalysis,
       ownership: AiOutputOwnership.aiGeneratedDraft,
       createdAt: timestamp,
@@ -105,6 +108,15 @@ class ImageAnalysisKnowledgeCardProducer {
     );
 
     final upsert = await cardStore.upsertCandidate(candidate);
+    if (!createReviewItem) {
+      return ImageAnalysisKnowledgeCardProducerResult(
+        card: upsert.card,
+        inserted: upsert.inserted,
+        duplicateOfId: upsert.duplicateOfId,
+        addedToReviewInbox: false,
+      );
+    }
+
     final reviewItem = KnowledgeCardReviewAdapter.fromKnowledgeCard(
       upsert.card,
       now: timestamp,
@@ -171,7 +183,7 @@ class ImageAnalysisKnowledgeCardProducer {
         .map((value) => _normalize(value ?? ''))
         .where((value) => value.isNotEmpty)
         .toList(growable: false);
-    if (parts.isEmpty) return 'Image saved for knowledge review.';
+    if (parts.isEmpty) return 'Image saved as draft knowledge card.';
     return _clipSnippet(parts.join('\n'));
   }
 

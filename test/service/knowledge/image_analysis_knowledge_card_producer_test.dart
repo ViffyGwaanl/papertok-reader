@@ -30,6 +30,37 @@ void main() {
     }
   });
 
+  test('image analysis defaults to draft KnowledgeCard without Review',
+      () async {
+    final result = await producer.createFromImageAnalysis(
+      bookId: 7,
+      cfi: 'epubcfi(/6/8)',
+      href: 'Text/chapter.xhtml',
+      analysisText:
+          'The figure compares retrieval paths and highlights evidence drift.',
+      imageTitle: 'Retrieval diagram',
+      imageAlt: 'Two retrieval paths',
+      contextText: 'A figure about RAG evidence.',
+      chapterTitle: 'Chapter 3',
+      bookTitle: 'PaperTok Notes',
+      now: 100,
+    );
+
+    expect(result.inserted, true);
+    expect(result.addedToReviewInbox, false);
+    expect(result.reviewItem, isNull);
+    expect(result.card.origin, KnowledgeCardOrigin.imageAnalysis);
+    expect(result.card.reviewState, KnowledgeCardReviewState.draft);
+    expect(result.card.sourceRefs.single.canJumpBack, true);
+    expect(
+      await reviewStore.list(
+        status: ReviewItemStatus.pending,
+        sourceType: ReviewItemSourceType.knowledgeCard,
+      ),
+      isEmpty,
+    );
+  });
+
   test('image analysis becomes a pending KnowledgeCard review item', () async {
     final result = await producer.createFromImageAnalysis(
       bookId: 7,
@@ -42,6 +73,7 @@ void main() {
       contextText: 'A figure about RAG evidence.',
       chapterTitle: 'Chapter 3',
       bookTitle: 'PaperTok Notes',
+      createReviewItem: true,
       now: 100,
     );
 
@@ -105,6 +137,7 @@ void main() {
       analysisText: 'The image explains a compact idea.',
       imageTitle: 'Long context image',
       contextText: longContext,
+      createReviewItem: true,
       now: 100,
     );
 

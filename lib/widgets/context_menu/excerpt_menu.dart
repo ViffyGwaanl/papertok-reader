@@ -5,6 +5,7 @@ import 'package:papertok_reader/constants/note_annotations.dart';
 import 'package:papertok_reader/dao/book_note.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/book_note.dart';
+import 'package:papertok_reader/models/knowledge_card.dart';
 import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/page/settings_page/concept_graph_explorer.dart';
 import 'package:papertok_reader/page/reading_page.dart';
@@ -289,6 +290,7 @@ class ExcerptMenuState extends State<ExcerptMenu> {
                 selectedText: selectedText,
                 chapterTitle: chapterTitle,
                 bookTitle: bookTitle,
+                createReviewItem: false,
               );
       final result = await creator(
         bookId: readerContext.bookId,
@@ -302,7 +304,11 @@ class ExcerptMenuState extends State<ExcerptMenu> {
           ? (result.inserted
               ? l10n.knowledgeCardAddedToReviewInbox
               : l10n.knowledgeCardAlreadyInReviewInbox)
-          : l10n.knowledgeCardAlreadySaved;
+          : result.inserted
+              ? l10n.knowledgeCardSavedInline
+              : result.card.reviewState == KnowledgeCardReviewState.pending
+                  ? l10n.knowledgeCardAlreadyInReviewInbox
+                  : l10n.knowledgeCardAlreadySaved;
       _showKnowledgeCardFeedback(message);
       widget.onClose();
     } catch (_) {

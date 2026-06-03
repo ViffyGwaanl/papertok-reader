@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/attachment_item.dart';
+import 'package:papertok_reader/models/knowledge_card.dart';
 import 'package:papertok_reader/page/reading_page.dart';
 import 'package:papertok_reader/service/ai/index.dart';
 import 'package:papertok_reader/service/knowledge/image_analysis_knowledge_card_producer.dart';
@@ -206,7 +207,11 @@ $displayText''';
           ? (result.inserted
               ? l10n.knowledgeCardAddedToReviewInbox
               : l10n.knowledgeCardAlreadyInReviewInbox)
-          : l10n.knowledgeCardAlreadySaved;
+          : result.inserted
+              ? l10n.knowledgeCardSavedInline
+              : result.card.reviewState == KnowledgeCardReviewState.pending
+                  ? l10n.knowledgeCardAlreadyInReviewInbox
+                  : l10n.knowledgeCardAlreadySaved;
       AnxToast.show(message);
     } catch (_) {
       if (mounted) {

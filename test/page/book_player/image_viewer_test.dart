@@ -55,7 +55,7 @@ void main() {
     expect(cardText, contains('traceable evidence chain'));
   });
 
-  testWidgets('ImageViewer analysis Card action writes review stores',
+  testWidgets('ImageViewer analysis Card action saves draft card inline',
       (tester) async {
     tester.view.physicalSize = const Size(800, 1200);
     tester.view.devicePixelRatio = 1.0;
@@ -163,7 +163,7 @@ void main() {
         await reviewStore.list(sourceType: ReviewItemSourceType.knowledgeCard);
 
     expect(cards, hasLength(1));
-    expect(cards.single.reviewState, KnowledgeCardReviewState.pending);
+    expect(cards.single.reviewState, KnowledgeCardReviewState.draft);
     expect(cards.single.sourceRefs.single.bookId, 7);
     expect(cards.single.sourceRefs.single.cfi, 'epubcfi(/6/8)');
     expect(cards.single.sourceRefs.single.href, 'Text/chapter.xhtml');
@@ -184,12 +184,8 @@ void main() {
     expect(cards.single.sourceRefs.single.createdAt, 100);
     expect(cards.single.sourceRefs.single.canJumpBack, true);
     expect(cards.single.quote, contains('source-grounded retrieval'));
-    expect(reviewItems, hasLength(1));
-    expect(reviewItems.single.status, ReviewItemStatus.pending);
-    expect(reviewItems.single.sourceId, cards.single.id);
-    final reviewPayload = reviewItems.single.payload.toString();
-    expect(reviewPayload, isNot(contains('data:image')));
-    expect(reviewPayload, isNot(contains('base64')));
+    expect(reviewItems, isEmpty);
+    expect(find.text('Saved as draft knowledge card'), findsOneWidget);
 
     await tester.pump(const Duration(milliseconds: 2100));
   });

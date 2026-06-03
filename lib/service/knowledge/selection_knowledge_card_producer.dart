@@ -38,6 +38,7 @@ class SelectionKnowledgeCardProducer {
     required String selectedText,
     String? chapterTitle,
     String? bookTitle,
+    bool createReviewItem = false,
     int? now,
   }) {
     final normalizedText = _normalizeSelectedText(selectedText);
@@ -55,6 +56,7 @@ class SelectionKnowledgeCardProducer {
       normalizedText: normalizedText,
       chapterTitle: chapterTitle,
       bookTitle: bookTitle,
+      createReviewItem: createReviewItem,
       now: now,
     );
   }
@@ -65,6 +67,7 @@ class SelectionKnowledgeCardProducer {
     required String normalizedText,
     String? chapterTitle,
     String? bookTitle,
+    required bool createReviewItem,
     int? now,
   }) async {
     final timestamp = now ?? DateTime.now().millisecondsSinceEpoch;
@@ -88,9 +91,12 @@ class SelectionKnowledgeCardProducer {
       explanation: _explanationFromSelection(
         chapterTitle: chapterTitle,
         bookTitle: bookTitle,
+        createReviewItem: createReviewItem,
       ),
       sourceRefs: [sourceRef],
-      reviewState: KnowledgeCardReviewState.pending,
+      reviewState: createReviewItem
+          ? KnowledgeCardReviewState.pending
+          : KnowledgeCardReviewState.draft,
       origin: KnowledgeCardOrigin.selection,
       ownership: AiOutputOwnership.aiGeneratedDraft,
       createdAt: timestamp,
@@ -98,6 +104,15 @@ class SelectionKnowledgeCardProducer {
     );
 
     final upsert = await cardStore.upsertCandidate(candidate);
+    if (!createReviewItem) {
+      return SelectionKnowledgeCardProducerResult(
+        card: upsert.card,
+        inserted: upsert.inserted,
+        duplicateOfId: upsert.duplicateOfId,
+        addedToReviewInbox: false,
+      );
+    }
+
     final reviewItem = KnowledgeCardReviewAdapter.fromKnowledgeCard(
       upsert.card,
       now: timestamp,
@@ -148,14 +163,16 @@ class SelectionKnowledgeCardProducer {
   static String _explanationFromSelection({
     String? chapterTitle,
     String? bookTitle,
+    required bool createReviewItem,
   }) {
     final location = [bookTitle, chapterTitle]
         .map((value) => value?.trim() ?? '')
         .where((value) => value.isNotEmpty)
         .join(' / ');
+    final action = createReviewItem ? 'saved for review' : 'saved as draft';
     if (location.isEmpty) {
-      return 'Selected passage saved for review.';
+      return 'Selected passage $action.';
     }
-    return 'Selected passage saved for review from $location.';
+    return 'Selected passage $action from $location.';
   }
 }
