@@ -32,6 +32,37 @@ void main() {
     }
   });
 
+  test('assistant answer defaults to draft KnowledgeCard without Review',
+      () async {
+    final result = await producer.createFromAssistantAnswer(
+      assistantAnswer: 'Attention is a mechanism for weighting context.',
+      userPrompt: 'Explain attention.',
+      conversationId: 'chat-draft',
+      messageNodeId: 'assistant:1',
+      modelId: 'gpt-test',
+      bookId: 7,
+      bookTitle: 'Transformer Notes',
+      cfi: 'epubcfi(/6/4)',
+      chapterTitle: 'Chapter 2',
+      now: 100,
+    );
+
+    expect(result.inserted, true);
+    expect(result.addedToReviewInbox, false);
+    expect(result.reviewItem, isNull);
+    expect(result.card.origin, KnowledgeCardOrigin.aiChat);
+    expect(result.card.reviewState, KnowledgeCardReviewState.draft);
+    expect(result.card.ownership, AiOutputOwnership.aiGeneratedDraft);
+    expect(result.card.sourceRefs.last.canJumpBack, true);
+    expect(
+      await reviewStore.list(
+        status: ReviewItemStatus.pending,
+        sourceType: ReviewItemSourceType.knowledgeCard,
+      ),
+      isEmpty,
+    );
+  });
+
   test('assistant answer becomes pending KnowledgeCard review item', () async {
     final result = await producer.createFromAssistantAnswer(
       assistantAnswer: 'Attention is a mechanism for weighting context.',
@@ -43,6 +74,7 @@ void main() {
       bookTitle: 'Transformer Notes',
       cfi: 'epubcfi(/6/4)',
       chapterTitle: 'Chapter 2',
+      createReviewItem: true,
       now: 100,
     );
 
@@ -117,6 +149,7 @@ void main() {
       messageNodeId: 'assistant:1',
       bookId: 7,
       cfi: 'epubcfi(/6/4)',
+      createReviewItem: true,
       now: 100,
     );
 
@@ -145,6 +178,7 @@ void main() {
       messageNodeId: 'assistant:1',
       bookId: 7,
       cfi: 'epubcfi(/6/4)',
+      createReviewItem: true,
       now: 100,
     );
 
@@ -198,6 +232,7 @@ void main() {
       userPrompt: 'What should I remember?',
       conversationId: 'chat-no-reader-source',
       messageNodeId: 'assistant:1',
+      createReviewItem: true,
       now: 100,
     );
 
@@ -261,6 +296,7 @@ void main() {
       assistantAnswer: longAnswer,
       userPrompt: 'Summarize.',
       conversationId: 'chat-5',
+      createReviewItem: true,
       messageNodeId: 'assistant:1',
       now: 100,
     );

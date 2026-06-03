@@ -19,7 +19,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('assistant answer Memory action adds candidate to review inbox',
+  testWidgets('assistant answer Memory action remembers inline and can undo',
       (tester) async {
     final fakeMemoryWorkflow = _FakeMemoryWorkflowService();
     final container = await _pumpMemoryChat(
@@ -38,12 +38,13 @@ void main() {
 
     await tester.tap(find.byTooltip('Memory actions').last);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Add to review inbox'));
+    await tester.tap(find.text('Remember this'));
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pump(const Duration(milliseconds: 2100));
 
-    expect(fakeMemoryWorkflow.reviewInboxCalls, hasLength(1));
-    final call = fakeMemoryWorkflow.reviewInboxCalls.single;
+    expect(fakeMemoryWorkflow.saveDailyCalls, hasLength(1));
+    expect(fakeMemoryWorkflow.reviewInboxCalls, isEmpty);
+    final call = fakeMemoryWorkflow.saveDailyCalls.single;
     expect(call.text, 'Remember that evidence must stay attached.');
     expect(call.targetDoc, MemoryDocTarget.daily);
     expect(call.sourceType, 'chat');
@@ -53,6 +54,14 @@ void main() {
     expect(call.sourcePointer, 'memory-widget-session#assistant:1');
     expect(call.rawContextRef, 'conversation:memory-widget-session');
     expect(call.triggerKind, 'manual_save');
+
+    await tester.tap(find.byTooltip('Memory actions').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Undo memory'));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 2100));
+
+    expect(fakeMemoryWorkflow.undoCalls, ['fake-memory-candidate-1']);
   });
 
   testWidgets('assistant Memory action is disabled while streaming',
@@ -77,7 +86,7 @@ void main() {
         warnIfMissed: false);
     await tester.pumpAndSettle();
 
-    expect(find.text('Add to review inbox'), findsNothing);
+    expect(find.text('Remember this'), findsNothing);
     expect(fakeMemoryWorkflow.reviewInboxCalls, isEmpty);
   });
 }
@@ -133,6 +142,77 @@ class _FakeMemoryWorkflowService extends MemoryWorkflowService {
   _FakeMemoryWorkflowService();
 
   final reviewInboxCalls = <_MemoryReviewInboxCall>[];
+  final saveDailyCalls = <_MemoryReviewInboxCall>[];
+  final undoCalls = <String>[];
+
+  @override
+  Future<MemoryCandidate> saveToDaily({
+    required String text,
+    DateTime? date,
+    String sourceType = 'manual',
+    String? conversationId,
+    String? messageNodeId,
+    String? summary,
+    String sensitivity = 'normal',
+    double? confidence,
+    String? displayText,
+    String? sourcePointer,
+    String? rawContextRef,
+    String? triggerKind,
+    int? bookId,
+    String? cfi,
+    String? chapter,
+    MemorySourceKind sourceKind = MemorySourceKind.chat,
+    String? rationale,
+  }) async {
+    saveDailyCalls.add(
+      _MemoryReviewInboxCall(
+        text: text,
+        targetDoc: MemoryDocTarget.daily,
+        sourceType: sourceType,
+        conversationId: conversationId,
+        messageNodeId: messageNodeId,
+        displayText: displayText,
+        sourcePointer: sourcePointer,
+        rawContextRef: rawContextRef,
+        triggerKind: triggerKind,
+      ),
+    );
+    return MemoryCandidate(
+      id: 'fake-memory-candidate-${saveDailyCalls.length}',
+      summary: summary ?? text,
+      text: text,
+      targetDoc: MemoryDocTarget.daily,
+      sourceType: sourceType,
+      createdAtMs: saveDailyCalls.length,
+      status: MemoryCandidateStatus.applied,
+      conversationId: conversationId,
+      messageNodeId: messageNodeId,
+      displayText: displayText,
+      sourcePointer: sourcePointer,
+      rawContextRef: rawContextRef,
+      triggerKind: triggerKind,
+      decisionSource: 'direct_save',
+    );
+  }
+
+  @override
+  Future<MemoryCandidate> undoDirectSave(
+    String candidateId, {
+    DateTime? date,
+  }) async {
+    undoCalls.add(candidateId);
+    return MemoryCandidate(
+      id: candidateId,
+      summary: 'undone',
+      text: 'undone',
+      targetDoc: MemoryDocTarget.daily,
+      sourceType: 'chat',
+      createdAtMs: undoCalls.length,
+      status: MemoryCandidateStatus.dismissed,
+      decisionSource: 'user_undo',
+    );
+  }
 
   @override
   Future<MemoryCandidate> addToReviewInbox({

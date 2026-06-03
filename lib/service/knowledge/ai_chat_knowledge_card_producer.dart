@@ -46,6 +46,7 @@ class AiChatKnowledgeCardProducer {
     String? cfi,
     String? chapterTitle,
     SourceRef? readerSourceRef,
+    bool createReviewItem = false,
     int? now,
   }) async {
     final answer = _normalize(assistantAnswer);
@@ -84,12 +85,18 @@ class AiChatKnowledgeCardProducer {
         messageNodeId: messageNodeId,
       ),
       title: _title(answer),
-      quote: prompt.isEmpty ? 'AI chat answer saved for review.' : prompt,
+      quote: prompt.isEmpty
+          ? createReviewItem
+              ? 'AI chat answer saved for review.'
+              : 'AI chat answer saved as draft.'
+          : prompt,
       explanation: _clip(answer, maxAnswerChars),
       sourceRefs: sourceRefs,
       conceptRefs: conceptRefs,
       tags: const ['ai-chat'],
-      reviewState: KnowledgeCardReviewState.pending,
+      reviewState: createReviewItem
+          ? KnowledgeCardReviewState.pending
+          : KnowledgeCardReviewState.draft,
       origin: KnowledgeCardOrigin.aiChat,
       ownership: AiOutputOwnership.aiGeneratedDraft,
       createdAt: timestamp,
@@ -97,6 +104,15 @@ class AiChatKnowledgeCardProducer {
     );
 
     final upsert = await cardStore.upsertCandidate(candidate);
+    if (!createReviewItem) {
+      return AiChatKnowledgeCardProducerResult(
+        card: upsert.card,
+        inserted: upsert.inserted,
+        duplicateOfId: upsert.duplicateOfId,
+        addedToReviewInbox: false,
+      );
+    }
+
     final reviewItem = KnowledgeCardReviewAdapter.fromKnowledgeCard(
       upsert.card,
       now: timestamp,

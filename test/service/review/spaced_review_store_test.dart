@@ -135,6 +135,72 @@ void main() {
     expect(allItems.single.sourceRefs.single.hasEvidence, true);
   });
 
+  test('upsert inline flashcard creates one traceable review item', () async {
+    final first = await store.upsertInlineFlashcard(
+      flashcardId: 'seminar:s1:synthesis-review',
+      prompt: 'Review the synthesis',
+      answer: 'Traceable evidence.',
+      sourceRefs: [traceableRef()],
+      now: 1000,
+    );
+    final duplicate = await store.upsertInlineFlashcard(
+      flashcardId: 'seminar:s1:synthesis-review',
+      prompt: 'Review the updated synthesis',
+      answer: 'Traceable evidence.',
+      sourceRefs: [traceableRef()],
+      now: 2000,
+    );
+
+    final allItems = await store.list();
+
+    expect(
+      first.id,
+      SpacedReviewStore.reviewIdForFlashcard('seminar:s1:synthesis-review'),
+    );
+    expect(duplicate.id, first.id);
+    expect(allItems, hasLength(1));
+    expect(allItems.single.prompt, 'Review the updated synthesis');
+    expect(allItems.single.sourceRefs.single.hasEvidence, true);
+  });
+
+  test('remove inline flashcard only removes unreviewed inline items',
+      () async {
+    final item = await store.upsertInlineFlashcard(
+      flashcardId: 'seminar:s1:synthesis-review',
+      prompt: 'Review the synthesis',
+      answer: 'Traceable evidence.',
+      sourceRefs: [traceableRef()],
+      now: 1000,
+    );
+
+    final removed = await store.removeInlineFlashcard(
+      'seminar:s1:synthesis-review',
+    );
+
+    expect(removed, true);
+    expect(await store.getById(item.id), isNull);
+
+    final reviewed = await store.upsertInlineFlashcard(
+      flashcardId: 'seminar:s2:synthesis-review',
+      prompt: 'Review another synthesis',
+      answer: 'Traceable evidence.',
+      sourceRefs: [traceableRef()],
+      now: 2000,
+    );
+    await store.recordReview(
+      reviewed.id,
+      rating: SpacedReviewRating.good,
+      now: 2000,
+    );
+
+    final removedAfterReview = await store.removeInlineFlashcard(
+      'seminar:s2:synthesis-review',
+    );
+
+    expect(removedAfterReview, false);
+    expect(await store.getById(reviewed.id), isNotNull);
+  });
+
   test('again rating increments lapses and keeps source provenance', () async {
     final item = await store.upsertFromKnowledgeCard(
       appliedCard(),
@@ -200,6 +266,19 @@ void main() {
     );
     expect(
       () => store.upsertFromFlashcardReviewItem(untraceable, now: 1000),
+      throwsStateError,
+    );
+  });
+
+  test('rejects inline flashcards without traceable evidence', () async {
+    expect(
+      () => store.upsertInlineFlashcard(
+        flashcardId: 'seminar:no-source:synthesis-review',
+        prompt: 'No source',
+        answer: 'No source.',
+        sourceRefs: const [],
+        now: 1000,
+      ),
       throwsStateError,
     );
   });

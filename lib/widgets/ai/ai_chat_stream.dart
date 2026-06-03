@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:papertok_reader/app/app_globals.dart';
 import 'package:papertok_reader/config/shared_preference_provider.dart';
@@ -11,16 +10,19 @@ import 'package:papertok_reader/providers/ai_chat.dart';
 import 'package:papertok_reader/providers/ai_draft_input.dart';
 import 'package:papertok_reader/providers/ai_history.dart';
 import 'package:papertok_reader/providers/current_reading.dart';
+import 'package:papertok_reader/providers/spaced_review.dart';
 import 'package:papertok_reader/service/ai/ai_services.dart';
 import 'package:papertok_reader/service/ai/ai_history.dart';
 import 'package:papertok_reader/models/ai_seminar.dart';
 import 'package:papertok_reader/models/ai_provider_meta.dart';
 import 'package:papertok_reader/enums/ai_thinking_mode.dart';
+import 'package:papertok_reader/models/concept_graph.dart';
 import 'package:papertok_reader/models/current_reading_state.dart';
 import 'package:papertok_reader/page/settings_page/custom_skills.dart';
 import 'package:papertok_reader/page/settings_page/ai_seminar_config.dart';
 import 'package:papertok_reader/page/settings_page/ai_seminar_runtime.dart';
 import 'package:papertok_reader/providers/ai_seminar_runtime.dart';
+import 'package:papertok_reader/providers/concept_graph_explorer.dart';
 import 'package:papertok_reader/service/memory/memory_candidate.dart';
 import 'package:papertok_reader/service/memory/memory_workflow_policy.dart';
 import 'package:papertok_reader/service/memory/memory_workflow_service.dart';
@@ -39,10 +41,13 @@ import 'package:papertok_reader/widgets/common/pt_bottom_sheet.dart';
 import 'package:papertok_reader/widgets/common/pt_dialog.dart';
 import 'package:papertok_reader/service/ai/skills/ai_skill.dart';
 import 'package:papertok_reader/service/ai/skills/ai_skill_registry.dart';
+import 'package:papertok_reader/service/deeplink/paperreader_reader_intent.dart';
+import 'package:papertok_reader/service/deeplink/paperreader_source_opener.dart';
 import 'package:papertok_reader/service/knowledge/ai_chat_knowledge_card_producer.dart';
 import 'package:papertok_reader/models/ai_conversation_tree.dart';
 import 'package:papertok_reader/models/attachment_item.dart';
 import 'package:papertok_reader/models/book_import_item.dart';
+import 'package:papertok_reader/models/knowledge_card.dart';
 import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/service/book.dart';
 import 'package:papertok_reader/service/receive_file/share_inbox_cleanup_service.dart';
@@ -570,6 +575,7 @@ class AiChatStream extends ConsumerStatefulWidget {
     this.emptyStateBuilder,
     this.chatKnowledgeCardProducer,
     this.memoryWorkflowService,
+    this.sourceOpener,
     this.initialSourceRef,
     this.uiVisible = true,
   });
@@ -614,6 +620,7 @@ class AiChatStream extends ConsumerStatefulWidget {
 
   final AiChatKnowledgeCardProducer? chatKnowledgeCardProducer;
   final MemoryWorkflowService? memoryWorkflowService;
+  final PaperReaderSourceOpener? sourceOpener;
   final SourceRef? initialSourceRef;
   final bool uiVisible;
 
@@ -622,9 +629,10 @@ class AiChatStream extends ConsumerStatefulWidget {
 }
 
 enum _MessageMemoryAction {
-  saveToDaily,
+  rememberNow,
   saveToLongTerm,
   addToReviewInbox,
+  undoDirectSave,
 }
 
 enum _SeminarRunSnapshotSubview {
@@ -633,7 +641,8 @@ enum _SeminarRunSnapshotSubview {
   roles('roles'),
   disagreements('disagreements'),
   whiteboard('whiteboard'),
-  summary('summary');
+  summary('summary'),
+  review('review');
 
   const _SeminarRunSnapshotSubview(this.id);
 
@@ -647,6 +656,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       widget.memoryWorkflowService ?? MemoryWorkflowService();
   late final AiChatKnowledgeCardProducer _chatKnowledgeCards =
       widget.chatKnowledgeCardProducer ?? AiChatKnowledgeCardProducer();
+  late final PaperReaderSourceOpener _sourceOpener =
+      widget.sourceOpener ?? openPaperReaderSource;
 
   bool _suppressDraftSync = false;
   bool _inlineSeminarVisible = false;
@@ -663,6 +674,12 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   final Map<String, _SeminarRunSnapshotSubview> _seminarCardSnapshotSubviews =
       {};
   final Set<String> _seminarCardSubmittingSessionIds = <String>{};
+  final Set<String> _seminarCardSavedKnowledgeCardIds = <String>{};
+  final Set<String> _seminarCardSpacedReviewFlashcardIds = <String>{};
+  final Set<String> _seminarCardConceptNodeIds = <String>{};
+  final Set<String> _seminarCardIgnoredActionSessionIds = <String>{};
+  final Map<String, MemoryCandidate> _directMemoryByMessageKey =
+      <String, MemoryCandidate>{};
 
   String? _seminarRuntimeScopeId(String? raw) {
     final value = raw?.trim();
@@ -671,6 +688,30 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
   String _newSeminarChatSessionId() {
     return 'seminar-chat-${DateTime.now().microsecondsSinceEpoch}';
+  }
+
+  String? _seminarSynthesisKnowledgeCardId(String? sessionId) {
+    final normalizedSessionId = sessionId?.trim();
+    if (normalizedSessionId == null || normalizedSessionId.isEmpty) {
+      return null;
+    }
+    return 'seminar:$normalizedSessionId:synthesis-card';
+  }
+
+  String? _seminarSynthesisReviewFlashcardId(String? sessionId) {
+    final normalizedSessionId = sessionId?.trim();
+    if (normalizedSessionId == null || normalizedSessionId.isEmpty) {
+      return null;
+    }
+    return 'seminar:$normalizedSessionId:synthesis-review';
+  }
+
+  String? _seminarSynthesisConceptNodeId(String? sessionId) {
+    final normalizedSessionId = sessionId?.trim();
+    if (normalizedSessionId == null || normalizedSessionId.isEmpty) {
+      return null;
+    }
+    return 'seminar:$normalizedSessionId:synthesis-node';
   }
 
   AiSeminarRuntimeState _watchSeminarRuntimeState(String? sessionId) {
@@ -2903,6 +2944,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             id: item.id,
             title: _seminarEvidenceSnapshotTitle(item),
             snippet: _seminarEvidenceSnapshotSnippet(item),
+            sourceRef: item.sourceRef,
           ),
         )
         .where((item) => !item.isEmpty)
@@ -2919,6 +2961,19 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             roleId: turn.role.asString,
             label: _seminarRoleFallbackLabel(turn.role.asString),
             summary: turn.responseText.trim(),
+            evidenceRefs: turn.evidenceRefIds
+                .map((id) => evidenceById[id.trim()])
+                .whereType<AiSeminarEvidence>()
+                .map(
+                  (item) => AiSeminarRunCardEvidenceSnapshot(
+                    id: item.id,
+                    title: _seminarEvidenceSnapshotTitle(item),
+                    snippet: _seminarEvidenceSnapshotSnippet(item),
+                    sourceRef: item.sourceRef,
+                  ),
+                )
+                .where((item) => !item.isEmpty)
+                .toList(growable: false),
           ),
         )
         .toList(growable: false);
@@ -2978,6 +3033,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     id: item.id,
                     title: _seminarEvidenceSnapshotTitle(item),
                     snippet: _seminarEvidenceSnapshotSnippet(item),
+                    sourceRef: item.sourceRef,
                   ),
                 )
                 .where((item) => !item.isEmpty)
@@ -3387,9 +3443,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final dailyStrategy = prefs.memoryWorkflowDailyStrategy;
     final body = !prefs.memorySessionDigestEnabled
         ? l10n.aiChatEndSessionBodyNoDigest
-        : dailyStrategy == MemoryWorkflowDailyStrategy.autoDaily
-            ? l10n.aiChatEndSessionBodyAutoDaily
-            : l10n.aiChatEndSessionBodyReviewInbox;
+        : switch (dailyStrategy) {
+            MemoryWorkflowDailyStrategy.smartDaily =>
+              l10n.aiChatEndSessionBodySmartDaily,
+            MemoryWorkflowDailyStrategy.autoDaily =>
+              l10n.aiChatEndSessionBodyAutoDaily,
+            MemoryWorkflowDailyStrategy.reviewInbox =>
+              l10n.aiChatEndSessionBodyReviewInbox,
+          };
     final confirmed = await PTDialog.show<bool>(
       context,
       title: l10n.aiChatEndSessionTitle,
@@ -3423,13 +3484,18 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         if (!mounted) return;
         if (result.candidates.isEmpty) {
           AnxToast.show(l10n.memorySessionDigestNoCandidates);
-        } else if (result.writesDailyDirectly) {
+        } else if (result.directSaveCount > 0 && result.reviewInboxCount > 0) {
           AnxToast.show(
-            l10n.memorySessionDigestSavedToDaily(result.candidates.length),
+            '${l10n.memorySessionDigestSavedToDaily(result.directSaveCount)}; '
+            '${l10n.memorySessionDigestAddedToInbox(result.reviewInboxCount)}',
+          );
+        } else if (result.directSaveCount > 0) {
+          AnxToast.show(
+            l10n.memorySessionDigestSavedToDaily(result.directSaveCount),
           );
         } else {
           AnxToast.show(
-            l10n.memorySessionDigestAddedToInbox(result.candidates.length),
+            l10n.memorySessionDigestAddedToInbox(result.reviewInboxCount),
           );
         }
       } catch (e) {
@@ -3466,26 +3532,36 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
     final l10n = L10n.of(context);
     final conversationId = ref.read(aiChatProvider.notifier).currentSessionId;
+    final actionKey = _messageMemoryActionKey(
+      sourceType: sourceType,
+      messageNodeId: messageNodeId,
+      text: normalized,
+    );
+    final sourcePointer = conversationId == null
+        ? messageNodeId
+        : messageNodeId == null
+            ? conversationId
+            : '$conversationId#$messageNodeId';
+    final rawContextRef =
+        conversationId == null ? null : 'conversation:$conversationId';
 
     try {
       switch (action) {
-        case _MessageMemoryAction.saveToDaily:
-          await _memoryWorkflow.saveToDaily(
+        case _MessageMemoryAction.rememberNow:
+          final candidate = await _memoryWorkflow.saveToDaily(
             text: normalized,
             sourceType: sourceType,
             conversationId: conversationId,
             messageNodeId: messageNodeId,
             displayText: normalized,
-            sourcePointer: conversationId == null
-                ? messageNodeId
-                : messageNodeId == null
-                    ? conversationId
-                    : '$conversationId#$messageNodeId',
-            rawContextRef:
-                conversationId == null ? null : 'conversation:$conversationId',
+            sourcePointer: sourcePointer,
+            rawContextRef: rawContextRef,
             triggerKind: 'manual_save',
           );
           if (!mounted) return;
+          setState(() {
+            _directMemoryByMessageKey[actionKey] = candidate;
+          });
           AnxToast.show(l10n.memorySavedToDaily);
           break;
         case _MessageMemoryAction.saveToLongTerm:
@@ -3493,22 +3569,20 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           if (!confirmed) {
             return;
           }
-          await _memoryWorkflow.saveToLongTerm(
+          final candidate = await _memoryWorkflow.saveToLongTerm(
             text: normalized,
             sourceType: sourceType,
             conversationId: conversationId,
             messageNodeId: messageNodeId,
             displayText: normalized,
-            sourcePointer: conversationId == null
-                ? messageNodeId
-                : messageNodeId == null
-                    ? conversationId
-                    : '$conversationId#$messageNodeId',
-            rawContextRef:
-                conversationId == null ? null : 'conversation:$conversationId',
+            sourcePointer: sourcePointer,
+            rawContextRef: rawContextRef,
             triggerKind: 'manual_save',
           );
           if (!mounted) return;
+          setState(() {
+            _directMemoryByMessageKey[actionKey] = candidate;
+          });
           AnxToast.show(l10n.memorySavedToLongTerm);
           break;
         case _MessageMemoryAction.addToReviewInbox:
@@ -3519,23 +3593,43 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             conversationId: conversationId,
             messageNodeId: messageNodeId,
             displayText: normalized,
-            sourcePointer: conversationId == null
-                ? messageNodeId
-                : messageNodeId == null
-                    ? conversationId
-                    : '$conversationId#$messageNodeId',
-            rawContextRef:
-                conversationId == null ? null : 'conversation:$conversationId',
+            sourcePointer: sourcePointer,
+            rawContextRef: rawContextRef,
             triggerKind: 'manual_save',
           );
           if (!mounted) return;
           AnxToast.show(l10n.memoryAddedToReviewInbox);
+          break;
+        case _MessageMemoryAction.undoDirectSave:
+          final candidate = _directMemoryByMessageKey[actionKey];
+          if (candidate == null) {
+            AnxToast.show(l10n.memoryWorkflowNothingToSave);
+            return;
+          }
+          await _memoryWorkflow.undoDirectSave(candidate.id);
+          if (!mounted) return;
+          setState(() {
+            _directMemoryByMessageKey.remove(actionKey);
+          });
+          AnxToast.show(l10n.memoryDirectSaveUndone);
           break;
       }
     } catch (e) {
       if (!mounted) return;
       AnxToast.show('${l10n.memoryWorkflowActionFailed}: $e');
     }
+  }
+
+  String _messageMemoryActionKey({
+    required String sourceType,
+    required String? messageNodeId,
+    required String text,
+  }) {
+    final node = messageNodeId?.trim();
+    if (node != null && node.isNotEmpty) {
+      return '$sourceType#$node';
+    }
+    return '$sourceType#${text.hashCode}';
   }
 
   Future<void> _handleAssistantKnowledgeCardAction({
@@ -3578,7 +3672,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           ? (result.inserted
               ? l10n.knowledgeCardAddedToReviewInbox
               : l10n.knowledgeCardAlreadyInReviewInbox)
-          : l10n.knowledgeCardAlreadySaved;
+          : result.inserted
+              ? l10n.knowledgeCardSavedInline
+              : result.card.reviewState == KnowledgeCardReviewState.pending
+                  ? l10n.knowledgeCardAlreadyInReviewInbox
+                  : l10n.knowledgeCardAlreadySaved;
       AnxToast.show(message);
     } catch (_) {
       if (!mounted) return;
@@ -3683,7 +3781,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     String? messageNodeId,
   }) {
     final l10n = L10n.of(context);
-    final enabled = text.trim().isNotEmpty && !_isStreaming;
+    final normalized = text.trim();
+    final enabled = normalized.isNotEmpty && !_isStreaming;
+    final actionKey = _messageMemoryActionKey(
+      sourceType: sourceType,
+      messageNodeId: messageNodeId,
+      text: normalized,
+    );
+    final directCandidate = _directMemoryByMessageKey[actionKey];
 
     return PopupMenuButton<_MessageMemoryAction>(
       enabled: enabled,
@@ -3695,18 +3800,24 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         messageNodeId: messageNodeId,
       ),
       itemBuilder: (context) => [
-        PopupMenuItem(
-          value: _MessageMemoryAction.saveToDaily,
-          child: Text(l10n.memorySaveToDailyAction),
-        ),
-        PopupMenuItem(
-          value: _MessageMemoryAction.saveToLongTerm,
-          child: Text(l10n.memorySaveToLongTermAction),
-        ),
-        PopupMenuItem(
-          value: _MessageMemoryAction.addToReviewInbox,
-          child: Text(l10n.memoryAddToReviewInboxAction),
-        ),
+        if (directCandidate == null) ...[
+          PopupMenuItem(
+            value: _MessageMemoryAction.rememberNow,
+            child: Text(l10n.memoryRememberThisAction),
+          ),
+          PopupMenuItem(
+            value: _MessageMemoryAction.saveToLongTerm,
+            child: Text(l10n.memorySaveToLongTermAction),
+          ),
+          PopupMenuItem(
+            value: _MessageMemoryAction.addToReviewInbox,
+            child: Text(l10n.memoryAddToReviewInboxAction),
+          ),
+        ] else
+          PopupMenuItem(
+            value: _MessageMemoryAction.undoDirectSave,
+            child: Text(l10n.memoryUndoDirectSaveAction),
+          ),
       ],
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -4846,6 +4957,35 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final canSendToReview = card.sessionId != null &&
         runtimeState.session?.id == card.sessionId &&
         runtimeState.canSendToReview;
+    final canSaveKnowledgeCard = card.sessionId != null &&
+        runtimeState.session?.id == card.sessionId &&
+        _seminarSynthesisKnowledgeCardSourceRefs(runtimeState).isNotEmpty;
+    final canAddSpacedReview = canSaveKnowledgeCard;
+    final canAddConceptGraph = canSaveKnowledgeCard;
+    final knowledgeCardId = _seminarSynthesisKnowledgeCardId(card.sessionId);
+    final hasSavedKnowledgeCard = knowledgeCardId != null &&
+        _seminarCardSavedKnowledgeCardIds.contains(knowledgeCardId);
+    final reviewFlashcardId =
+        _seminarSynthesisReviewFlashcardId(card.sessionId);
+    final hasAddedSpacedReview = reviewFlashcardId != null &&
+        _seminarCardSpacedReviewFlashcardIds.contains(reviewFlashcardId);
+    final conceptNodeId = _seminarSynthesisConceptNodeId(card.sessionId);
+    final hasAddedConceptGraph = conceptNodeId != null &&
+        _seminarCardConceptNodeIds.contains(conceptNodeId);
+    final normalizedSessionId = card.sessionId?.trim();
+    final hasIgnoredActions = normalizedSessionId != null &&
+        normalizedSessionId.isNotEmpty &&
+        _seminarCardIgnoredActionSessionIds.contains(normalizedSessionId);
+    final hasAnyAssetAction = canSaveKnowledgeCard ||
+        canAddSpacedReview ||
+        canAddConceptGraph ||
+        canSendToReview;
+    final canIgnoreAssetActions = normalizedSessionId != null &&
+        normalizedSessionId.isNotEmpty &&
+        !hasSavedKnowledgeCard &&
+        !hasAddedSpacedReview &&
+        !hasAddedConceptGraph &&
+        hasAnyAssetAction;
 
     void openCard() {
       openInlineSeminar(
@@ -4987,21 +5127,182 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               const SizedBox(height: 12),
               _buildSeminarRunCardComposer(card, runtimeState),
             ],
-            if (canSendToReview) ...[
+            if (hasIgnoredActions) ...[
               const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: FilledButton.icon(
-                  icon: const Icon(Icons.fact_check_outlined, size: 18),
-                  label: Text(l10n.seminarSendToReview),
-                  onPressed: () => _sendActiveSeminarRunCardToReview(
-                    card.sessionId,
-                  ),
-                ),
+              _buildSeminarRunCardIgnoredActionsNotice(card.sessionId),
+            ] else if (hasAnyAssetAction) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (canSaveKnowledgeCard)
+                    hasSavedKnowledgeCard
+                        ? OutlinedButton.icon(
+                            icon: const Icon(Icons.undo_outlined, size: 18),
+                            label: Text(
+                              _localizedSeminarCardText(
+                                zh: '撤销保存',
+                                en: 'Undo save',
+                              ),
+                            ),
+                            onPressed: () =>
+                                _undoActiveSeminarRunCardKnowledgeCard(
+                              card.sessionId,
+                            ),
+                          )
+                        : FilledButton.icon(
+                            icon: const Icon(Icons.style_outlined, size: 18),
+                            label: Text(
+                              _localizedSeminarCardText(
+                                zh: '保存知识卡',
+                                en: 'Save card',
+                              ),
+                            ),
+                            onPressed: () =>
+                                _saveActiveSeminarRunCardKnowledgeCard(
+                              card.sessionId,
+                            ),
+                          ),
+                  if (canSaveKnowledgeCard && !hasSavedKnowledgeCard)
+                    FilledButton.tonalIcon(
+                      icon: const Icon(Icons.edit_note_outlined, size: 18),
+                      label: Text(
+                        _localizedSeminarCardText(
+                          zh: '编辑后保存',
+                          en: 'Edit and save',
+                        ),
+                      ),
+                      onPressed: () => _editActiveSeminarRunCardKnowledgeCard(
+                        card.sessionId,
+                      ),
+                    ),
+                  if (canAddSpacedReview)
+                    hasAddedSpacedReview
+                        ? OutlinedButton.icon(
+                            icon: const Icon(Icons.undo_outlined, size: 18),
+                            label: Text(
+                              _localizedSeminarCardText(
+                                zh: '撤销复习',
+                                en: 'Undo review',
+                              ),
+                            ),
+                            onPressed: () =>
+                                _undoActiveSeminarRunCardSpacedReview(
+                              card.sessionId,
+                            ),
+                          )
+                        : FilledButton.tonalIcon(
+                            icon: const Icon(Icons.school_outlined, size: 18),
+                            label: Text(
+                              _localizedSeminarCardText(
+                                zh: '加入复习',
+                                en: 'Add review',
+                              ),
+                            ),
+                            onPressed: () =>
+                                _addActiveSeminarRunCardSpacedReview(
+                              card.sessionId,
+                            ),
+                          ),
+                  if (canAddConceptGraph)
+                    hasAddedConceptGraph
+                        ? OutlinedButton.icon(
+                            icon: const Icon(Icons.undo_outlined, size: 18),
+                            label: Text(
+                              _localizedSeminarCardText(
+                                zh: '撤销图谱',
+                                en: 'Undo graph',
+                              ),
+                            ),
+                            onPressed: () =>
+                                _undoActiveSeminarRunCardConceptGraph(
+                              card.sessionId,
+                            ),
+                          )
+                        : FilledButton.tonalIcon(
+                            icon: const Icon(
+                              Icons.account_tree_outlined,
+                              size: 18,
+                            ),
+                            label: Text(
+                              _localizedSeminarCardText(
+                                zh: '加入我的图谱',
+                                en: 'Add to graph',
+                              ),
+                            ),
+                            onPressed: () =>
+                                _addActiveSeminarRunCardConceptGraph(
+                              card.sessionId,
+                            ),
+                          ),
+                  if (canSendToReview)
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.fact_check_outlined, size: 18),
+                      label: Text(l10n.seminarSendToReview),
+                      onPressed: () => _sendActiveSeminarRunCardToReview(
+                        card.sessionId,
+                      ),
+                    ),
+                  if (canIgnoreAssetActions)
+                    TextButton.icon(
+                      icon: const Icon(Icons.visibility_off_outlined, size: 18),
+                      label: Text(
+                        _localizedSeminarCardText(
+                          zh: '忽略',
+                          en: 'Ignore',
+                        ),
+                      ),
+                      onPressed: () =>
+                          _ignoreSeminarRunCardAssetActions(card.sessionId),
+                    ),
+                ],
               ),
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSeminarRunCardIgnoredActionsNotice(String? sessionId) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: ClaudePalette.bg(context).withValues(alpha: 0.55),
+        border: Border.all(color: ClaudePalette.divider(context)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.visibility_off_outlined,
+            size: 17,
+            color: ClaudePalette.fg(context).withValues(alpha: 0.62),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _localizedSeminarCardText(
+                zh: '已忽略本次沉淀建议',
+                en: 'Suggestions ignored',
+              ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: ClaudePalette.fg(context).withValues(alpha: 0.62),
+                  ),
+            ),
+          ),
+          TextButton(
+            onPressed: () => _restoreSeminarRunCardAssetActions(sessionId),
+            child: Text(
+              _localizedSeminarCardText(
+                zh: '恢复操作',
+                en: 'Restore',
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -5611,11 +5912,465 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     }
   }
 
+  void _ignoreSeminarRunCardAssetActions(String? sessionId) {
+    final normalizedSessionId = sessionId?.trim();
+    if (normalizedSessionId == null || normalizedSessionId.isEmpty) return;
+    setState(() {
+      _seminarCardIgnoredActionSessionIds.add(normalizedSessionId);
+    });
+    ScaffoldMessenger.of(context)
+      ..removeCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            _localizedSeminarCardText(
+              zh: '已忽略本次沉淀建议。',
+              en: 'Suggestions ignored for this Seminar.',
+            ),
+          ),
+        ),
+      );
+  }
+
+  void _restoreSeminarRunCardAssetActions(String? sessionId) {
+    final normalizedSessionId = sessionId?.trim();
+    if (normalizedSessionId == null || normalizedSessionId.isEmpty) return;
+    setState(() {
+      _seminarCardIgnoredActionSessionIds.remove(normalizedSessionId);
+    });
+  }
+
+  Future<void> _saveActiveSeminarRunCardKnowledgeCard(
+    String? sessionId, {
+    String? editedTitle,
+    String? editedExplanation,
+  }) async {
+    final normalizedSessionId = sessionId?.trim();
+    if (normalizedSessionId == null || normalizedSessionId.isEmpty) return;
+    final cardId = _seminarSynthesisKnowledgeCardId(normalizedSessionId);
+    if (cardId == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final runtimeState = _readSeminarRuntimeState(normalizedSessionId);
+    final synthesis = runtimeState.synthesis;
+    final sourceRefs = _seminarSynthesisKnowledgeCardSourceRefs(runtimeState);
+    if (runtimeState.session?.id != normalizedSessionId ||
+        synthesis == null ||
+        synthesis.summary.trim().isEmpty ||
+        sourceRefs.isEmpty) {
+      return;
+    }
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final quote = sourceRefs
+        .map((ref) => ref.sourceTextSnippet ?? '')
+        .firstWhere((text) => text.trim().isNotEmpty, orElse: () => '');
+    final title = editedTitle?.trim().isNotEmpty == true
+        ? editedTitle!.trim()
+        : 'AI Seminar synthesis';
+    final explanation = editedExplanation?.trim().isNotEmpty == true
+        ? editedExplanation!.trim()
+        : synthesis.summary.trim();
+    final card = KnowledgeCard(
+      id: cardId,
+      title: title,
+      quote: quote,
+      explanation: explanation,
+      sourceRefs: sourceRefs,
+      reviewState: KnowledgeCardReviewState.draft,
+      origin: KnowledgeCardOrigin.seminar,
+      ownership: AiOutputOwnership.aiGeneratedDraft,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    );
+    try {
+      final result =
+          await ref.read(aiSeminarKnowledgeCardStoreProvider).upsertCandidate(
+                card,
+              );
+      if (!mounted) return;
+      if (result.inserted || result.card.id == cardId) {
+        setState(() => _seminarCardSavedKnowledgeCardIds.add(cardId));
+      }
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            _localizedSeminarCardText(
+              zh: '已保存为知识卡。',
+              en: 'Saved as a KnowledgeCard.',
+            ),
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
+  Future<void> _editActiveSeminarRunCardKnowledgeCard(
+    String? sessionId,
+  ) async {
+    final normalizedSessionId = sessionId?.trim();
+    if (normalizedSessionId == null || normalizedSessionId.isEmpty) return;
+    final runtimeState = _readSeminarRuntimeState(normalizedSessionId);
+    final synthesis = runtimeState.synthesis;
+    if (runtimeState.session?.id != normalizedSessionId ||
+        synthesis == null ||
+        synthesis.summary.trim().isEmpty ||
+        _seminarSynthesisKnowledgeCardSourceRefs(runtimeState).isEmpty) {
+      return;
+    }
+    final edited = await _showSeminarKnowledgeCardEditDialog(
+      initialTitle: 'AI Seminar synthesis',
+      initialExplanation: synthesis.summary.trim(),
+    );
+    if (!mounted || edited == null) return;
+    await _saveActiveSeminarRunCardKnowledgeCard(
+      normalizedSessionId,
+      editedTitle: edited['title'],
+      editedExplanation: edited['explanation'],
+    );
+  }
+
+  Future<Map<String, String>?> _showSeminarKnowledgeCardEditDialog({
+    required String initialTitle,
+    required String initialExplanation,
+  }) async {
+    var title = initialTitle;
+    var explanation = initialExplanation;
+    String? explanationError;
+    return showDialog<Map<String, String>>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(
+                _localizedSeminarCardText(
+                  zh: '编辑知识卡',
+                  en: 'Edit KnowledgeCard',
+                ),
+              ),
+              content: SizedBox(
+                width: 420,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        key: const ValueKey('seminar-card-edit-title'),
+                        initialValue: initialTitle,
+                        decoration: InputDecoration(
+                          labelText: _localizedSeminarCardText(
+                            zh: '标题',
+                            en: 'Title',
+                          ),
+                        ),
+                        onChanged: (value) => title = value,
+                        textInputAction: TextInputAction.next,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        key: const ValueKey('seminar-card-edit-explanation'),
+                        initialValue: initialExplanation,
+                        minLines: 4,
+                        maxLines: 8,
+                        decoration: InputDecoration(
+                          labelText: _localizedSeminarCardText(
+                            zh: '解释',
+                            en: 'Explanation',
+                          ),
+                          errorText: explanationError,
+                        ),
+                        onChanged: (value) => explanation = value,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: Text(
+                    _localizedSeminarCardText(
+                      zh: '取消',
+                      en: 'Cancel',
+                    ),
+                  ),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    final normalizedExplanation = explanation.trim();
+                    if (normalizedExplanation.isEmpty) {
+                      setDialogState(() {
+                        explanationError = _localizedSeminarCardText(
+                          zh: '解释不能为空',
+                          en: 'Explanation is required',
+                        );
+                      });
+                      return;
+                    }
+                    final normalizedTitle = title.trim();
+                    Navigator.of(dialogContext).pop({
+                      'title': normalizedTitle.isEmpty
+                          ? initialTitle
+                          : normalizedTitle,
+                      'explanation': normalizedExplanation,
+                    });
+                  },
+                  child: Text(
+                    _localizedSeminarCardText(
+                      zh: '保存',
+                      en: 'Save',
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _undoActiveSeminarRunCardKnowledgeCard(
+    String? sessionId,
+  ) async {
+    final cardId = _seminarSynthesisKnowledgeCardId(sessionId);
+    if (cardId == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final removed = await ref
+          .read(aiSeminarKnowledgeCardStoreProvider)
+          .removeDraftCandidate(cardId);
+      if (!mounted) return;
+      setState(() => _seminarCardSavedKnowledgeCardIds.remove(cardId));
+      messenger.removeCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            removed
+                ? _localizedSeminarCardText(
+                    zh: '已撤销知识卡保存。',
+                    en: 'KnowledgeCard save undone.',
+                  )
+                : _localizedSeminarCardText(
+                    zh: '这张知识卡已确认或已不存在，不能撤销。',
+                    en: 'This KnowledgeCard was already confirmed or removed.',
+                  ),
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
+  Future<void> _addActiveSeminarRunCardSpacedReview(
+    String? sessionId,
+  ) async {
+    final normalizedSessionId = sessionId?.trim();
+    if (normalizedSessionId == null || normalizedSessionId.isEmpty) return;
+    final flashcardId = _seminarSynthesisReviewFlashcardId(normalizedSessionId);
+    if (flashcardId == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final runtimeState = _readSeminarRuntimeState(normalizedSessionId);
+    final synthesis = runtimeState.synthesis;
+    final sourceRefs = _seminarSynthesisKnowledgeCardSourceRefs(runtimeState);
+    if (runtimeState.session?.id != normalizedSessionId ||
+        synthesis == null ||
+        synthesis.summary.trim().isEmpty ||
+        sourceRefs.isEmpty) {
+      return;
+    }
+    try {
+      await ref.read(spacedReviewStoreProvider).upsertInlineFlashcard(
+            flashcardId: flashcardId,
+            prompt: _localizedSeminarCardText(
+              zh: '复习这场 AI Seminar 的结论',
+              en: 'Review this AI Seminar synthesis',
+            ),
+            answer: synthesis.summary.trim(),
+            sourceRefs: sourceRefs,
+          );
+      if (!mounted) return;
+      setState(() => _seminarCardSpacedReviewFlashcardIds.add(flashcardId));
+      messenger.removeCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            _localizedSeminarCardText(
+              zh: '已加入复习。',
+              en: 'Added to spaced review.',
+            ),
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
+  Future<void> _undoActiveSeminarRunCardSpacedReview(
+    String? sessionId,
+  ) async {
+    final flashcardId = _seminarSynthesisReviewFlashcardId(sessionId);
+    if (flashcardId == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final removed =
+          await ref.read(spacedReviewStoreProvider).removeInlineFlashcard(
+                flashcardId,
+              );
+      if (!mounted) return;
+      setState(() => _seminarCardSpacedReviewFlashcardIds.remove(flashcardId));
+      messenger.removeCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            removed
+                ? _localizedSeminarCardText(
+                    zh: '已撤销复习。',
+                    en: 'Spaced review undone.',
+                  )
+                : _localizedSeminarCardText(
+                    zh: '这条复习已经有记录或已不存在，不能撤销。',
+                    en: 'This review item was already reviewed or removed.',
+                  ),
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
+  Future<void> _addActiveSeminarRunCardConceptGraph(
+    String? sessionId,
+  ) async {
+    final normalizedSessionId = sessionId?.trim();
+    if (normalizedSessionId == null || normalizedSessionId.isEmpty) return;
+    final nodeId = _seminarSynthesisConceptNodeId(normalizedSessionId);
+    if (nodeId == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final runtimeState = _readSeminarRuntimeState(normalizedSessionId);
+    final synthesis = runtimeState.synthesis;
+    final sourceRefs = _seminarSynthesisKnowledgeCardSourceRefs(runtimeState);
+    if (runtimeState.session?.id != normalizedSessionId ||
+        synthesis == null ||
+        synthesis.summary.trim().isEmpty ||
+        sourceRefs.isEmpty) {
+      return;
+    }
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final summary = synthesis.summary.trim();
+    try {
+      await ref.read(conceptGraphStoreProvider).upsertNode(
+            ConceptNode(
+              id: nodeId,
+              type: ConceptNodeType.claim,
+              label: _seminarConceptNodeLabel(summary),
+              summary: summary,
+              sourceRefs: sourceRefs,
+              ownership: AiOutputOwnership.aiGeneratedDraft,
+              createdAt: timestamp,
+              updatedAt: timestamp,
+            ),
+          );
+      if (!mounted) return;
+      setState(() => _seminarCardConceptNodeIds.add(nodeId));
+      messenger.removeCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            _localizedSeminarCardText(
+              zh: '已加入我的图谱。',
+              en: 'Added to my graph.',
+            ),
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
+  Future<void> _undoActiveSeminarRunCardConceptGraph(
+    String? sessionId,
+  ) async {
+    final nodeId = _seminarSynthesisConceptNodeId(sessionId);
+    if (nodeId == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final removed = await ref.read(conceptGraphStoreProvider).removeDraftNode(
+            nodeId,
+          );
+      if (!mounted) return;
+      setState(() => _seminarCardConceptNodeIds.remove(nodeId));
+      messenger.removeCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            removed
+                ? _localizedSeminarCardText(
+                    zh: '已撤销图谱保存。',
+                    en: 'Graph save undone.',
+                  )
+                : _localizedSeminarCardText(
+                    zh: '这个图谱节点已确认或已不存在，不能撤销。',
+                    en: 'This graph node was already confirmed or removed.',
+                  ),
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
+  String _seminarConceptNodeLabel(String summary) {
+    final normalized = summary.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (normalized.length <= 80) return normalized;
+    return '${normalized.substring(0, 77)}...';
+  }
+
+  List<SourceRef> _seminarSynthesisKnowledgeCardSourceRefs(
+    AiSeminarRuntimeState runtimeState,
+  ) {
+    final synthesis = runtimeState.synthesis;
+    if (synthesis == null || synthesis.summary.trim().isEmpty) {
+      return const <SourceRef>[];
+    }
+    final evidenceById = <String, AiSeminarEvidence>{
+      for (final evidence in synthesis.evidence)
+        if (evidence.id.trim().isNotEmpty) evidence.id.trim(): evidence,
+    };
+    final refs = <SourceRef>[];
+    final seen = <String>{};
+    for (final id in synthesis.evidenceRefIds) {
+      final evidence = evidenceById[id.trim()];
+      if (evidence == null || !evidence.sourceRef.hasEvidence) continue;
+      final key = evidence.sourceRef.sourceHash ??
+          evidence.sourceRef.jumpLink ??
+          '${evidence.sourceRef.bookId}:${evidence.sourceRef.href}:${evidence.sourceRef.cfi}:${evidence.sourceRef.chunkId}:${evidence.sourceRef.sourceTextSnippet}';
+      if (!seen.add(key)) continue;
+      refs.add(evidence.sourceRef);
+    }
+    return refs;
+  }
+
   Widget _buildSeminarRunSnapshot(
     String? sessionId,
     AiSeminarRunCardSnapshot snapshot,
   ) {
-    final evidence = snapshot.evidence.take(3).toList(growable: false);
+    final allEvidence = snapshot.evidence
+        .where((item) => !item.isEmpty)
+        .toList(growable: false);
+    final evidence = allEvidence.take(3).toList(growable: false);
     final roles = snapshot.roleSummaries.take(4).toList(growable: false);
     final synthesis = snapshot.synthesisSummary?.trim();
     final disagreements = snapshot.disagreements
@@ -5652,12 +6407,13 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       availableSubViews,
     );
     final showOverview = selectedSubview == _SeminarRunSnapshotSubview.overview;
+    final showTimeline = showOverview && roles.isNotEmpty;
     final showEvidence =
         showOverview || selectedSubview == _SeminarRunSnapshotSubview.evidence;
-    final showRoles =
-        showOverview || selectedSubview == _SeminarRunSnapshotSubview.roles;
+    final showRoles = selectedSubview == _SeminarRunSnapshotSubview.roles;
     final showSummary =
         showOverview || selectedSubview == _SeminarRunSnapshotSubview.summary;
+    final showReview = selectedSubview == _SeminarRunSnapshotSubview.review;
     final showWhiteboard = showOverview ||
         selectedSubview == _SeminarRunSnapshotSubview.whiteboard;
     final showDisagreements =
@@ -5672,6 +6428,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             selected: selectedSubview,
           ),
           const SizedBox(height: 8),
+        ],
+        if (showTimeline) ...[
+          _seminarSnapshotDiscussionTimeline(roles),
+          if ((showEvidence && evidence.isNotEmpty) ||
+              (showSummary && synthesis != null && synthesis.isNotEmpty) ||
+              disagreementTexts.isNotEmpty ||
+              openQuestions.isNotEmpty)
+            const SizedBox(height: 10),
         ],
         if (showEvidence && evidence.isNotEmpty) ...[
           _seminarSnapshotHeading(
@@ -5771,6 +6535,12 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               items: legacyOnlyDisagreements,
             ),
         ],
+        if (showReview) ...[
+          _seminarSnapshotReviewPreview(
+            synthesis: synthesis,
+            evidenceCount: allEvidence.length,
+          ),
+        ],
         if (showWhiteboard &&
             (disagreementTexts.isNotEmpty || openQuestions.isNotEmpty)) ...[
           if ((showEvidence && evidence.isNotEmpty) ||
@@ -5802,6 +6572,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         _SeminarRunSnapshotSubview.whiteboard,
       if (synthesis != null && synthesis.isNotEmpty)
         _SeminarRunSnapshotSubview.summary,
+      if ((synthesis != null && synthesis.isNotEmpty) || evidence.isNotEmpty)
+        _SeminarRunSnapshotSubview.review,
     ];
   }
 
@@ -5858,6 +6630,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         return _localizedSeminarCardText(zh: '白板', en: 'Whiteboard');
       case _SeminarRunSnapshotSubview.summary:
         return _localizedSeminarCardText(zh: '总结', en: 'Summary');
+      case _SeminarRunSnapshotSubview.review:
+        return _localizedSeminarCardText(zh: '异常', en: 'Triage');
     }
   }
 
@@ -5886,6 +6660,51 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   ) {
     final title = evidence.title.trim();
     final snippet = evidence.snippet.trim();
+    final sourceRef = evidence.sourceRef;
+    final sourceIntent = sourceRef == null
+        ? null
+        : PaperReaderReaderIntent.fromSourceRef(sourceRef);
+    final canShowSourceAction = sourceRef != null && sourceRef.hasEvidence;
+    final sourceAction = canShowSourceAction
+        ? TextButton.icon(
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              minimumSize: const Size(0, 26),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+            ),
+            icon: Icon(
+              sourceIntent == null
+                  ? Icons.info_outline
+                  : Icons.open_in_new_outlined,
+              size: 14,
+            ),
+            label: Text(
+              sourceIntent == null
+                  ? _localizedSeminarCardText(
+                      zh: '来源不可用',
+                      en: 'Source unavailable',
+                    )
+                  : _localizedSeminarCardText(
+                      zh: '打开来源',
+                      en: 'Open source',
+                    ),
+            ),
+            onPressed: sourceIntent == null
+                ? () => showPaperReaderSourceUnavailable(
+                      context,
+                      [sourceRef],
+                      _localizedSeminarCardText(
+                        zh: '没有可跳转的来源。',
+                        en: 'No jumpable source available.',
+                      ),
+                    )
+                : () => _sourceOpener(
+                      ref,
+                      sourceIntent.toUri(),
+                    ),
+          )
+        : null;
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: DecoratedBox(
@@ -5899,14 +6718,26 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (title.isNotEmpty)
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: ClaudePalette.fg(context),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style:
+                            Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: ClaudePalette.fg(context),
+                                ),
                       ),
+                    ),
+                    if (sourceAction != null) ...[
+                      const SizedBox(width: 6),
+                      sourceAction,
+                    ],
+                  ],
                 ),
               if (snippet.isNotEmpty) ...[
                 if (title.isNotEmpty) const SizedBox(height: 3),
@@ -5918,6 +6749,13 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         color: ClaudePalette.secondary(context),
                         height: 1.32,
                       ),
+                ),
+              ],
+              if (title.isEmpty && sourceAction != null) ...[
+                if (snippet.isNotEmpty) const SizedBox(height: 4),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: sourceAction,
                 ),
               ],
             ],
@@ -5970,6 +6808,105 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _seminarSnapshotDiscussionTimeline(
+    List<AiSeminarRunCardRoleSummary> roles,
+  ) {
+    final turns = roles.where((role) => !role.isEmpty).take(4).toList();
+    if (turns.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _seminarSnapshotHeading(
+          Icons.chat_bubble_outline,
+          _localizedSeminarCardText(
+            zh: '研讨时间线',
+            en: 'Discussion timeline',
+          ),
+        ),
+        const SizedBox(height: 6),
+        for (var index = 0; index < turns.length; index += 1)
+          _seminarSnapshotTimelineTurn(turns[index], index + 1),
+      ],
+    );
+  }
+
+  Widget _seminarSnapshotTimelineTurn(
+    AiSeminarRunCardRoleSummary role,
+    int turnNumber,
+  ) {
+    final label = role.label.trim().isNotEmpty
+        ? role.label.trim()
+        : _seminarRoleFallbackLabel(role.roleId);
+    final evidenceRefs = role.evidenceRefs
+        .where((item) => !item.isEmpty)
+        .take(2)
+        .toList(growable: false);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: ClaudePalette.elevated(context).withValues(alpha: 0.55),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: ClaudePalette.divider(context)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                _seminarRoleIconById(role.roleId),
+                size: 17,
+                color: ClaudePalette.accent(context),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$turnNumber · $label',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: ClaudePalette.fg(context),
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    if (role.summary.trim().isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        role.summary.trim(),
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: ClaudePalette.secondary(context),
+                              height: 1.32,
+                            ),
+                      ),
+                    ],
+                    if (evidenceRefs.isNotEmpty) ...[
+                      const SizedBox(height: 7),
+                      _seminarSnapshotDetailLabel(
+                        _localizedSeminarCardText(
+                          zh: '本轮证据',
+                          en: 'Evidence used by this turn',
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      for (final evidence in evidenceRefs)
+                        _seminarSnapshotEvidenceTile(evidence),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -6107,6 +7044,104 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             ),
             items: openQuestions,
           ),
+      ],
+    );
+  }
+
+  Widget _seminarSnapshotReviewPreview({
+    required String? synthesis,
+    required int evidenceCount,
+  }) {
+    final summary = synthesis?.trim() ?? '';
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: ClaudePalette.divider(context)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _seminarSnapshotHeading(
+              Icons.fact_check_outlined,
+              _localizedSeminarCardText(
+                zh: '异常处理预览',
+                en: 'Exception triage preview',
+              ),
+            ),
+            const SizedBox(height: 8),
+            _seminarSnapshotReviewLine(
+              Icons.outbox_outlined,
+              _localizedSeminarCardText(
+                zh: '只在低置信、冲突或来源异常时发送到 Review Inbox',
+                en: 'Send to Review Inbox only for low-confidence, conflict, or broken-source cases',
+              ),
+            ),
+            if (summary.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              _seminarSnapshotDetailLabel(
+                _localizedSeminarCardText(
+                  zh: '综合总结',
+                  en: 'Synthesis',
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                summary,
+                maxLines: 5,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: ClaudePalette.fg(context),
+                      height: 1.35,
+                    ),
+              ),
+            ],
+            const SizedBox(height: 8),
+            _seminarSnapshotReviewLine(
+              Icons.link_outlined,
+              _localizedSeminarCardText(
+                zh: '可追踪证据：$evidenceCount 条',
+                en: evidenceCount == 1
+                    ? 'Traceable evidence: 1 source'
+                    : 'Traceable evidence: $evidenceCount sources',
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _localizedSeminarCardText(
+                zh: '普通学习保存请优先使用知识卡、复习或我的图谱。',
+                en: 'For normal learning saves, use KnowledgeCard, Review, or My Graph first.',
+              ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: ClaudePalette.secondary(context),
+                    height: 1.32,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _seminarSnapshotReviewLine(IconData icon, String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 15, color: ClaudePalette.accent(context)),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            text,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: ClaudePalette.secondary(context),
+                  height: 1.32,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ),
       ],
     );
   }

@@ -257,8 +257,7 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
                       _SourceActionButton(
                         icon: Icons.menu_book_outlined,
                         label: L10n.of(context).memoryOpenInReader,
-                        onTap: () =>
-                            _workflow.openInReader(context, candidate),
+                        onTap: () => _workflow.openInReader(context, candidate),
                       ),
                     if (candidate.conversationId != null)
                       _SourceActionButton(
@@ -372,6 +371,10 @@ class _MemorySettingsBodyState extends ConsumerState<_MemorySettingsBody> {
           trailing: DropdownButton<MemoryWorkflowDailyStrategy>(
             value: prefs.memoryWorkflowDailyStrategy,
             items: [
+              DropdownMenuItem(
+                value: MemoryWorkflowDailyStrategy.smartDaily,
+                child: Text(l10n.memoryDailyWorkflowStrategySmartDaily),
+              ),
               DropdownMenuItem(
                 value: MemoryWorkflowDailyStrategy.reviewInbox,
                 child: Text(l10n.memoryDailyWorkflowStrategyReviewInbox),

@@ -57,6 +57,31 @@ void main() {
       expect(await workflow.listPendingCandidates(), isEmpty);
     });
 
+    test('undoDirectSave removes direct daily text and dismisses candidate',
+        () async {
+      final candidate = await workflow.saveToDaily(
+        text: 'Undo this directly saved note',
+        date: DateTime(2026, 3, 7),
+        sourceType: 'chat',
+      );
+
+      final undone = await workflow.undoDirectSave(
+        candidate.id,
+        date: DateTime(2026, 3, 7),
+      );
+
+      final daily = await store.read(
+        longTerm: false,
+        date: DateTime(2026, 3, 7),
+      );
+      final allCandidates = await candidateStore.list();
+
+      expect(daily, isNot(contains('Undo this directly saved note')));
+      expect(undone.status, MemoryCandidateStatus.dismissed);
+      expect(undone.decisionSource, 'user_undo_direct_save');
+      expect(allCandidates.single.status, MemoryCandidateStatus.dismissed);
+    });
+
     test('review inbox stays separate until candidate is applied', () async {
       final pending = await workflow.addToReviewInbox(
         text: 'Promote this later',
@@ -107,7 +132,8 @@ void main() {
       expect(allCandidates.single.status, MemoryCandidateStatus.dismissed);
     });
 
-    test('captureSessionDigest routes candidates to review inbox by default',
+    test(
+        'captureSessionDigest smart-saves high-confidence candidates by default',
         () async {
       final result = await workflow.captureSessionDigest(
         messages: <ChatMessage>[
@@ -119,9 +145,12 @@ void main() {
         conversationId: 'session-1',
       );
 
-      expect(result.writesDailyDirectly, isFalse);
+      expect(result.dailyStrategy, MemoryWorkflowDailyStrategy.smartDaily);
+      expect(result.writesDailyDirectly, isTrue);
+      expect(result.directSaveCount, result.candidates.length);
+      expect(result.reviewInboxCount, 0);
       expect(result.candidates, isNotEmpty);
-      expect(result.candidates.every((c) => c.isPending), isTrue);
+      expect(result.candidates.every((c) => c.isApplied), isTrue);
       expect(
           result.candidates.every((c) => c.targetDoc == MemoryDocTarget.daily),
           isTrue);
@@ -129,6 +158,29 @@ void main() {
           isTrue);
       expect(result.candidates.every((c) => c.conversationId == 'session-1'),
           isTrue);
+      expect(await workflow.listPendingCandidates(), isEmpty);
+
+      final daily = await store.read(longTerm: false, date: DateTime.now());
+      expect(daily, contains('中文'));
+    });
+
+    test('captureSessionDigest keeps low-confidence smart candidates in review',
+        () async {
+      final result = await workflow.captureSessionDigest(
+        messages: <ChatMessage>[
+          HumanChatMessage(content: ChatMessageContent.text('谢谢')),
+          AIChatMessage(content: '好的。'),
+        ],
+        dailyStrategy: MemoryWorkflowDailyStrategy.smartDaily,
+        conversationId: 'session-low-confidence',
+      );
+
+      expect(result.dailyStrategy, MemoryWorkflowDailyStrategy.smartDaily);
+      expect(result.writesDailyDirectly, isFalse);
+      expect(result.directSaveCount, 0);
+      expect(result.reviewInboxCount, result.candidates.length);
+      expect(result.candidates, isNotEmpty);
+      expect(result.candidates.every((c) => c.isPending), isTrue);
       expect(await workflow.listPendingCandidates(),
           hasLength(result.candidates.length));
 

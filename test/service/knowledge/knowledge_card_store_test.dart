@@ -188,6 +188,51 @@ void main() {
     expect(await store.list(), isEmpty);
   });
 
+  test('removeDraftCandidate removes staged AI-generated draft cards',
+      () async {
+    final store = KnowledgeCardStore(rootDir: tempRoot);
+    await store.upsertCandidate(
+      card(
+        id: 'draft-card',
+        reviewState: KnowledgeCardReviewState.draft,
+      ),
+    );
+
+    final removed = await store.removeDraftCandidate('draft-card');
+
+    expect(removed, true);
+    expect(await store.getById('draft-card'), isNull);
+    expect(await store.list(), isEmpty);
+  });
+
+  test('removeDraftCandidate refuses confirmed user assets', () async {
+    final store = KnowledgeCardStore(rootDir: tempRoot);
+    await store.upsertCandidate(card(id: 'confirmed-card'));
+    final pending = KnowledgeCardReviewAdapter.fromKnowledgeCard(
+      card(id: 'confirmed-card'),
+    );
+    final appliedReview = pending
+        .transitionTo(
+          ReviewItemStatus.approved,
+          now: 200,
+          decisionSource: 'user_approve',
+        )
+        .transitionTo(
+          ReviewItemStatus.applied,
+          now: 300,
+          decisionSource: 'user_apply',
+        );
+    await store.applyReviewDecision(appliedReview, now: 300);
+
+    final removed = await store.removeDraftCandidate('confirmed-card');
+
+    expect(removed, false);
+    final restored = await store.getById('confirmed-card');
+    expect(restored, isNotNull);
+    expect(restored!.reviewState, KnowledgeCardReviewState.applied);
+    expect(restored.isUserAsset, true);
+  });
+
   test('applies ReviewItem decisions to the stored card without writing memory',
       () async {
     final store = KnowledgeCardStore(rootDir: tempRoot);

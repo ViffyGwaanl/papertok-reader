@@ -114,6 +114,21 @@ class KnowledgeCardStore {
     });
   }
 
+  Future<bool> removeDraftCandidate(String id) {
+    final normalizedId = id.trim();
+    if (normalizedId.isEmpty) return Future<bool>.value(false);
+    return _enqueue(() async {
+      final cards = await _readAllUnlocked();
+      final index = cards.indexWhere((card) => card.id == normalizedId);
+      if (index < 0) return false;
+      final card = cards[index];
+      if (!_canRemoveDraftCandidate(card)) return false;
+      cards.removeAt(index);
+      await _writeAllUnlocked(cards);
+      return true;
+    });
+  }
+
   Future<KnowledgeCard> upsert(KnowledgeCard card) {
     if (!_canStageViaRawUpsert(card)) {
       throw ArgumentError(
@@ -561,6 +576,14 @@ class KnowledgeCardStore {
     final stageStatus = card.reviewState == KnowledgeCardReviewState.draft ||
         card.reviewState == KnowledgeCardReviewState.pending;
     return stageStatus && card.ownership == AiOutputOwnership.aiGeneratedDraft;
+  }
+
+  bool _canRemoveDraftCandidate(KnowledgeCard card) {
+    final stageStatus = card.reviewState == KnowledgeCardReviewState.draft ||
+        card.reviewState == KnowledgeCardReviewState.pending;
+    return stageStatus &&
+        card.ownership == AiOutputOwnership.aiGeneratedDraft &&
+        !card.isUserAsset;
   }
 
   void _replaceOrAdd(List<KnowledgeCard> cards, KnowledgeCard card) {

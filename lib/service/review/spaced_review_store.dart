@@ -137,6 +137,71 @@ class SpacedReviewStore {
     });
   }
 
+  Future<SpacedReviewItem> upsertInlineFlashcard({
+    required String flashcardId,
+    required String prompt,
+    required String answer,
+    List<SourceRef> sourceRefs = const <SourceRef>[],
+    int? now,
+  }) {
+    final normalizedFlashcardId = flashcardId.trim();
+    final normalizedPrompt = prompt.trim();
+    final normalizedAnswer = answer.trim();
+    if (normalizedFlashcardId.isEmpty ||
+        normalizedPrompt.isEmpty ||
+        normalizedAnswer.isEmpty) {
+      throw StateError('Inline flashcard is missing required content.');
+    }
+    if (!sourceRefs.any((ref) => ref.hasEvidence)) {
+      throw StateError(
+        'Inline flashcard cannot enter spaced review without SourceRef.',
+      );
+    }
+    return _enqueue(() async {
+      final items = await _readAllUnlocked();
+      final id = reviewIdForFlashcard(normalizedFlashcardId);
+      final dueAt = now ?? DateTime.now().millisecondsSinceEpoch;
+      final candidate = SpacedReviewItem(
+        id: id,
+        cardId: normalizedFlashcardId,
+        prompt: normalizedPrompt,
+        answer: normalizedAnswer,
+        sourceRefs: sourceRefs,
+        dueAt: dueAt,
+      );
+      final index = items.indexWhere((entry) => entry.id == id);
+      final next =
+          index >= 0 ? _mergeExisting(items[index], candidate) : candidate;
+      if (index >= 0) {
+        items[index] = next;
+      } else {
+        items.add(next);
+      }
+      await _writeAllUnlocked(items);
+      return next;
+    });
+  }
+
+  Future<bool> removeInlineFlashcard(String flashcardId) {
+    final normalizedFlashcardId = flashcardId.trim();
+    if (normalizedFlashcardId.isEmpty) return Future<bool>.value(false);
+    return _enqueue(() async {
+      final items = await _readAllUnlocked();
+      final id = reviewIdForFlashcard(normalizedFlashcardId);
+      final index = items.indexWhere((entry) => entry.id == id);
+      if (index < 0) return false;
+      final item = items[index];
+      if (item.cardId != normalizedFlashcardId ||
+          item.lastReviewedAt != null ||
+          item.reviewHistory.isNotEmpty) {
+        return false;
+      }
+      items.removeAt(index);
+      await _writeAllUnlocked(items);
+      return true;
+    });
+  }
+
   Future<SpacedReviewItem> recordReview(
     String id, {
     required SpacedReviewRating rating,

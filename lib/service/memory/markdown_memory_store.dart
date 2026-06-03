@@ -129,6 +129,39 @@ class MarkdownMemoryStore {
     await f.writeAsString(buffer.toString(), mode: FileMode.append);
   }
 
+  /// Remove the last exact block previously appended to a memory document.
+  ///
+  /// This is intentionally conservative: it only removes an exact text block
+  /// and returns `false` if the block can no longer be found.
+  Future<bool> removeLastExactBlock({
+    required bool longTerm,
+    DateTime? date,
+    required String text,
+  }) async {
+    await ensureInitialized();
+    final f = _fileFor(longTerm: longTerm, date: date);
+    if (!await f.exists()) return false;
+
+    final normalized = text.trim();
+    if (normalized.isEmpty) return false;
+
+    final raw = await f.readAsString();
+    final candidates = <String>[
+      normalized.endsWith('\n') ? normalized : '$normalized\n',
+      normalized,
+    ];
+
+    for (final block in candidates) {
+      final index = raw.lastIndexOf(block);
+      if (index < 0) continue;
+      final next = raw.replaceRange(index, index + block.length, '');
+      await f.writeAsString(next);
+      return true;
+    }
+
+    return false;
+  }
+
   /// List daily memory files (YYYY-MM-DD.md), newest first.
   Future<List<String>> listDailyFileNames({int limit = 366}) async {
     await ensureInitialized();

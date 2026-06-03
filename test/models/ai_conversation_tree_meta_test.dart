@@ -127,6 +127,109 @@ void main() {
       expect(restored.isEmpty, false);
     });
 
+    test('seminar role summaries preserve cited evidence refs', () {
+      final restored = AiSegmentMeta.fromJson(const {
+        'seminarRunCard': {
+          'question': 'Debate this passage.',
+          'createdAt': 1234,
+          'snapshot': {
+            'roleSummaries': [
+              {
+                'roleId': 'critical',
+                'label': 'Critical',
+                'summary': 'This claim needs a boundary condition.',
+                'evidenceRefs': [
+                  {
+                    'id': 'e1',
+                    'title': 'Chapter 2',
+                    'snippet': 'The source passage grounds the turn.',
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      });
+
+      final encoded = restored.toJson();
+      final seminarCard = encoded['seminarRunCard'] as Map;
+      final snapshot = seminarCard['snapshot'] as Map;
+      final roleSummaries = snapshot['roleSummaries'] as List;
+      final critical = roleSummaries.single as Map;
+      final evidenceRefs = critical['evidenceRefs'] as List? ?? const [];
+
+      expect(evidenceRefs, hasLength(1));
+      expect((evidenceRefs.single as Map)['id'], 'e1');
+      expect(
+        (evidenceRefs.single as Map)['snippet'],
+        'The source passage grounds the turn.',
+      );
+    });
+
+    test('seminar evidence snapshots preserve SourceRef through roundtrip', () {
+      final meta = AiSeminarRunCardMeta.fromJson(const {
+        'question': 'Debate this evidence.',
+        'sessionId': 'seminar-source-snapshot',
+        'bookId': 7,
+        'status': 'ready',
+        'createdAt': 1234,
+        'snapshot': {
+          'evidence': [
+            {
+              'id': 'e1',
+              'title': 'Chapter 2',
+              'snippet': 'The source passage.',
+              'sourceRef': {
+                'bookId': 7,
+                'href': 'Text/ch2.xhtml',
+                'cfi': 'epubcfi(/6/8)',
+                'jumpLink':
+                    'paperreader://reader/open?bookId=7&cfi=epubcfi%28/6/8%29',
+                'sourceTitle': 'Chapter 2',
+                'locationLabel': 'Section 2.1',
+                'sourceTextSnippet': 'The source passage.',
+                'sourceKind': 'current-book-rag',
+              },
+            },
+          ],
+          'roleSummaries': [
+            {
+              'roleId': 'critical',
+              'label': 'Critical',
+              'summary': 'The claim needs a boundary.',
+              'evidenceRefs': [
+                {
+                  'id': 'e1',
+                  'title': 'Chapter 2',
+                  'snippet': 'The source passage.',
+                  'sourceRef': {
+                    'bookId': 7,
+                    'href': 'Text/ch2.xhtml',
+                    'sourceTextSnippet': 'The source passage.',
+                    'sourceKind': 'current-book-rag',
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      });
+
+      final encoded = meta.toJson();
+      final snapshot = encoded['snapshot'] as Map;
+      final evidence = (snapshot['evidence'] as List).single as Map;
+      final sourceRef = evidence['sourceRef'] as Map?;
+      final roleSummaries = snapshot['roleSummaries'] as List;
+      final roleEvidence =
+          ((roleSummaries.single as Map)['evidenceRefs'] as List).single as Map;
+      final roleSourceRef = roleEvidence['sourceRef'] as Map?;
+
+      expect(sourceRef?['bookId'], 7);
+      expect(sourceRef?['jumpLink'],
+          'paperreader://reader/open?bookId=7&cfi=epubcfi%28/6/8%29');
+      expect(roleSourceRef?['href'], 'Text/ch2.xhtml');
+    });
+
     test('seminar run card falls back to stable createdAt for malformed json',
         () {
       final restored = AiSeminarRunCardMeta.fromJson(const {

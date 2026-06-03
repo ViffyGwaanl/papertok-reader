@@ -105,6 +105,69 @@ void main() {
     expect(fakeProducer.calls.single.readerSourceRef, isNull);
   });
 
+  testWidgets('assistant Card action saves draft inline without Review',
+      (tester) async {
+    const providerId = 'openai';
+    final fakeProducer = _FakeAiChatKnowledgeCardProducer();
+    final providers = [
+      AiProviderMeta(
+        id: providerId,
+        name: 'OpenAI',
+        type: AiProviderType.openaiCompatible,
+        enabled: true,
+        isBuiltIn: true,
+        createdAt: 1,
+        updatedAt: 1,
+      ),
+    ];
+
+    SharedPreferences.setMockInitialValues({
+      'selectedAiService': providerId,
+      'aiProvidersV1': AiProviderMeta.encodeList(providers),
+      'aiConfig_$providerId': jsonEncode({'model': 'gpt-test'}),
+    });
+
+    await Prefs().initPrefs();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          navigatorKey: navigatorKey,
+          locale: const Locale('zh', 'CN'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: AiChatStream(
+            chatKnowledgeCardProducer: fakeProducer,
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    AnxToast.init(tester.element(find.byType(AiChatStream)));
+    await tester.pump();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(AiChatStream)),
+    );
+    await container.read(aiChatProvider.future);
+    container.read(aiChatProvider.notifier).restore(
+      [
+        ChatMessage.humanText('Explain attention.'),
+        ChatMessage.ai('Attention weights context for the current passage.'),
+      ],
+      sessionId: 'chat-ui-draft-card',
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+
+    await tester.tap(find.widgetWithText(TextButton, '知识卡').last);
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(fakeProducer.calls, hasLength(1));
+    expect(fakeProducer.calls.single.createReviewItem, false);
+    expect(find.text('已保存为草稿知识卡'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 2100));
+  });
+
   testWidgets('assistant Card action is disabled while streaming',
       (tester) async {
     const providerId = 'openai';
@@ -725,6 +788,7 @@ class _FakeAiChatKnowledgeCardProducer extends AiChatKnowledgeCardProducer {
     String? cfi,
     String? chapterTitle,
     SourceRef? readerSourceRef,
+    bool createReviewItem = false,
     int? now,
   }) async {
     calls.add(
@@ -739,6 +803,7 @@ class _FakeAiChatKnowledgeCardProducer extends AiChatKnowledgeCardProducer {
         cfi: cfi,
         chapterTitle: chapterTitle,
         readerSourceRef: readerSourceRef,
+        createReviewItem: createReviewItem,
       ),
     );
     final sourceRef = SourceRef(
@@ -754,7 +819,9 @@ class _FakeAiChatKnowledgeCardProducer extends AiChatKnowledgeCardProducer {
       quote: userPrompt ?? '',
       explanation: assistantAnswer,
       sourceRefs: [sourceRef],
-      reviewState: KnowledgeCardReviewState.pending,
+      reviewState: createReviewItem
+          ? KnowledgeCardReviewState.pending
+          : KnowledgeCardReviewState.draft,
       origin: KnowledgeCardOrigin.aiChat,
       ownership: AiOutputOwnership.aiGeneratedDraft,
       createdAt: 1,
@@ -763,18 +830,20 @@ class _FakeAiChatKnowledgeCardProducer extends AiChatKnowledgeCardProducer {
     return AiChatKnowledgeCardProducerResult(
       card: card,
       inserted: true,
-      addedToReviewInbox: true,
-      reviewItem: ReviewItem(
-        id: 'review:fake-ai-chat-card',
-        sourceType: ReviewItemSourceType.knowledgeCard,
-        sourceId: card.id,
-        title: card.title,
-        body: card.explanation,
-        status: ReviewItemStatus.pending,
-        sourceRefs: card.sourceRefs,
-        createdAt: 1,
-        updatedAt: 1,
-      ),
+      addedToReviewInbox: createReviewItem,
+      reviewItem: createReviewItem
+          ? ReviewItem(
+              id: 'review:fake-ai-chat-card',
+              sourceType: ReviewItemSourceType.knowledgeCard,
+              sourceId: card.id,
+              title: card.title,
+              body: card.explanation,
+              status: ReviewItemStatus.pending,
+              sourceRefs: card.sourceRefs,
+              createdAt: 1,
+              updatedAt: 1,
+            )
+          : null,
     );
   }
 }
@@ -791,6 +860,7 @@ class _AiChatCardCall {
     this.cfi,
     this.chapterTitle,
     this.readerSourceRef,
+    required this.createReviewItem,
   });
 
   final String assistantAnswer;
@@ -803,6 +873,7 @@ class _AiChatCardCall {
   final String? cfi;
   final String? chapterTitle;
   final SourceRef? readerSourceRef;
+  final bool createReviewItem;
 }
 
 AiChatHistoryEntry _entryWithPersistedReaderSourceRef(SourceRef sourceRef) {

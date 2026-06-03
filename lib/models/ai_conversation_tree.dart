@@ -484,30 +484,41 @@ class AiSeminarRunCardEvidenceSnapshot {
     this.id,
     required this.title,
     required this.snippet,
+    this.sourceRef,
   });
 
   final String? id;
   final String title;
   final String snippet;
+  final SourceRef? sourceRef;
 
   bool get isEmpty =>
       (id == null || id!.trim().isEmpty) &&
       title.trim().isEmpty &&
-      snippet.trim().isEmpty;
+      snippet.trim().isEmpty &&
+      (sourceRef == null || !sourceRef!.hasEvidence);
 
   Map<String, dynamic> toJson() => {
         if (id != null && id!.trim().isNotEmpty) 'id': id!.trim(),
         if (title.trim().isNotEmpty) 'title': title.trim(),
         if (snippet.trim().isNotEmpty) 'snippet': snippet.trim(),
+        if (sourceRef != null && sourceRef!.hasEvidence)
+          'sourceRef': sourceRef!.toSafeJson(),
       };
 
   factory AiSeminarRunCardEvidenceSnapshot.fromJson(
     Map<String, dynamic> json,
   ) {
+    final rawSourceRef = json['sourceRef'];
     return AiSeminarRunCardEvidenceSnapshot(
       id: _trimmedOrNull(json['id']),
       title: json['title']?.toString().trim() ?? '',
       snippet: json['snippet']?.toString().trim() ?? '',
+      sourceRef: rawSourceRef is Map
+          ? SourceRef.fromJson(
+              rawSourceRef.map((key, value) => MapEntry(key.toString(), value)),
+            )
+          : null,
     );
   }
 
@@ -524,19 +535,29 @@ class AiSeminarRunCardRoleSummary {
     required this.roleId,
     required this.label,
     required this.summary,
+    this.evidenceRefs = const <AiSeminarRunCardEvidenceSnapshot>[],
   });
 
   final String roleId;
   final String label;
   final String summary;
+  final List<AiSeminarRunCardEvidenceSnapshot> evidenceRefs;
 
   bool get isEmpty =>
-      roleId.trim().isEmpty && label.trim().isEmpty && summary.trim().isEmpty;
+      roleId.trim().isEmpty &&
+      label.trim().isEmpty &&
+      summary.trim().isEmpty &&
+      evidenceRefs.where((item) => !item.isEmpty).isEmpty;
 
   Map<String, dynamic> toJson() => {
         if (roleId.trim().isNotEmpty) 'roleId': roleId.trim(),
         if (label.trim().isNotEmpty) 'label': label.trim(),
         if (summary.trim().isNotEmpty) 'summary': summary.trim(),
+        if (evidenceRefs.where((item) => !item.isEmpty).isNotEmpty)
+          'evidenceRefs': evidenceRefs
+              .where((item) => !item.isEmpty)
+              .map((item) => item.toJson())
+              .toList(growable: false),
       };
 
   factory AiSeminarRunCardRoleSummary.fromJson(Map<String, dynamic> json) {
@@ -544,6 +565,16 @@ class AiSeminarRunCardRoleSummary {
       roleId: json['roleId']?.toString().trim() ?? '',
       label: json['label']?.toString().trim() ?? '',
       summary: json['summary']?.toString().trim() ?? '',
+      evidenceRefs: (json['evidenceRefs'] as List?)
+              ?.whereType<Map>()
+              .map(
+                (item) => AiSeminarRunCardEvidenceSnapshot.fromJson(
+                  item.map((key, value) => MapEntry(key.toString(), value)),
+                ),
+              )
+              .where((item) => !item.isEmpty)
+              .toList(growable: false) ??
+          const <AiSeminarRunCardEvidenceSnapshot>[],
     );
   }
 }

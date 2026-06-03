@@ -84,14 +84,17 @@ class MemoryCandidateStore {
     });
   }
 
-  Future<MemoryCandidate> dismiss(String id) {
+  Future<MemoryCandidate> dismiss(
+    String id, {
+    String decisionSource = 'user_dismiss',
+  }) {
     return _updateExisting(id, (candidate) {
       final now = DateTime.now().millisecondsSinceEpoch;
       return candidate.copyWith(
         status: MemoryCandidateStatus.dismissed,
         reviewedAtMs: now,
         dismissedAtMs: now,
-        decisionSource: 'user_dismiss',
+        decisionSource: decisionSource,
       );
     });
   }

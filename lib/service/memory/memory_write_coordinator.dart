@@ -27,6 +27,24 @@ class MemoryWriteCoordinator {
     });
   }
 
+  Future<bool> removeLastExactBlock({
+    required bool longTerm,
+    DateTime? date,
+    required String text,
+  }) {
+    return _enqueue(() async {
+      final removed = await _store.removeLastExactBlock(
+        longTerm: longTerm,
+        date: date,
+        text: text,
+      );
+      if (removed) {
+        MemoryIndexCoordinator.instance.markDirty();
+      }
+      return removed;
+    });
+  }
+
   Future<void> replace({
     required bool longTerm,
     DateTime? date,

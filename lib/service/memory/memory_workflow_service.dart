@@ -36,6 +36,7 @@ class MemoryWorkflowService {
             reviewItemStore ?? ReviewItemStore(rootDir: store?.rootDir);
 
   static const Uuid _uuid = Uuid();
+  static const double _smartDailyConfidenceThreshold = 0.7;
 
   final MemoryCandidateStore _candidateStore;
   final MemoryWriteCoordinator _writeCoordinator;
@@ -186,7 +187,7 @@ class MemoryWorkflowService {
   Future<MemorySessionDigestResult> captureSessionDigest({
     required List<ChatMessage> messages,
     MemoryWorkflowDailyStrategy dailyStrategy =
-        MemoryWorkflowDailyStrategy.reviewInbox,
+        MemoryWorkflowDailyStrategy.smartDaily,
     String sourceType = 'session_digest',
     String triggerKind = 'session_digest',
     String? conversationId,
@@ -215,7 +216,11 @@ class MemoryWorkflowService {
         triggerKind: triggerKind,
         confidence: draft.confidence,
       );
-      final candidate = dailyStrategy.writesDailyDirectly
+      final shouldSaveDirectly = _shouldSaveDigestDirectly(
+        dailyStrategy: dailyStrategy,
+        confidence: draft.confidence,
+      );
+      final candidate = shouldSaveDirectly
           ? await saveToDaily(
               text: draft.text,
               sourceType: sourceType,
@@ -280,6 +285,40 @@ class MemoryWorkflowService {
 
   Future<MemoryCandidate> dismissCandidate(String candidateId) {
     return _candidateStore.dismiss(candidateId);
+  }
+
+  Future<MemoryCandidate> undoDirectSave(
+    String candidateId, {
+    DateTime? date,
+  }) async {
+    final candidate = await _candidateStore.getById(candidateId);
+    if (candidate == null) {
+      throw StateError('Memory candidate not found: $candidateId');
+    }
+    if (!candidate.isApplied || candidate.decisionSource != 'direct_save') {
+      throw StateError('Only direct-saved memory can be undone: $candidateId');
+    }
+
+    final targetDoc = candidate.effectiveTargetDoc;
+    final targetDate = targetDoc == MemoryDocTarget.daily
+        ? date ??
+            DateTime.fromMillisecondsSinceEpoch(
+              candidate.appliedAtMs ?? candidate.createdAtMs,
+            )
+        : null;
+    final removed = await _removeFromTarget(
+      targetDoc: targetDoc,
+      date: targetDate,
+      text: candidate.text,
+    );
+    if (!removed) {
+      throw StateError('Direct-saved memory text not found: $candidateId');
+    }
+
+    return _candidateStore.dismiss(
+      candidateId,
+      decisionSource: 'user_undo_direct_save',
+    );
   }
 
   Future<MemoryCandidate> _saveDirect({
@@ -350,6 +389,19 @@ class MemoryWorkflowService {
     );
   }
 
+  Future<bool> _removeFromTarget({
+    required MemoryDocTarget targetDoc,
+    DateTime? date,
+    required String text,
+  }) {
+    return _writeCoordinator.removeLastExactBlock(
+      longTerm: targetDoc == MemoryDocTarget.longTerm,
+      date:
+          targetDoc == MemoryDocTarget.daily ? (date ?? DateTime.now()) : null,
+      text: text,
+    );
+  }
+
   String _normalizeText(String text) {
     final normalized = text.trim();
     if (normalized.isEmpty) {
@@ -382,6 +434,19 @@ class MemoryWorkflowService {
       return collapsed;
     }
     return '${collapsed.substring(0, 77)}...';
+  }
+
+  bool _shouldSaveDigestDirectly({
+    required MemoryWorkflowDailyStrategy dailyStrategy,
+    required double? confidence,
+  }) {
+    if (dailyStrategy == MemoryWorkflowDailyStrategy.autoDaily) {
+      return true;
+    }
+    if (dailyStrategy == MemoryWorkflowDailyStrategy.smartDaily) {
+      return (confidence ?? 0) >= _smartDailyConfidenceThreshold;
+    }
+    return false;
   }
 
   /// Navigate into the reader at the position where [candidate] was captured.
@@ -437,5 +502,13 @@ class MemorySessionDigestResult {
   final List<MemoryCandidate> candidates;
   final MemoryWorkflowDailyStrategy dailyStrategy;
 
-  bool get writesDailyDirectly => dailyStrategy.writesDailyDirectly;
+  int get directSaveCount => candidates.where((c) => c.isApplied).length;
+
+  int get reviewInboxCount => candidates.where((c) => c.isPending).length;
+
+  bool get writesDailyDirectly {
+    return candidates.isNotEmpty &&
+        reviewInboxCount == 0 &&
+        directSaveCount > 0;
+  }
 }
