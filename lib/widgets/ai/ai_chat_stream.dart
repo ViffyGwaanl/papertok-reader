@@ -7062,12 +7062,12 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final canPreviewHandoff = activeSynthesis != null &&
         activeSynthesis.readyForReview &&
         activeSynthesis.hasTraceableHandoff;
-    final candidateCardTitles = canPreviewHandoff
-        ? _seminarReviewCandidateCardTitles(activeSynthesis.candidateCards)
-        : const <String>[];
+    final candidateCardItems = canPreviewHandoff
+        ? _seminarReviewCandidateCardItems(activeSynthesis)
+        : const <_SeminarReviewPreviewItem>[];
     final reviewQuestions = canPreviewHandoff
         ? _seminarReviewQuestions(activeSynthesis.candidateReviewQuestions)
-        : const <String>[];
+        : const <_SeminarReviewPreviewItem>[];
     final candidateCardCount =
         canPreviewHandoff ? activeSynthesis.candidateCards.length : 0;
     final flashcardCandidateCount = reviewQuestions.length;
@@ -7151,14 +7151,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       : 'KnowledgeCard candidates: $candidateCardCount items',
                 ),
               ),
-              if (candidateCardTitles.isNotEmpty) ...[
+              if (candidateCardItems.isNotEmpty) ...[
                 const SizedBox(height: 3),
                 _seminarSnapshotReviewItems(
                   label: _localizedSeminarCardText(
                     zh: '知识卡候选明细',
                     en: 'KnowledgeCard candidate details',
                   ),
-                  items: candidateCardTitles,
+                  items: candidateCardItems,
                 ),
               ],
               const SizedBox(height: 4),
@@ -7199,30 +7199,57 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     );
   }
 
-  List<String> _seminarReviewCandidateCardTitles(
-    List<AiSeminarWhiteboardEntry> cards,
+  List<_SeminarReviewPreviewItem> _seminarReviewCandidateCardItems(
+    AiSeminarSynthesis synthesis,
   ) {
-    return cards
-        .map((card) => card.text.trim())
-        .where((title) => title.isNotEmpty)
+    final evidenceById = <String, AiSeminarEvidence>{
+      for (final item in synthesis.evidence)
+        if (item.id.trim().isNotEmpty) item.id.trim(): item,
+    };
+    return synthesis.candidateCards
+        .map((card) {
+          final title = card.text.trim();
+          final evidenceRefs = card.evidenceRefIds
+              .map((id) => evidenceById[id.trim()])
+              .whereType<AiSeminarEvidence>()
+              .where((item) => item.isTraceable)
+              .take(2)
+              .map(
+                (item) => AiSeminarRunCardEvidenceSnapshot(
+                  id: item.id,
+                  title: _seminarEvidenceSnapshotTitle(item),
+                  snippet: _seminarEvidenceSnapshotSnippet(item),
+                  sourceRef: item.sourceRef,
+                ),
+              )
+              .where((item) => !item.isEmpty)
+              .toList(growable: false);
+          return _SeminarReviewPreviewItem(
+            text: title,
+            evidenceRefs: evidenceRefs,
+          );
+        })
+        .where((item) => !item.isEmpty)
         .toList(growable: false);
   }
 
-  List<String> _seminarReviewQuestions(List<String> questions) {
+  List<_SeminarReviewPreviewItem> _seminarReviewQuestions(
+    List<String> questions,
+  ) {
     final seen = <String>{};
-    final items = <String>[];
+    final items = <_SeminarReviewPreviewItem>[];
     for (final raw in questions) {
       final question = raw.trim();
       if (question.isEmpty) continue;
       if (!seen.add(question.toLowerCase())) continue;
-      items.add(question);
+      items.add(_SeminarReviewPreviewItem(text: question));
     }
     return items;
   }
 
   Widget _seminarSnapshotReviewItems({
     required String label,
-    required List<String> items,
+    required List<_SeminarReviewPreviewItem> items,
   }) {
     final visibleItems = items.take(3).toList(growable: false);
     final remainingCount = items.length - visibleItems.length;
@@ -7236,27 +7263,53 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           for (final item in visibleItems)
             Padding(
               padding: const EdgeInsets.only(bottom: 3),
-              child: Row(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '•',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: ClaudePalette.secondary(context),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '•',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: ClaudePalette.secondary(context),
+                            ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          item.text,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: ClaudePalette.secondary(context),
+                                    height: 1.32,
+                                  ),
                         ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      item,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: ClaudePalette.secondary(context),
-                            height: 1.32,
+                  if (item.evidenceRefs.isNotEmpty) ...[
+                    const SizedBox(height: 5),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _seminarSnapshotDetailLabel(
+                            _localizedSeminarCardText(
+                              zh: '候选证据',
+                              en: 'Candidate evidence',
+                            ),
                           ),
+                          const SizedBox(height: 5),
+                          for (final evidence in item.evidenceRefs)
+                            _seminarSnapshotEvidenceTile(evidence),
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -8553,6 +8606,18 @@ class _AssistantGroupChatItem extends _ChatItem {
   final int? userIndex;
 
   final List<AIChatMessage> variants;
+}
+
+class _SeminarReviewPreviewItem {
+  const _SeminarReviewPreviewItem({
+    required this.text,
+    this.evidenceRefs = const <AiSeminarRunCardEvidenceSnapshot>[],
+  });
+
+  final String text;
+  final List<AiSeminarRunCardEvidenceSnapshot> evidenceRefs;
+
+  bool get isEmpty => text.trim().isEmpty && evidenceRefs.isEmpty;
 }
 
 class _AiChatKnowledgeSourceStatus {

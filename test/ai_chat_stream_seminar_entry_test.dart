@@ -1415,6 +1415,8 @@ void main() {
       expect(find.text('综合总结：1 项'), findsOneWidget);
       expect(find.text('知识卡候选：1 项'), findsOneWidget);
       expect(find.text('Exception card candidate'), findsOneWidget);
+      expect(find.text('候选证据'), findsWidgets);
+      expect(find.text('Additional source passage 4.'), findsOneWidget);
       expect(find.text('复习候选：1 项'), findsOneWidget);
       expect(find.text('What boundary should be reviewed?'), findsOneWidget);
       expect(find.text('普通学习保存请优先使用知识卡、复习或我的图谱。'), findsOneWidget);
