@@ -329,10 +329,12 @@ void main() {
         .toList();
 
     expect(client.sentJsonBodies, hasLength(2));
+    expect(client.sentJsonBodies[0]['store'], isTrue);
     final secondBody = client.sentJsonBodies[1];
 
     expect(secondBody['previous_response_id'], 'resp_1');
     expect(secondBody['model'], 'gpt-5.1-codex');
+    expect(secondBody['store'], isTrue);
     expect(secondBody.containsKey('conversation'), isFalse);
 
     final input = (secondBody['input'] as List).cast<dynamic>();
@@ -510,6 +512,48 @@ void main() {
         .toList(growable: false);
     expect(retryInput, contains('function_call'));
     expect(retryInput, contains('function_call_output'));
+
+    final content = chunks.map((c) => c.output.content).join();
+    expect(content, 'OK');
+  });
+
+  test('falls back when response store is rejected by provider', () async {
+    final retry = StringBuffer()
+      ..write(_sseEvent('response.output_text.delta', {'delta': 'OK'}))
+      ..write(_sseEvent('response.completed', {
+        'response': {
+          'id': 'resp_1',
+          'reasoning': {'summary': null}
+        }
+      }));
+
+    final client = _QueuedStreamClient([
+      const _QueuedHttpResponse(
+        400,
+        '{"error":{"message":"Unsupported parameter: store","type":"bad_response_status_code","param":"store","code":"bad_response_status_code"}}',
+      ),
+      retry.toString(),
+    ]);
+
+    final model = ChatOpenAIResponses(
+      baseUrl: 'https://example.com/v1',
+      apiKey: 'k',
+      defaultOptions: const ChatOpenAIOptions(model: 'gpt-test'),
+      client: client,
+    );
+
+    final chunks = await model
+        .stream(
+          PromptValue.chat([
+            ChatMessage.humanText('hello'),
+          ]),
+        )
+        .toList();
+
+    expect(client.sentJsonBodies, hasLength(2));
+    expect(client.sentJsonBodies[0]['store'], isTrue);
+    expect(client.sentJsonBodies[1].containsKey('store'), isFalse);
+    expect(client.sentJsonBodies[1].containsKey('previous_response_id'), false);
 
     final content = chunks.map((c) => c.output.content).join();
     expect(content, 'OK');

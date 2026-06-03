@@ -67,6 +67,24 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
   int _apiKeyRateLimitCooldownMinutes = 5;
   int _apiKeyServiceCooldownMinutes = 1;
 
+  bool get _isChineseLocale =>
+      Localizations.localeOf(context).languageCode.toLowerCase().startsWith(
+            'zh',
+          );
+
+  String _text({required String zh, required String en}) {
+    return _isChineseLocale ? zh : en;
+  }
+
+  String _defaultKeyName(int index) {
+    return _text(zh: '密钥 $index', en: 'Key $index');
+  }
+
+  String _boolLabel(bool value) {
+    if (_isChineseLocale) return value ? '是' : '否';
+    return value ? 'true' : 'false';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -488,7 +506,9 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
     try {
       final ok = await PTDialog.show<bool>(
         context,
-        title: existing == null ? 'Add API Key' : 'Edit API Key',
+        title: existing == null
+            ? _text(zh: '添加 API 密钥', en: 'Add API Key')
+            : _text(zh: '编辑 API 密钥', en: 'Edit API Key'),
         content: StatefulBuilder(
           builder: (ctx, setInner) {
             return SingleChildScrollView(
@@ -497,8 +517,11 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
                 children: [
                   TextField(
                     controller: nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Name (optional)',
+                    decoration: InputDecoration(
+                      labelText: _text(
+                        zh: '名称（可选）',
+                        en: 'Name (optional)',
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -506,9 +529,12 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
                     controller: keyController,
                     obscureText: obscure,
                     decoration: InputDecoration(
-                      labelText: 'Key',
+                      labelText: _text(zh: '密钥', en: 'Key'),
                       suffixIcon: IconButton(
                         onPressed: () => setInner(() => obscure = !obscure),
+                        tooltip: obscure
+                            ? _text(zh: '显示', en: 'Reveal')
+                            : _text(zh: '隐藏', en: 'Hide'),
                         icon: Icon(
                           obscure ? Icons.visibility_off : Icons.visibility,
                         ),
@@ -520,13 +546,16 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
                   const SizedBox(height: 12),
                   SwitchListTile.adaptive(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Enabled'),
+                    title: Text(_text(zh: '启用', en: 'Enabled')),
                     value: enabled,
                     onChanged: (v) => setInner(() => enabled = v),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Security: API keys are stored locally only. They are NOT synced via WebDAV and are excluded from plain backups.',
+                    _text(
+                      zh: '安全提示：API 密钥只保存在本机，不会通过 WebDAV 同步，也会从普通备份中排除。',
+                      en: 'Security: API keys are stored locally only. They are NOT synced via WebDAV and are excluded from plain backups.',
+                    ),
                     style: Theme.of(ctx).textTheme.bodySmall,
                   ),
                 ],
@@ -551,7 +580,9 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
 
       final key = keyController.text.trim();
       if (key.isEmpty) {
-        AnxToast.show('${l10n.commonFailed}: empty key');
+        AnxToast.show(
+          '${l10n.commonFailed}: ${_text(zh: '空密钥', en: 'empty key')}',
+        );
         return;
       }
 
@@ -561,7 +592,7 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
       final updated = existing == null
           ? AiApiKeyEntry(
               id: _uuid.v4(),
-              name: name.isEmpty ? 'Key ${_apiKeys.length + 1}' : name,
+              name: name.isEmpty ? _defaultKeyName(_apiKeys.length + 1) : name,
               key: key,
               enabled: enabled,
               createdAt: now,
@@ -597,12 +628,14 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
     try {
       final ok = await PTDialog.show<bool>(
         context,
-        title: 'Import API Keys',
+        title: _text(zh: '导入 API 密钥', en: 'Import API Keys'),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(
-            hintText:
-                'Paste keys here (one per line / separated by comma/semicolon)',
+          decoration: InputDecoration(
+            hintText: _text(
+              zh: '在这里粘贴密钥（每行一条，或用逗号/分号分隔）',
+              en: 'Paste keys here (one per line / separated by comma/semicolon)',
+            ),
           ),
           minLines: 4,
           maxLines: 10,
@@ -644,7 +677,7 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
         next.add(
           AiApiKeyEntry(
             id: _uuid.v4(),
-            name: 'Key ${next.length + 1}',
+            name: _defaultKeyName(next.length + 1),
             key: k,
             enabled: true,
             createdAt: now,
@@ -655,7 +688,9 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
       }
 
       _setApiKeys(next);
-      AnxToast.show('Imported $added key(s)');
+      AnxToast.show(
+        _text(zh: '已导入 $added 个密钥', en: 'Imported $added key(s)'),
+      );
     } finally {
       controller.dispose();
     }
@@ -666,8 +701,10 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
     final ok = await PTDialog.show<bool>(
       context,
       title: l10n.commonDelete,
-      message:
-          'Delete ${entry.name.isEmpty ? entry.maskedKey() : entry.name}?',
+      message: _text(
+        zh: '删除 ${entry.name.isEmpty ? entry.maskedKey() : entry.name}？',
+        en: 'Delete ${entry.name.isEmpty ? entry.maskedKey() : entry.name}?',
+      ),
       actions: [
         PTDialogAction(
           label: l10n.commonCancel,
@@ -701,7 +738,7 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
           )
           .toList(growable: false),
     );
-    AnxToast.show('Cooldown cleared');
+    AnxToast.show(_text(zh: '已解除冷却', en: 'Cooldown cleared'));
   }
 
   void _resetStatsForKey(AiApiKeyEntry entry) {
@@ -721,7 +758,7 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
           )
           .toList(growable: false),
     );
-    AnxToast.show('Stats reset');
+    AnxToast.show(_text(zh: '统计已重置', en: 'Stats reset'));
   }
 
   Future<void> _testKey(AiApiKeyEntry entry) async {
@@ -740,7 +777,12 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
 
       if (!mounted) return;
 
-      final msg = models.isEmpty ? 'OK' : 'OK (${models.length} models)';
+      final msg = models.isEmpty
+          ? _text(zh: '成功', en: 'OK')
+          : _text(
+              zh: '成功（${models.length} 个模型）',
+              en: 'OK (${models.length} models)',
+            );
       _setApiKeys(
         _apiKeys
             .map(
@@ -756,7 +798,9 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
             .toList(growable: false),
       );
 
-      AnxToast.show('Test success: ${entry.name}');
+      AnxToast.show(
+        _text(zh: '测试成功：${entry.name}', en: 'Test success: ${entry.name}'),
+      );
     } catch (e) {
       if (!mounted) return;
       _setApiKeys(
@@ -792,28 +836,30 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
       children: [
         Row(
           children: [
-            const Text(
-              'API Keys',
+            Text(
+              _text(zh: 'API 密钥', en: 'API Keys'),
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
             const Spacer(),
             IconButton(
-              tooltip: 'Import',
+              tooltip: _text(zh: '导入', en: 'Import'),
               onPressed: _showBulkImportDialog,
               icon: const Icon(Icons.playlist_add),
             ),
             IconButton(
-              tooltip: 'Add',
+              tooltip: _text(zh: '添加', en: 'Add'),
               onPressed: () => _showEditKeyDialog(),
               icon: const Icon(Icons.add),
             ),
             IconButton(
-              tooltip: 'Test',
+              tooltip: _text(zh: '测试', en: 'Test'),
               onPressed: _testAllEnabledKeys,
               icon: const Icon(Icons.check_circle_outline),
             ),
             IconButton(
-              tooltip: _revealKeys ? 'Hide' : 'Reveal',
+              tooltip: _revealKeys
+                  ? _text(zh: '隐藏', en: 'Hide')
+                  : _text(zh: '显示', en: 'Reveal'),
               onPressed: () => setState(() => _revealKeys = !_revealKeys),
               icon: Icon(_revealKeys ? Icons.visibility_off : Icons.visibility),
             ),
@@ -821,7 +867,10 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Keys are stored locally only (not synced via WebDAV; excluded from plain backups).',
+          _text(
+            zh: '密钥仅保存在本机（不通过 WebDAV 同步，也不会进入普通备份）。',
+            en: 'Keys are stored locally only (not synced via WebDAV; excluded from plain backups).',
+          ),
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 8),
@@ -833,7 +882,8 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
               border: Border.all(color: Theme.of(context).dividerColor),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Text('No API keys configured.'),
+            child:
+                Text(_text(zh: '未配置 API 密钥。', en: 'No API keys configured.')),
           )
         else
           Container(
@@ -851,20 +901,24 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
                 final testText = e.lastTestAt == null
                     ? ''
                     : (e.lastTestOk == true
-                        ? ' • last test: OK'
-                        : ' • last test: FAIL');
+                        ? _text(zh: ' • 上次测试：成功', en: ' • last test: OK')
+                        : _text(zh: ' • 上次测试：失败', en: ' • last test: FAIL'));
 
                 final fails = e.failureCount ?? 0;
                 final consec = e.consecutiveFailures ?? 0;
                 final failText = fails > 0
-                    ? ' • fails: $fails${consec > 0 ? ' (x$consec)' : ''}'
+                    ? _text(
+                        zh: ' • 失败：$fails${consec > 0 ? '（连续 $consec）' : ''}',
+                        en: ' • fails: $fails${consec > 0 ? ' (x$consec)' : ''}',
+                      )
                     : '';
 
                 final nowMs = DateTime.now().millisecondsSinceEpoch;
                 final cooldownUntil = e.disabledUntil;
                 final inCooldown =
                     cooldownUntil != null && cooldownUntil > nowMs;
-                final cooldownText = inCooldown ? ' • cooldown' : '';
+                final cooldownText =
+                    inCooldown ? _text(zh: ' • 冷却中', en: ' • cooldown') : '';
 
                 return Column(
                   children: [
@@ -876,7 +930,7 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
                             : Theme.of(context).disabledColor,
                       ),
                       title: Text(
-                        '${e.name}${isActive ? ' (active)' : ''}',
+                        '${e.name}${isActive ? _text(zh: '（当前）', en: ' (active)') : ''}',
                         overflow: TextOverflow.ellipsis,
                       ),
                       subtitle: Text(
@@ -887,13 +941,13 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
                       onTap: () => _showEditKeyDialog(existing: e),
                       onLongPress: () {
                         Clipboard.setData(ClipboardData(text: e.key.trim()));
-                        AnxToast.show('Key copied');
+                        AnxToast.show(_text(zh: '密钥已复制', en: 'Key copied'));
                       },
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            tooltip: 'Test',
+                            tooltip: _text(zh: '测试', en: 'Test'),
                             onPressed: () => _testKey(e),
                             icon: const Icon(Icons.play_circle_outline),
                           ),
@@ -904,7 +958,9 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
                                   Clipboard.setData(
                                     ClipboardData(text: e.key.trim()),
                                   );
-                                  AnxToast.show('Key copied');
+                                  AnxToast.show(
+                                    _text(zh: '密钥已复制', en: 'Key copied'),
+                                  );
                                   break;
                                 case 'clear_cooldown':
                                   _clearCooldownForKey(e);
@@ -920,17 +976,21 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
                               }
                             },
                             itemBuilder: (ctx) => [
-                              const PopupMenuItem(
+                              PopupMenuItem(
                                 value: 'copy',
-                                child: Text('Copy'),
+                                child: Text(_text(zh: '复制', en: 'Copy')),
                               ),
-                              const PopupMenuItem(
+                              PopupMenuItem(
                                 value: 'clear_cooldown',
-                                child: Text('解除冷却'),
+                                child: Text(
+                                  _text(zh: '解除冷却', en: 'Clear cooldown'),
+                                ),
                               ),
-                              const PopupMenuItem(
+                              PopupMenuItem(
                                 value: 'reset_stats',
-                                child: Text('重置统计'),
+                                child: Text(
+                                  _text(zh: '重置统计', en: 'Reset stats'),
+                                ),
                               ),
                               PopupMenuItem(
                                 value: 'delete',
@@ -1186,21 +1246,41 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Model capability',
+                      Text(
+                        _text(zh: '模型能力', en: 'Model capability'),
                         style: TextStyle(fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                          'Context window: ${capability?.contextWindow ?? '-'}'),
+                        _text(
+                          zh: '上下文窗口：${capability?.contextWindow ?? '-'}',
+                          en: 'Context window: ${capability?.contextWindow ?? '-'}',
+                        ),
+                      ),
                       Text(
-                          'Max output tokens: ${capability?.maxOutputTokens ?? '-'}'),
+                        _text(
+                          zh: '最大输出 token：${capability?.maxOutputTokens ?? '-'}',
+                          en: 'Max output tokens: ${capability?.maxOutputTokens ?? '-'}',
+                        ),
+                      ),
                       Text(
-                          'Supports thinking: ${capability?.supportsThinking ?? false}'),
+                        _text(
+                          zh: '支持思考：${_boolLabel(capability?.supportsThinking ?? false)}',
+                          en: 'Supports thinking: ${_boolLabel(capability?.supportsThinking ?? false)}',
+                        ),
+                      ),
                       Text(
-                          'Supports tools: ${capability?.supportsTools ?? false}'),
+                        _text(
+                          zh: '支持工具：${_boolLabel(capability?.supportsTools ?? false)}',
+                          en: 'Supports tools: ${_boolLabel(capability?.supportsTools ?? false)}',
+                        ),
+                      ),
                       Text(
-                          'Supports images: ${capability?.supportsImages ?? false}'),
+                        _text(
+                          zh: '支持图片：${_boolLabel(capability?.supportsImages ?? false)}',
+                          en: 'Supports images: ${_boolLabel(capability?.supportsImages ?? false)}',
+                        ),
+                      ),
                     ],
                   ),
                 );

@@ -63,6 +63,11 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
   /// advertise /responses but reject `previous_response_id`.
   bool _previousResponseIdUnsupported = false;
 
+  /// Runtime compatibility guard for providers that reject the Responses API
+  /// `store` parameter. Without stored responses, this runtime cannot rely on
+  /// `previous_response_id`, so it falls back to manual replay.
+  bool _responseStoreUnsupported = false;
+
   /// Accumulated reasoning items from previous Responses calls within the same
   /// agent loop.
   ///
@@ -205,6 +210,19 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
             _previousResponseIdUnsupported = true;
             _aiDebug(
               'provider rejected previous_response_id; retrying in compatibility mode',
+            );
+            requestBody = _buildRequestBody(messages, effective);
+            fallbackRetried = true;
+            response = await _sendRequest(client, requestBody);
+            errorBody = null;
+          } else if (_isUnsupportedResponseStore(
+            statusCode: response.statusCode,
+            errorBody: errorBody,
+            requestBody: requestBody,
+          )) {
+            _responseStoreUnsupported = true;
+            _aiDebug(
+              'provider rejected response store; retrying without stateful continuation',
             );
             requestBody = _buildRequestBody(messages, effective);
             fallbackRetried = true;
@@ -548,8 +566,10 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
     ChatOpenAIOptions options,
   ) {
     final model = options.model ?? defaultOptions.model;
-    final canUsePreviousResponseId =
-        usePreviousResponseId && !_previousResponseIdUnsupported;
+    final canUsePreviousResponseId = usePreviousResponseId &&
+        !_previousResponseIdUnsupported &&
+        !_responseStoreUnsupported;
+    final storeResponsesForContinuation = canUsePreviousResponseId;
 
     // If we're starting a fresh run (no tool outputs in the scratchpad), clear
     // replay items and previous-response tracking.
@@ -599,6 +619,7 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
         'previous_response_id': _lastServerResponseId,
         'input': outputs,
         'stream': true,
+        if (storeResponsesForContinuation) 'store': true,
         if (tools.isNotEmpty) 'tools': tools,
         'tool_choice': _mapToolChoice(options.toolChoice) ?? 'auto',
         if (reasoning != null) 'reasoning': reasoning,
@@ -668,6 +689,7 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
       if (instructions != null) 'instructions': instructions,
       'input': inputItems,
       'stream': true,
+      if (storeResponsesForContinuation) 'store': true,
       if (tools.isNotEmpty) 'tools': tools,
       'tool_choice': _mapToolChoice(options.toolChoice) ?? 'auto',
       if (reasoning != null) 'reasoning': reasoning,
@@ -734,6 +756,21 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
         lower.contains('unsupported');
   }
 
+  bool _isUnsupportedResponseStore({
+    required int statusCode,
+    required String errorBody,
+    required Map<String, dynamic> requestBody,
+  }) {
+    if (statusCode != 400) {
+      return false;
+    }
+    if (requestBody['store'] != true) {
+      return false;
+    }
+    final lower = errorBody.toLowerCase();
+    return lower.contains('store') && lower.contains('unsupported');
+  }
+
   String _requestDiagnostics(
     Map<String, dynamic> requestBody,
     bool fallbackRetried,
@@ -742,6 +779,7 @@ class ChatOpenAIResponses extends BaseChatModel<ChatOpenAIOptions> {
     return 'Diagnostics: endpoint=${_endpoint()} model=$model '
         'sent_previous_response_id=${requestBody.containsKey('previous_response_id')} '
         'sent_conversation=${requestBody.containsKey('conversation')} '
+        'sent_store=${requestBody.containsKey('store')} '
         'fallback_retried=$fallbackRetried';
   }
 
