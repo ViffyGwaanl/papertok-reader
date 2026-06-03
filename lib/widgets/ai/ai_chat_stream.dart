@@ -313,6 +313,9 @@ class _SeminarRunSetupSheetState extends State<_SeminarRunSetupSheet> {
   late final Map<AiSeminarRole, TextEditingController> _nameControllers;
   late final Map<AiSeminarRole, AiSeminarRoleProfile?> _baseProfiles;
   late final Map<AiSeminarRole, bool> _roleEnabled;
+  late final Map<AiSeminarRole, Set<AiSeminarEvidenceScope>>
+      _roleEvidenceScopes;
+  late final Set<AiSeminarRole> _roleEvidenceScopeTouched;
   late bool _includeVerifier;
 
   @override
@@ -341,6 +344,14 @@ class _SeminarRunSetupSheetState extends State<_SeminarRunSetupSheet> {
       for (final role in AiSeminarRole.values)
         role: _baseProfiles[role]?.enabled ?? true,
     };
+    _roleEvidenceScopes = {
+      for (final role in AiSeminarRole.values)
+        role: {
+          ...(_baseProfiles[role]?.evidenceScopes ??
+              const <AiSeminarEvidenceScope>[]),
+        },
+    };
+    _roleEvidenceScopeTouched = <AiSeminarRole>{};
   }
 
   @override
@@ -425,8 +436,24 @@ class _SeminarRunSetupSheetState extends State<_SeminarRunSetupSheet> {
               enabled: _roleEnabled[role] ?? true,
               nameController: _nameControllers[role]!,
               promptController: _promptControllers[role]!,
+              evidenceScopes:
+                  _roleEvidenceScopes[role] ?? const <AiSeminarEvidenceScope>{},
               onEnabledChanged: (value) {
                 setState(() => _roleEnabled[role] = value);
+              },
+              onEvidenceScopeToggled: (scope) {
+                setState(() {
+                  _roleEvidenceScopeTouched.add(role);
+                  final scopes = _roleEvidenceScopes.putIfAbsent(
+                    role,
+                    () => <AiSeminarEvidenceScope>{},
+                  );
+                  if (scopes.contains(scope)) {
+                    scopes.remove(scope);
+                  } else {
+                    scopes.add(scope);
+                  }
+                });
               },
             ),
           const SizedBox(height: 12),
@@ -459,13 +486,20 @@ class _SeminarRunSetupSheetState extends State<_SeminarRunSetupSheet> {
     final profiles = <AiSeminarRoleProfile>[];
     for (final role in AiSeminarRole.values) {
       final baseProfile = _baseProfiles[role];
+      final selectedScopes =
+          _roleEvidenceScopes[role] ?? const <AiSeminarEvidenceScope>{};
+      final evidenceScopes =
+          selectedScopes.isEmpty && _roleEvidenceScopeTouched.contains(role)
+              ? const <AiSeminarEvidenceScope>[
+                  AiSeminarEvidenceScope.currentBook,
+                ]
+              : selectedScopes.toList(growable: false);
       final profile = AiSeminarRoleProfile(
         role: role,
         name: _nameControllers[role]?.text,
         customPrompt: _promptControllers[role]?.text,
         enabled: _roleEnabled[role] ?? true,
-        evidenceScopes:
-            baseProfile?.evidenceScopes ?? const <AiSeminarEvidenceScope>[],
+        evidenceScopes: evidenceScopes,
         allowedToolIds: baseProfile?.allowedToolIds ?? const <String>[],
       );
       if (profile.hasOverrides) {
@@ -490,7 +524,9 @@ class _SeminarRunRoleProfileTile extends StatelessWidget {
     required this.enabled,
     required this.nameController,
     required this.promptController,
+    required this.evidenceScopes,
     required this.onEnabledChanged,
+    required this.onEvidenceScopeToggled,
   });
 
   final AiSeminarRole role;
@@ -498,7 +534,9 @@ class _SeminarRunRoleProfileTile extends StatelessWidget {
   final bool enabled;
   final TextEditingController nameController;
   final TextEditingController promptController;
+  final Set<AiSeminarEvidenceScope> evidenceScopes;
   final ValueChanged<bool> onEnabledChanged;
+  final ValueChanged<AiSeminarEvidenceScope> onEvidenceScopeToggled;
 
   @override
   Widget build(BuildContext context) {
@@ -544,8 +582,71 @@ class _SeminarRunRoleProfileTile extends StatelessWidget {
               border: const OutlineInputBorder(),
             ),
           ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(
+              zh ? '本次证据范围' : 'Run evidence scope',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _SeminarRunEvidenceScopeChip(
+                key: ValueKey(
+                  'seminar-run-role-${role.asString}-scope-current-book',
+                ),
+                label: zh ? '当前书' : 'Current book',
+                selected: evidenceScopes.isEmpty ||
+                    evidenceScopes.contains(AiSeminarEvidenceScope.currentBook),
+                onPressed: () => onEvidenceScopeToggled(
+                  AiSeminarEvidenceScope.currentBook,
+                ),
+              ),
+              _SeminarRunEvidenceScopeChip(
+                key: ValueKey(
+                  'seminar-run-role-${role.asString}-scope-library',
+                ),
+                label: zh ? '书库' : 'Library',
+                selected:
+                    evidenceScopes.contains(AiSeminarEvidenceScope.library),
+                onPressed: () => onEvidenceScopeToggled(
+                  AiSeminarEvidenceScope.library,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _SeminarRunEvidenceScopeChip extends StatelessWidget {
+  const _SeminarRunEvidenceScopeChip({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onPressed,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return FilterChip(
+      selected: selected,
+      label: Text(label),
+      avatar: Icon(
+        selected ? Icons.check_circle_outline : Icons.circle_outlined,
+        size: 16,
+      ),
+      onSelected: (_) => onPressed(),
     );
   }
 }

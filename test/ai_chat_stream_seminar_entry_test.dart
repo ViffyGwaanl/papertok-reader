@@ -183,6 +183,19 @@ void main() {
         find.byKey(const ValueKey('seminar-run-role-critical-prompt')),
         '请先指出反方证据缺口，再决定是否需要刷新证据。',
       );
+      expect(
+        find.byKey(
+          const ValueKey('seminar-run-role-critical-scope-current-book'),
+        ),
+        findsOneWidget,
+      );
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('seminar-run-role-critical-scope-library')),
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('seminar-run-role-critical-scope-library')),
+      );
+      await tester.pump();
       await tester
           .ensureVisible(find.byKey(const ValueKey('seminar-run-start')));
       await tester.tap(find.byKey(const ValueKey('seminar-run-start')));
@@ -199,7 +212,11 @@ void main() {
       expect(card?.maxRounds, 4);
       expect(criticalProfile?.customPrompt, '请先指出反方证据缺口，再决定是否需要刷新证据。');
       expect(criticalProfile?.evidenceScopes,
-          const [AiSeminarEvidenceScope.library]);
+          const [AiSeminarEvidenceScope.currentBook]);
+      expect(
+        Prefs().aiSeminarRoleProfileFor(AiSeminarRole.critical)?.evidenceScopes,
+        const [AiSeminarEvidenceScope.library],
+      );
       expect(
         criticalProfile?.allowedToolIds,
         const ['semantic_search_current_book'],

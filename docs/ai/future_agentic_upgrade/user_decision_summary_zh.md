@@ -104,7 +104,7 @@
 
 - 把当前带 snapshot、白板正文首片、首片异常送审按钮、异常送审内容计数、候选明细、知识卡候选证据摘录和复习候选综合证据、completed 卡内低负担保存动作、completed / askUser 卡内读者参与 composer、分歧快捷继续讨论入口、snapshot 子视图首片和 AI Chat scoped runtime 的历史任务卡继续升级为完整 AI Chat message part / run 卡片，补齐完整异常送审详情表、完整 contradiction 详情 tab、message part schema migration 和独立详情页 scoped store。
 - 让 `DirectorState` 从已接入的可恢复账本和 next-intent policy 升级为真实调度器输入：根据已发言角色、分歧、证据刷新次数、用户插话和下一步 intent 决定继续找证据、让某个角色反驳、向用户提问或总结。
-- 补齐角色 profile 治理的剩余部分：默认角色仍是 `critical/supportive/synthesizer/verifier`；显示名、custom prompt、启用状态、会话证据提示和只读工具范围已有 Settings 全局默认；后续还要增加 AI Chat 单次 run 临时配置、空 prompt 显式提示、角色级证据过滤、角色级预算和真实角色工具调用闭环。
+- 补齐角色 profile 治理的剩余部分：默认角色仍是 `critical/supportive/synthesizer/verifier`；显示名、custom prompt、启用状态、会话证据提示和只读工具范围已有 Settings 全局默认；AI Chat 单次 run 已能临时覆盖 prompt、启用状态和 current book/library 证据范围；后续还要增加空 prompt 显式提示、单次只读工具范围 override、角色级证据过滤、角色级预算和真实角色工具调用闭环。
 - 增加多轮机制：第一轮观点后做 contradiction scan；证据不足或角色冲突时重新检索，再进入反驳轮，最后 synthesis。
 - 继续完善用户讨论环节：用户输入框、动作选择、“某角色回应”、“重新找证据”、“直接总结”和 disagreement 预算内自动刷新执行路径已接入；后续要把运行结果落到完整结构化 Chat run card 子视图，并接入完整角色反驳 loop。
 - 把独立 Seminar 页面降为详情/恢复入口，并与 Chat run card 共用同一个 runtime state。
@@ -112,7 +112,7 @@
 做成后的效果：
 
 - 用户不需要离开 AI Chat，就能看到多个角色围绕同一个问题交锋、补证据、反驳和总结。
-- 角色不再只是固定 prompt；用户已能改名称、风格、是否启用、为整场研讨补充 current book/library 证据提示，以及限制哪些安全只读工具会写入 role prompt；后续还可以在单次 Chat run 中临时覆盖这些设置，并做真正角色级证据过滤。
+- 角色不再只是固定 prompt；用户已能改名称、风格、是否启用、为整场研讨补充 current book/library 证据提示，以及限制哪些安全只读工具会写入 role prompt；AI Chat 单次 run 已能临时覆盖 prompt、启用状态和 current book/library 证据范围，后续还要补单次工具范围、角色级预算和真正角色级证据过滤。
 - 讨论遇到矛盾不会一轮结束，而是会把争议点列出来，再按证据缺口重新查书内或书库 evidence。
 - AI Chat 的 thinking、tool call、skill/plugin 面板和 Seminar 会变成同一个工作台：用户在同一个输入框里提问、插话、点名某个角色、要求重查证据或收束送审。
 - 独立 Seminar 页面只承担详情、恢复和调试，不再是日常主路径；日常入口是 AI Chat 的结构化 Seminar run card。
