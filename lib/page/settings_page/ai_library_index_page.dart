@@ -6,6 +6,7 @@ import 'package:papertok_reader/models/ai_provider_meta.dart';
 import 'package:papertok_reader/service/ai/ai_models_service.dart';
 import 'package:papertok_reader/service/ai/tools/repository/books_repository.dart';
 import 'package:papertok_reader/utils/toast/common.dart';
+import 'package:papertok_reader/service/rag/ai_book_index_readiness.dart';
 import 'package:papertok_reader/service/rag/ai_book_indexer.dart';
 import 'package:papertok_reader/service/rag/ai_embeddings_service.dart';
 import 'package:papertok_reader/service/rag/ai_global_index_builder.dart';
@@ -31,6 +32,42 @@ enum _BookIndexStatus {
   indexed,
 }
 
+typedef AiLibraryBookSearchLoader = Future<List<BookSearchResult>> Function({
+  required int limit,
+});
+
+typedef AiLibraryBookIndexInfoLoader = Future<Map<int, AiBookIndexInfo>>
+    Function(List<int> bookIds);
+
+typedef AiLibraryBookReadinessLoader = Future<AiBookIndexReadiness> Function(
+  int bookId,
+);
+
+typedef AiLibraryBookBaseEmbeddingRepairer = Future<void> Function(int bookId);
+typedef AiLibraryBookGlobalLayerBuilder = Future<void> Function(int bookId);
+typedef AiLibraryBookNativeVectorBuilder = Future<void> Function(int bookId);
+typedef AiLibraryBookAnnVectorBuilder = Future<void> Function(
+  int bookId, {
+  void Function(AiVec1VectorIndexBuildProgress progress)? onProgress,
+});
+
+enum _BookIndexLayerAction {
+  baseEmbeddingRepair,
+  globalLayer,
+  nativeVector,
+  annVector,
+}
+
+class _BookIndexLayerActionFailure {
+  const _BookIndexLayerActionFailure({
+    required this.action,
+    required this.message,
+  });
+
+  final _BookIndexLayerAction action;
+  final String message;
+}
+
 class _BookRow {
   const _BookRow({
     required this.result,
@@ -46,7 +83,26 @@ class _BookRow {
 }
 
 class AiLibraryIndexPage extends ConsumerStatefulWidget {
-  const AiLibraryIndexPage({super.key});
+  const AiLibraryIndexPage({
+    super.key,
+    this.bookSearchLoader,
+    this.bookIndexInfoLoader,
+    this.bookReadinessLoader,
+    this.bookBaseEmbeddingRepairer,
+    this.bookGlobalLayerBuilder,
+    this.bookNativeVectorBuilder,
+    this.bookAnnVectorBuilder,
+    this.queueStateForTesting,
+  });
+
+  final AiLibraryBookSearchLoader? bookSearchLoader;
+  final AiLibraryBookIndexInfoLoader? bookIndexInfoLoader;
+  final AiLibraryBookReadinessLoader? bookReadinessLoader;
+  final AiLibraryBookBaseEmbeddingRepairer? bookBaseEmbeddingRepairer;
+  final AiLibraryBookGlobalLayerBuilder? bookGlobalLayerBuilder;
+  final AiLibraryBookNativeVectorBuilder? bookNativeVectorBuilder;
+  final AiLibraryBookAnnVectorBuilder? bookAnnVectorBuilder;
+  final AiLibraryIndexQueueState? queueStateForTesting;
 
   @override
   ConsumerState<AiLibraryIndexPage> createState() => _AiLibraryIndexPageState();
@@ -68,6 +124,16 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
   Timer? _activeQueueHeartbeatTimer;
   int _loadToken = 0;
   List<int> _currentVisibleBookIds = const [];
+  final Map<int, Future<AiBookIndexReadiness>> _bookReadinessFutures =
+      <int, Future<AiBookIndexReadiness>>{};
+  final Map<int, _BookIndexLayerActionFailure> _bookLayerActionFailures =
+      <int, _BookIndexLayerActionFailure>{};
+  final Map<int, AiVec1VectorIndexBuildProgress> _bookAnnVectorProgress =
+      <int, AiVec1VectorIndexBuildProgress>{};
+  final Set<int> _globalLayerBookBuildingIds = <int>{};
+  final Set<int> _baseEmbeddingRepairBookIds = <int>{};
+  final Set<int> _nativeVectorBookBuildingIds = <int>{};
+  final Set<int> _annVectorBookBuildingIds = <int>{};
   bool _globalLayerBackfilling = false;
   bool _globalLayerCancelRequested = false;
   AiGlobalIndexBackfillProgress? _globalLayerProgress;
@@ -100,6 +166,7 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
     _refreshDebounce = Timer(debounce, () {
       if (!mounted) return;
       setState(() {
+        _bookReadinessFutures.clear();
         _booksFuture = _loadBooks(filter: _filter, token: ++_loadToken);
         _globalLayerFuture = _loadMissingGlobalLayers();
         _nativeVectorFuture = _loadNativeVectorStatus();
@@ -126,17 +193,22 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    final queue = ref.watch(aiLibraryIndexQueueProvider);
-    final queueSvc = ref.read(aiLibraryIndexQueueProvider.notifier);
+    final AiLibraryIndexQueueState queue =
+        widget.queueStateForTesting ?? ref.watch(aiLibraryIndexQueueProvider);
+    final queueSvc = widget.queueStateForTesting == null
+        ? ref.read(aiLibraryIndexQueueProvider.notifier)
+        : null;
     _syncActiveQueueHeartbeatTimer(queue.activeJob != null);
 
     // The queue updates fairly frequently (progress), so debounce book list
     // refreshes to avoid jitter. Must live in build (not initState) per
     // Riverpod's `ref.listen` contract.
-    ref.listen<AiLibraryIndexQueueState>(aiLibraryIndexQueueProvider,
-        (prev, next) {
-      _scheduleBooksRefresh(const Duration(milliseconds: 900));
-    });
+    if (widget.queueStateForTesting == null) {
+      ref.listen<AiLibraryIndexQueueState>(aiLibraryIndexQueueProvider,
+          (prev, next) {
+        _scheduleBooksRefresh(const Duration(milliseconds: 900));
+      });
+    }
 
     return SettingsSubpageScaffold(
       title: l10n.settingsAiLibraryIndexTitle,
@@ -192,7 +264,7 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: FilledButton(
-                        onPressed: _selectedBookIds.isEmpty
+                        onPressed: _selectedBookIds.isEmpty || queueSvc == null
                             ? null
                             : () async {
                                 final ids = _selectedBookIds.toList();
@@ -216,24 +288,30 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
           : _buildQueueBottomProgress(context, queue),
       child: SafeArea(
         bottom: false,
-        child: ListView(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Text(
-                l10n.settingsAiLibraryIndexSubtitle,
-                style: Theme.of(context).textTheme.bodyMedium,
+        child: CustomScrollView(
+          slivers: [
+            SliverList(
+              delegate: SliverChildListDelegate.fixed(
+                [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                    child: Text(
+                      l10n.settingsAiLibraryIndexSubtitle,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                  _buildConfigTile(context),
+                  _buildGlobalLayerTile(context),
+                  _buildNativeVectorTile(context),
+                  _buildAnnVectorTile(context),
+                  _buildFilterBar(context),
+                  const Divider(height: 1),
+                  _buildQueueSection(context, queue, queueSvc),
+                  const Divider(height: 1),
+                ],
               ),
             ),
-            _buildConfigTile(context),
-            _buildGlobalLayerTile(context),
-            _buildNativeVectorTile(context),
-            _buildAnnVectorTile(context),
-            _buildFilterBar(context),
-            const Divider(height: 1),
-            _buildQueueSection(context, queue, queueSvc),
-            const Divider(height: 1),
-            _buildBooksSection(context),
+            _buildBooksSection(context, queue, queueSvc),
           ],
         ),
       ),
@@ -425,6 +503,7 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
           _globalLayerBackfilling = false;
           _globalLayerCancelRequested = false;
           _globalLayerProgress = null;
+          _bookReadinessFutures.clear();
           _booksFuture = _loadBooks(filter: _filter, token: ++_loadToken);
           _globalLayerFuture = _loadMissingGlobalLayers();
         });
@@ -524,6 +603,7 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
           _nativeVectorBackfilling = false;
           _nativeVectorCancelRequested = false;
           _nativeVectorProgress = null;
+          _bookReadinessFutures.clear();
           _nativeVectorFuture = _loadNativeVectorStatus();
           _annVectorFuture = _loadAnnVectorStatus();
         });
@@ -623,6 +703,7 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
           _annVectorBuilding = false;
           _annVectorCancelRequested = false;
           _annVectorProgress = null;
+          _bookReadinessFutures.clear();
           _annVectorFuture = _loadAnnVectorStatus();
         });
       }
@@ -1507,8 +1588,12 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
 
                       if (!mounted) return;
                       this.setState(() {
+                        _bookReadinessFutures.clear();
                         _booksFuture =
                             _loadBooks(filter: _filter, token: ++_loadToken);
+                        _globalLayerFuture = _loadMissingGlobalLayers();
+                        _nativeVectorFuture = _loadNativeVectorStatus();
+                        _annVectorFuture = _loadAnnVectorStatus();
                       });
                     },
                     child: Text(l10n.commonSave),
@@ -1550,6 +1635,7 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
             setState(() {
               _filter = f;
               _selectedBookIds.clear();
+              _bookReadinessFutures.clear();
             });
             _scheduleBooksRefresh(const Duration(milliseconds: 50));
           },
@@ -1572,7 +1658,7 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
   Widget _buildQueueSection(
     BuildContext context,
     AiLibraryIndexQueueState queue,
-    AiLibraryIndexQueueService queueSvc,
+    AiLibraryIndexQueueService? queueSvc,
   ) {
     final l10n = L10n.of(context);
 
@@ -1687,24 +1773,26 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
               const SizedBox(width: 8),
               if (queue.isPaused)
                 OutlinedButton(
-                  onPressed: queueSvc.resume,
+                  onPressed: queueSvc?.resume,
                   child: Text(l10n.aiLibraryIndexActionResume),
                 )
               else
                 OutlinedButton(
-                  onPressed: queueSvc.pause,
+                  onPressed: queueSvc?.pause,
                   child: Text(l10n.aiLibraryIndexActionPause),
                 ),
               const SizedBox(width: 8),
               if (active != null) ...[
                 OutlinedButton(
-                  onPressed: () => queueSvc.cancelJob(active.id),
+                  onPressed: queueSvc == null
+                      ? null
+                      : () => queueSvc.cancelJob(active.id),
                   child: Text(l10n.aiLibraryIndexActionCancel),
                 ),
                 const SizedBox(width: 8),
               ],
               TextButton(
-                onPressed: queueSvc.clearFinishedJobs,
+                onPressed: queueSvc?.clearFinishedJobs,
                 child: Text(l10n.aiLibraryIndexActionClearFinished),
               ),
             ],
@@ -1798,14 +1886,18 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
                         j.status == AiLibraryIndexJobStatus.running)
                       IconButton(
                         tooltip: l10n.aiLibraryIndexActionCancel,
-                        onPressed: () => queueSvc.cancelJob(j.id),
+                        onPressed: queueSvc == null
+                            ? null
+                            : () => queueSvc.cancelJob(j.id),
                         icon: const Icon(Icons.cancel_outlined),
                       )
                     else if (j.status == AiLibraryIndexJobStatus.failed ||
                         j.status == AiLibraryIndexJobStatus.cancelled)
                       IconButton(
                         tooltip: _localizedRetryActionLabel(context),
-                        onPressed: () => queueSvc.retryJob(j.id),
+                        onPressed: queueSvc == null
+                            ? null
+                            : () => queueSvc.retryJob(j.id),
                         icon: const Icon(Icons.replay_outlined),
                       ),
                   ],
@@ -1817,7 +1909,11 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
     );
   }
 
-  Widget _buildBooksSection(BuildContext context) {
+  Widget _buildBooksSection(
+    BuildContext context,
+    AiLibraryIndexQueueState queue,
+    AiLibraryIndexQueueService? queueSvc,
+  ) {
     final future = _booksFuture ??
         _loadBooks(
           filter: _filter,
@@ -1832,23 +1928,33 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
 
         if (snapshot.connectionState == ConnectionState.waiting &&
             rows.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 32),
-            child: Center(child: CircularProgressIndicator()),
+          return const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 32),
+              child: Center(child: CircularProgressIndicator()),
+            ),
           );
         }
 
         if (rows.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 32),
-            child: SizedBox.shrink(),
+          return const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 32),
+              child: SizedBox.shrink(),
+            ),
           );
         }
 
-        return Column(
-          children: [
-            for (final r in rows) _buildBookTile(context, r),
-          ],
+        return SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => _buildBookTile(
+              context,
+              rows[index],
+              queue,
+              queueSvc,
+            ),
+            childCount: rows.length,
+          ),
         );
       },
     );
@@ -2074,18 +2180,371 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
     return _localizedIncompleteIndexText(context);
   }
 
+  Future<AiBookIndexReadiness> _bookReadinessFuture(int bookId) {
+    return _bookReadinessFutures.putIfAbsent(
+      bookId,
+      () {
+        final loader = widget.bookReadinessLoader;
+        if (loader != null) return loader(bookId);
+        return AiBookIndexReadinessInspector().inspectBook(bookId);
+      },
+    );
+  }
+
+  Future<void> _repairBookBaseEmbeddings(
+    int bookId,
+    AiLibraryIndexQueueService? queueSvc,
+  ) async {
+    if (bookId <= 0 || _baseEmbeddingRepairBookIds.contains(bookId)) return;
+    setState(() {
+      _baseEmbeddingRepairBookIds.add(bookId);
+      _bookLayerActionFailures.remove(bookId);
+    });
+
+    var succeeded = false;
+    try {
+      final repairer = widget.bookBaseEmbeddingRepairer;
+      if (repairer != null) {
+        await repairer(bookId);
+      } else {
+        await queueSvc?.enqueueBook(bookId);
+      }
+      succeeded = true;
+      if (mounted) {
+        final zh = _isZh(context);
+        AnxToast.show(
+          zh ? '已排队修复基础 embedding' : 'Base embedding repair queued',
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      final zh = _isZh(context);
+      setState(() {
+        _bookLayerActionFailures[bookId] = _BookIndexLayerActionFailure(
+          action: _BookIndexLayerAction.baseEmbeddingRepair,
+          message: e.toString(),
+        );
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            zh ? '基础 embedding 修复失败：$e' : 'Base embedding repair failed: $e',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _baseEmbeddingRepairBookIds.remove(bookId);
+          if (succeeded) {
+            _bookLayerActionFailures.remove(bookId);
+          }
+          _bookReadinessFutures.remove(bookId);
+          _nativeVectorFuture = _loadNativeVectorStatus();
+          _annVectorFuture = _loadAnnVectorStatus();
+        });
+        if (succeeded) {
+          _scheduleBooksRefresh(const Duration(milliseconds: 500));
+        }
+      }
+    }
+  }
+
+  Future<void> _buildBookGlobalLayer(int bookId) async {
+    if (bookId <= 0 || _globalLayerBookBuildingIds.contains(bookId)) return;
+    setState(() {
+      _globalLayerBookBuildingIds.add(bookId);
+      _bookLayerActionFailures.remove(bookId);
+    });
+
+    var succeeded = false;
+    try {
+      final builder = widget.bookGlobalLayerBuilder;
+      if (builder != null) {
+        await builder(bookId);
+      } else {
+        await AiGlobalIndexBuilder().rebuildBook(bookId: bookId);
+      }
+      succeeded = true;
+    } catch (e) {
+      if (!mounted) return;
+      final zh = _isZh(context);
+      setState(() {
+        _bookLayerActionFailures[bookId] = _BookIndexLayerActionFailure(
+          action: _BookIndexLayerAction.globalLayer,
+          message: e.toString(),
+        );
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            zh ? '全局层补建失败：$e' : 'Global layer build failed: $e',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _globalLayerBookBuildingIds.remove(bookId);
+          if (succeeded) {
+            _bookLayerActionFailures.remove(bookId);
+          }
+          _bookReadinessFutures.remove(bookId);
+          _globalLayerFuture = _loadMissingGlobalLayers();
+        });
+      }
+    }
+  }
+
+  Future<void> _upgradeBookNativeVector(int bookId) async {
+    if (bookId <= 0 || _nativeVectorBookBuildingIds.contains(bookId)) return;
+    setState(() {
+      _nativeVectorBookBuildingIds.add(bookId);
+      _bookLayerActionFailures.remove(bookId);
+    });
+
+    var succeeded = false;
+    try {
+      final builder = widget.bookNativeVectorBuilder;
+      if (builder != null) {
+        await builder(bookId);
+      } else {
+        final db = await AiIndexDatabase.instance.database;
+        await const AiNativeVectorIndexBuilder().backfillBook(
+          db,
+          bookId: bookId,
+        );
+      }
+      succeeded = true;
+    } catch (e) {
+      if (!mounted) return;
+      final zh = _isZh(context);
+      setState(() {
+        _bookLayerActionFailures[bookId] = _BookIndexLayerActionFailure(
+          action: _BookIndexLayerAction.nativeVector,
+          message: e.toString(),
+        );
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            zh ? '向量层升级失败：$e' : 'Vector layer upgrade failed: $e',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _nativeVectorBookBuildingIds.remove(bookId);
+          if (succeeded) {
+            _bookLayerActionFailures.remove(bookId);
+          }
+          _bookReadinessFutures.remove(bookId);
+          _nativeVectorFuture = _loadNativeVectorStatus();
+          _annVectorFuture = _loadAnnVectorStatus();
+        });
+      }
+    }
+  }
+
+  Future<void> _buildBookAnnVector(int bookId) async {
+    if (bookId <= 0 || _annVectorBookBuildingIds.contains(bookId)) return;
+    setState(() {
+      _annVectorBookBuildingIds.add(bookId);
+      _bookLayerActionFailures.remove(bookId);
+      _bookAnnVectorProgress.remove(bookId);
+    });
+
+    var succeeded = false;
+    void recordProgress(AiVec1VectorIndexBuildProgress progress) {
+      if (!mounted) return;
+      setState(() {
+        if (_annVectorBookBuildingIds.contains(bookId)) {
+          _bookAnnVectorProgress[bookId] = progress;
+        }
+      });
+    }
+
+    try {
+      final builder = widget.bookAnnVectorBuilder;
+      if (builder != null) {
+        await builder(bookId, onProgress: recordProgress);
+        succeeded = true;
+      } else {
+        final db = await AiIndexDatabase.instance.database;
+        final result = await const AiVec1VectorIndexBuilder()
+            .rebuildBookSidecarFromNativeRows(
+          db,
+          bookId: bookId,
+          onProgress: recordProgress,
+        );
+        if (!result.available && mounted) {
+          final zh = _isZh(context);
+          final message =
+              result.lastError ?? 'Vec1/sqlite-vec extension was not detected';
+          setState(() {
+            _bookLayerActionFailures[bookId] = _BookIndexLayerActionFailure(
+              action: _BookIndexLayerAction.annVector,
+              message: message,
+            );
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                zh
+                    ? 'ANN sidecar 暂不可用：$message'
+                    : 'ANN sidecar unavailable: $message',
+              ),
+            ),
+          );
+        } else {
+          succeeded = true;
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      final zh = _isZh(context);
+      setState(() {
+        _bookLayerActionFailures[bookId] = _BookIndexLayerActionFailure(
+          action: _BookIndexLayerAction.annVector,
+          message: e.toString(),
+        );
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            zh ? 'ANN sidecar 构建失败：$e' : 'ANN sidecar build failed: $e',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _annVectorBookBuildingIds.remove(bookId);
+          _bookAnnVectorProgress.remove(bookId);
+          if (succeeded) {
+            _bookLayerActionFailures.remove(bookId);
+          }
+          _bookReadinessFutures.remove(bookId);
+          _annVectorFuture = _loadAnnVectorStatus();
+        });
+      }
+    }
+  }
+
   String _formatPercent(double value) {
     return AiLibraryIndexProgressText.formatPercent(value);
   }
 
-  Widget _buildBookTile(BuildContext context, _BookRow r) {
+  AiLibraryIndexJob? _latestQueueJobForBook(
+    List<AiLibraryIndexJob> jobs,
+    int bookId,
+  ) {
+    for (final job in jobs) {
+      if (job.bookId == bookId) return job;
+    }
+    return null;
+  }
+
+  bool _isActiveBaseIndexJob(AiLibraryIndexJob? job) {
+    return job?.status == AiLibraryIndexJobStatus.queued ||
+        job?.status == AiLibraryIndexJobStatus.running ||
+        job?.status == AiLibraryIndexJobStatus.paused;
+  }
+
+  bool _canRetryBaseIndexJob(AiLibraryIndexJob? job) {
+    return job?.status == AiLibraryIndexJobStatus.failed ||
+        job?.status == AiLibraryIndexJobStatus.cancelled;
+  }
+
+  bool _blocksDerivedLayerActions(AiLibraryIndexJob? job) {
+    return _isActiveBaseIndexJob(job) || _canRetryBaseIndexJob(job);
+  }
+
+  String? _baseIndexJobText(
+    BuildContext context,
+    AiLibraryIndexJob? job,
+  ) {
+    if (!_blocksDerivedLayerActions(job)) return null;
+    final languageCode = Localizations.localeOf(context).languageCode;
+    final zh = languageCode == 'zh';
+    final detail = AiLibraryIndexProgressText.detail(
+      job: job!,
+      languageCode: languageCode,
+    );
+    final parts = <String>[
+      zh
+          ? '基础索引任务：${_baseIndexJobStatusLabel(context, job.status)}'
+          : 'Base index job: ${_baseIndexJobStatusLabel(context, job.status)}',
+      _formatPercent(job.progress),
+      if (detail.isNotEmpty) detail,
+    ];
+
+    final error = (job.lastError ?? '').trim();
+    if (error.isNotEmpty) {
+      parts.add(zh ? '错误：$error' : 'error: $error');
+    }
+
+    return parts.join(' · ');
+  }
+
+  String _baseIndexJobStatusLabel(
+    BuildContext context,
+    AiLibraryIndexJobStatus status,
+  ) {
+    final zh = _isZh(context);
+    return switch (status) {
+      AiLibraryIndexJobStatus.queued => zh ? '等待中' : 'queued',
+      AiLibraryIndexJobStatus.running => zh ? '索引中' : 'running',
+      AiLibraryIndexJobStatus.paused => zh ? '已暂停' : 'paused',
+      AiLibraryIndexJobStatus.succeeded => zh ? '已完成' : 'done',
+      AiLibraryIndexJobStatus.failed => zh ? '失败' : 'failed',
+      AiLibraryIndexJobStatus.cancelled => zh ? '已取消' : 'cancelled',
+    };
+  }
+
+  String? _baseIndexJobLayerBlockReason(
+    BuildContext context,
+    AiLibraryIndexJob? job,
+  ) {
+    if (!_blocksDerivedLayerActions(job)) return null;
+    final zh = _isZh(context);
+    return switch (job!.status) {
+      AiLibraryIndexJobStatus.queued => zh
+          ? '基础索引任务已排队。完成后再补建各层。'
+          : 'Base index job is queued. Layer upgrades will be available after it finishes.',
+      AiLibraryIndexJobStatus.running => zh
+          ? '基础索引正在运行。完成后再补建各层。'
+          : 'Base index job is running. Layer upgrades will be available after it finishes.',
+      AiLibraryIndexJobStatus.paused => zh
+          ? '基础索引已暂停。请先继续基础索引，再补建各层。'
+          : 'Base index job is paused. Continue the base index before layer upgrades.',
+      AiLibraryIndexJobStatus.failed => zh
+          ? '基础索引任务失败。请先继续基础索引，再补建各层。'
+          : 'Base index job failed. Continue the base index before layer upgrades.',
+      AiLibraryIndexJobStatus.cancelled => zh
+          ? '基础索引任务已取消。请先继续基础索引，再补建各层。'
+          : 'Base index job was cancelled. Continue the base index before layer upgrades.',
+      AiLibraryIndexJobStatus.succeeded => null,
+    };
+  }
+
+  Widget _buildBookTile(
+    BuildContext context,
+    _BookRow r,
+    AiLibraryIndexQueueState queue,
+    AiLibraryIndexQueueService? queueSvc,
+  ) {
     final book = r.result.book;
     final selected = _selectedBookIds.contains(book.id);
-    final queueSvc = ref.read(aiLibraryIndexQueueProvider.notifier);
+    final baseQueueJob = _latestQueueJobForBook(queue.jobs, book.id);
 
     IconData statusIcon = Icons.book_outlined;
     Color? statusColor;
     final canContinue = _canContinueIndex(r.indexInfo);
+    final canRetryBaseQueueJob = _canRetryBaseIndexJob(baseQueueJob);
+    final canShowRetryAction = canRetryBaseQueueJob ||
+        (canContinue && !_isActiveBaseIndexJob(baseQueueJob));
 
     switch (r.status) {
       case _BookIndexStatus.unindexed:
@@ -2106,6 +2565,14 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
     final chapterProgress = _chapterProgressText(context, r.indexInfo);
     final continuationText = _indexContinuationText(context, r.indexInfo);
 
+    final summaryParts = [
+      book.author,
+      if (!_selecting && chapterProgress != null) chapterProgress,
+      if (!_selecting && chunkCount > 0)
+        _localizedChunkCountText(context, chunkCount),
+      if (!_selecting && continuationText != null) continuationText,
+    ].where((e) => e.trim().isNotEmpty).toList(growable: false);
+
     return ListTile(
       leading: _selecting
           ? Checkbox(
@@ -2122,26 +2589,52 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
             )
           : Icon(statusIcon, color: statusColor),
       title: Text(book.title),
-      subtitle: Text(
-        [
-          book.author,
-          if (!_selecting && chapterProgress != null) chapterProgress,
-          if (!_selecting && chunkCount > 0)
-            _localizedChunkCountText(context, chunkCount),
-          if (!_selecting && continuationText != null) continuationText,
-        ].where((e) => e.trim().isNotEmpty).join(' · '),
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (summaryParts.isNotEmpty)
+            Text(
+              summaryParts.join(' · '),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          if (!_selecting)
+            _BookIndexLayerReadinessSummary(
+              readinessFuture: _bookReadinessFuture(book.id),
+              actionFailure: _bookLayerActionFailures[book.id],
+              annVectorProgress: _bookAnnVectorProgress[book.id],
+              baseQueueJobText: _baseIndexJobText(context, baseQueueJob),
+              layerActionBlockReason:
+                  _bookIndexLayerActionBlockReason(context, r, baseQueueJob),
+              baseEmbeddingRepairing:
+                  _baseEmbeddingRepairBookIds.contains(book.id),
+              nativeVectorBuilding:
+                  _nativeVectorBookBuildingIds.contains(book.id),
+              annVectorBuilding: _annVectorBookBuildingIds.contains(book.id),
+              globalLayerBuilding:
+                  _globalLayerBookBuildingIds.contains(book.id),
+              onRepairBaseEmbeddings: () =>
+                  unawaited(_repairBookBaseEmbeddings(book.id, queueSvc)),
+              onUpgradeNativeVector: () =>
+                  unawaited(_upgradeBookNativeVector(book.id)),
+              onBuildAnnVector: () => unawaited(_buildBookAnnVector(book.id)),
+              onBuildGlobalLayer: () =>
+                  unawaited(_buildBookGlobalLayer(book.id)),
+            ),
+        ],
       ),
-      trailing: !_selecting && canContinue
+      isThreeLine: !_selecting,
+      trailing: !_selecting && canShowRetryAction
           ? IconButton(
               tooltip: _localizedRetryActionLabel(context),
               icon: const Icon(Icons.replay_outlined),
-              onPressed: () async {
-                AnxToast.show(_localizedRetryActionLabel(context));
-                await queueSvc.enqueueBook(book.id);
-                _scheduleBooksRefresh(const Duration(milliseconds: 500));
-              },
+              onPressed: queueSvc == null
+                  ? null
+                  : () async {
+                      AnxToast.show(_localizedRetryActionLabel(context));
+                      await queueSvc.enqueueBook(book.id);
+                      _scheduleBooksRefresh(const Duration(milliseconds: 500));
+                    },
             )
           : null,
       onTap: _selecting
@@ -2158,16 +2651,32 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
     );
   }
 
+  String? _bookIndexLayerActionBlockReason(
+    BuildContext context,
+    _BookRow row,
+    AiLibraryIndexJob? baseQueueJob,
+  ) {
+    final queueBlock = _baseIndexJobLayerBlockReason(context, baseQueueJob);
+    if (queueBlock != null) return queueBlock;
+    if (row.status != _BookIndexStatus.expired) return null;
+    return _isZh(context)
+        ? '当前设置下索引已过期。请先重建基础索引，再补建各层。'
+        : 'Index is out of date for current settings. Rebuild the base index before layer upgrades.';
+  }
+
   Future<List<_BookRow>> _loadBooks({
     required _Filter filter,
     required int token,
   }) async {
-    final repo = const BooksRepository();
-    final aiDb = AiIndexDatabase.instance;
-
-    final results = await repo.searchBooks(limit: _bookListLimit);
+    final results = await (widget.bookSearchLoader ??
+        ({required int limit}) => const BooksRepository().searchBooks(
+              limit: limit,
+            ))(limit: _bookListLimit);
     final ids = results.map((e) => e.book.id).toList(growable: false);
-    final idx = await aiDb.getBookIndexInfos(ids);
+    final idx = await (widget.bookIndexInfoLoader ??
+        (List<int> bookIds) => AiIndexDatabase.instance.getBookIndexInfos(
+              bookIds,
+            ))(ids);
 
     final providerId = Prefs().aiLibraryIndexProviderIdEffective;
     final embeddingModel = Prefs().aiLibraryIndexEmbeddingModelEffective;
@@ -2242,4 +2751,491 @@ class _AiLibraryIndexPageState extends ConsumerState<AiLibraryIndexPage> {
 
     return out;
   }
+}
+
+class _BookIndexLayerReadinessSummary extends StatelessWidget {
+  const _BookIndexLayerReadinessSummary({
+    required this.readinessFuture,
+    required this.actionFailure,
+    required this.annVectorProgress,
+    required this.baseQueueJobText,
+    required this.layerActionBlockReason,
+    required this.baseEmbeddingRepairing,
+    required this.nativeVectorBuilding,
+    required this.annVectorBuilding,
+    required this.globalLayerBuilding,
+    required this.onRepairBaseEmbeddings,
+    required this.onUpgradeNativeVector,
+    required this.onBuildAnnVector,
+    required this.onBuildGlobalLayer,
+  });
+
+  final Future<AiBookIndexReadiness> readinessFuture;
+  final _BookIndexLayerActionFailure? actionFailure;
+  final AiVec1VectorIndexBuildProgress? annVectorProgress;
+  final String? baseQueueJobText;
+  final String? layerActionBlockReason;
+  final bool baseEmbeddingRepairing;
+  final bool nativeVectorBuilding;
+  final bool annVectorBuilding;
+  final bool globalLayerBuilding;
+  final VoidCallback onRepairBaseEmbeddings;
+  final VoidCallback onUpgradeNativeVector;
+  final VoidCallback onBuildAnnVector;
+  final VoidCallback onBuildGlobalLayer;
+
+  @override
+  Widget build(BuildContext context) {
+    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    return FutureBuilder<AiBookIndexReadiness>(
+      future: readinessFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              zh ? '索引层状态：检查中...' : 'Index layers: checking...',
+              style: Theme.of(context).textTheme.bodySmall,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          );
+        }
+
+        final readiness = snapshot.data;
+        if (readiness == null || snapshot.hasError) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              zh ? '索引层状态：无法读取' : 'Index layers unavailable',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          );
+        }
+
+        final reason = _firstReadinessReason(readiness);
+        final availableText = _bookIndexAvailableCapabilitiesText(
+          context,
+          readiness,
+        );
+        final nextUnlockText = _bookIndexNextUnlockText(
+          context,
+          readiness,
+        );
+        final blockReason = layerActionBlockReason?.trim();
+        final queueJobText = baseQueueJobText?.trim();
+        final layerActionsBlocked =
+            blockReason != null && blockReason.isNotEmpty;
+        final hasQueueJobText = queueJobText != null && queueJobText.isNotEmpty;
+        final failureText = _bookIndexLayerActionFailureText(
+          context,
+          actionFailure,
+        );
+        final progressText = _bookIndexLayerActionProgressText(
+          context,
+          annVectorProgress,
+        );
+        final nativeVectorRetry =
+            actionFailure?.action == _BookIndexLayerAction.nativeVector;
+        final baseEmbeddingRepairRetry =
+            actionFailure?.action == _BookIndexLayerAction.baseEmbeddingRepair;
+        final annVectorRetry =
+            actionFailure?.action == _BookIndexLayerAction.annVector;
+        final globalLayerRetry =
+            actionFailure?.action == _BookIndexLayerAction.globalLayer;
+        return Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    zh ? '索引层状态' : 'Index layers',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  _BookIndexLayerChip(
+                    label: zh ? '基础' : 'Base',
+                    state: readiness.baseIndex.state,
+                  ),
+                  _BookIndexLayerChip(
+                    label: zh ? '向量' : 'Vector',
+                    state: readiness.nativeVector.state,
+                  ),
+                  _BookIndexLayerChip(
+                    label: 'ANN',
+                    state: readiness.annVector.state,
+                  ),
+                  _BookIndexLayerChip(
+                    label: zh ? '全局' : 'Global',
+                    state: readiness.globalLayer.state,
+                  ),
+                  _BookIndexLayerChip(
+                    label: zh ? '图谱' : 'Graph',
+                    state: readiness.graphLayer.state,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 3),
+              Text(
+                availableText,
+                style: Theme.of(context).textTheme.bodySmall,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                nextUnlockText,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.secondary,
+                    ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (hasQueueJobText) ...[
+                const SizedBox(height: 3),
+                Text(
+                  queueJobText,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.tertiary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+              if (layerActionsBlocked) ...[
+                const SizedBox(height: 3),
+                Text(
+                  blockReason,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.tertiary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+              if (reason != null) ...[
+                const SizedBox(height: 3),
+                Text(
+                  reason,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+              if (failureText != null) ...[
+                const SizedBox(height: 3),
+                Text(
+                  failureText,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.error,
+                        fontWeight: FontWeight.w600,
+                      ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+              if (progressText != null) ...[
+                const SizedBox(height: 3),
+                Text(
+                  progressText,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.secondary,
+                      ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+              if (!layerActionsBlocked &&
+                  readiness.canRepairBaseEmbeddings) ...[
+                const SizedBox(height: 4),
+                TextButton.icon(
+                  onPressed:
+                      baseEmbeddingRepairing ? null : onRepairBaseEmbeddings,
+                  icon: Icon(
+                    baseEmbeddingRepairing
+                        ? Icons.hourglass_empty
+                        : Icons.build_circle_outlined,
+                    size: 16,
+                  ),
+                  label: Text(
+                    baseEmbeddingRepairing
+                        ? (zh
+                            ? '正在修复基础 embedding...'
+                            : 'Repairing base embeddings...')
+                        : baseEmbeddingRepairRetry
+                            ? (zh ? '重试基础 embedding' : 'Retry base embeddings')
+                            : (zh
+                                ? '修复基础 embedding'
+                                : 'Repair base embeddings'),
+                  ),
+                  style: _inlineActionStyle(),
+                ),
+              ],
+              if (!layerActionsBlocked && readiness.canUpgradeNativeVector) ...[
+                const SizedBox(height: 4),
+                TextButton.icon(
+                  onPressed:
+                      nativeVectorBuilding ? null : onUpgradeNativeVector,
+                  icon: Icon(
+                    nativeVectorBuilding
+                        ? Icons.hourglass_empty
+                        : Icons.view_in_ar_outlined,
+                    size: 16,
+                  ),
+                  label: Text(
+                    nativeVectorBuilding
+                        ? (zh ? '正在升级向量层...' : 'Upgrading vector layer...')
+                        : nativeVectorRetry
+                            ? (zh ? '重试向量层' : 'Retry vector layer')
+                            : (zh ? '升级向量层' : 'Upgrade vector layer'),
+                  ),
+                  style: _inlineActionStyle(),
+                ),
+              ],
+              if (!layerActionsBlocked && readiness.canBuildAnnVector) ...[
+                const SizedBox(height: 4),
+                TextButton.icon(
+                  onPressed: annVectorBuilding ? null : onBuildAnnVector,
+                  icon: Icon(
+                    annVectorBuilding
+                        ? Icons.hourglass_empty
+                        : Icons.hub_outlined,
+                    size: 16,
+                  ),
+                  label: Text(
+                    annVectorBuilding
+                        ? (zh
+                            ? '正在构建 ANN sidecar...'
+                            : 'Building ANN sidecar...')
+                        : annVectorRetry
+                            ? (zh ? '重试 ANN sidecar' : 'Retry ANN sidecar')
+                            : (zh ? '构建 ANN sidecar' : 'Build ANN sidecar'),
+                  ),
+                  style: _inlineActionStyle(),
+                ),
+              ],
+              if (!layerActionsBlocked && readiness.canBuildGlobalLayer) ...[
+                const SizedBox(height: 4),
+                TextButton.icon(
+                  onPressed: globalLayerBuilding ? null : onBuildGlobalLayer,
+                  icon: Icon(
+                    globalLayerBuilding
+                        ? Icons.hourglass_empty
+                        : Icons.auto_graph_outlined,
+                    size: 16,
+                  ),
+                  label: Text(
+                    globalLayerBuilding
+                        ? (zh ? '正在补建全局层...' : 'Building global layer...')
+                        : globalLayerRetry
+                            ? (zh ? '重试全局层' : 'Retry global layer')
+                            : (zh ? '补建全局层' : 'Build global layer'),
+                  ),
+                  style: _inlineActionStyle(),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  ButtonStyle _inlineActionStyle() {
+    return TextButton.styleFrom(
+      padding: EdgeInsets.zero,
+      minimumSize: const Size(0, 28),
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      visualDensity: VisualDensity.compact,
+    );
+  }
+}
+
+class _BookIndexLayerChip extends StatelessWidget {
+  const _BookIndexLayerChip({
+    required this.label,
+    required this.state,
+  });
+
+  final String label;
+  final AiBookIndexLayerState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = '$label ${_bookLayerStateLabel(context, state)}';
+    final scheme = Theme.of(context).colorScheme;
+    final color = switch (state) {
+      AiBookIndexLayerState.ready => scheme.primary,
+      AiBookIndexLayerState.running => scheme.tertiary,
+      AiBookIndexLayerState.failed => scheme.error,
+      AiBookIndexLayerState.unavailable => scheme.outline,
+      AiBookIndexLayerState.empty => scheme.outline,
+      AiBookIndexLayerState.missing => scheme.outline,
+    };
+    return Text(
+      text,
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: color),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+}
+
+String _bookLayerStateLabel(
+  BuildContext context,
+  AiBookIndexLayerState state,
+) {
+  final zh = Localizations.localeOf(context).languageCode == 'zh';
+  return switch (state) {
+    AiBookIndexLayerState.ready => zh ? '已就绪' : 'Ready',
+    AiBookIndexLayerState.missing => zh ? '缺失' : 'Missing',
+    AiBookIndexLayerState.running => zh ? '进行中' : 'Running',
+    AiBookIndexLayerState.failed => zh ? '失败' : 'Failed',
+    AiBookIndexLayerState.unavailable => zh ? '暂不可用' : 'Unavailable',
+    AiBookIndexLayerState.empty => zh ? '暂无节点' : 'Empty',
+  };
+}
+
+String? _firstReadinessReason(AiBookIndexReadiness readiness) {
+  final layers = [
+    readiness.baseIndex,
+    readiness.nativeVector,
+    readiness.annVector,
+    readiness.globalLayer,
+    readiness.graphLayer,
+  ];
+  for (final layer in layers) {
+    final reason = layer.reason?.trim();
+    if (reason != null && reason.isNotEmpty) return reason;
+  }
+  return null;
+}
+
+String _bookIndexAvailableCapabilitiesText(
+  BuildContext context,
+  AiBookIndexReadiness readiness,
+) {
+  final zh = Localizations.localeOf(context).languageCode == 'zh';
+  final baseReady = readiness.baseIndex.state == AiBookIndexLayerState.ready;
+  final nativeReady =
+      readiness.nativeVector.state == AiBookIndexLayerState.ready;
+  final annReady = readiness.annVector.state == AiBookIndexLayerState.ready;
+  final globalReady =
+      readiness.globalLayer.state == AiBookIndexLayerState.ready;
+  final graphReady = readiness.graphLayer.state == AiBookIndexLayerState.ready;
+
+  if (!baseReady) {
+    return zh
+        ? '现在可用：暂未具备 AI 阅读能力。'
+        : 'Available now: no AI reading features yet.';
+  }
+
+  final parts = <String>[
+    zh ? '当前书问答' : 'current-book Q&A',
+    zh ? '原文跳转' : 'source jumps',
+    if (nativeReady || annReady) zh ? '语义搜索' : 'semantic search',
+    if (annReady) zh ? '大书快速召回' : 'fast large-book recall',
+    if (globalReady) zh ? '全书摘要层' : 'book-level summaries',
+    if (graphReady) zh ? '本书地图' : 'book map',
+  ];
+
+  return zh
+      ? '现在可用：${parts.join('、')}。'
+      : 'Available now: ${parts.join(', ')}.';
+}
+
+String _bookIndexNextUnlockText(
+  BuildContext context,
+  AiBookIndexReadiness readiness,
+) {
+  final zh = Localizations.localeOf(context).languageCode == 'zh';
+  final baseReady = readiness.baseIndex.state == AiBookIndexLayerState.ready;
+  final nativeReady =
+      readiness.nativeVector.state == AiBookIndexLayerState.ready;
+  final annReady = readiness.annVector.state == AiBookIndexLayerState.ready;
+  final globalReady =
+      readiness.globalLayer.state == AiBookIndexLayerState.ready;
+  final graphReady = readiness.graphLayer.state == AiBookIndexLayerState.ready;
+
+  if (!baseReady) {
+    return zh
+        ? '下一步解锁：先完成基础索引，启用 AI 问答和证据跳转。'
+        : 'Next unlock: build the base index to enable AI Q&A and evidence jumps.';
+  }
+
+  final parts = <String>[];
+  if (!nativeReady) {
+    parts.add(
+      zh
+          ? '升级向量层以降低语义搜索内存占用'
+          : 'upgrade vector layer for lighter semantic search',
+    );
+  }
+  if (nativeReady && !annReady) {
+    parts.add(
+      zh ? '构建 ANN 加速大书搜索' : 'build ANN for faster large-book search',
+    );
+  }
+  if (!globalReady) {
+    parts.add(
+      zh
+          ? '补建全局层生成本书地图和导读路径'
+          : 'build global layer for book map and reading path',
+    );
+  } else if (!graphReady) {
+    parts.add(
+      zh ? '生成图谱层以显示概念关系' : 'build graph layer for concept links',
+    );
+  }
+
+  if (parts.isEmpty) {
+    return zh
+        ? '下一步解锁：书籍理解层已就绪，可直接在 AI Chat 或图谱页使用。'
+        : 'Next unlock: book understanding stack is ready for AI Chat and the graph page.';
+  }
+
+  return zh ? '下一步解锁：${parts.join('；')}。' : 'Next unlock: ${parts.join('; ')}.';
+}
+
+String? _bookIndexLayerActionFailureText(
+  BuildContext context,
+  _BookIndexLayerActionFailure? failure,
+) {
+  if (failure == null) return null;
+  final zh = Localizations.localeOf(context).languageCode == 'zh';
+  final message = failure.message.trim();
+  final suffix = message.isEmpty ? '' : ': $message';
+  return switch (failure.action) {
+    _BookIndexLayerAction.baseEmbeddingRepair =>
+      zh ? '基础 embedding 修复失败$suffix' : 'Base embedding repair failed$suffix',
+    _BookIndexLayerAction.globalLayer =>
+      zh ? '全局层补建失败$suffix' : 'Global layer build failed$suffix',
+    _BookIndexLayerAction.nativeVector =>
+      zh ? '向量层升级失败$suffix' : 'Vector layer upgrade failed$suffix',
+    _BookIndexLayerAction.annVector =>
+      zh ? 'ANN sidecar 构建失败$suffix' : 'ANN sidecar build failed$suffix',
+  };
+}
+
+String? _bookIndexLayerActionProgressText(
+  BuildContext context,
+  AiVec1VectorIndexBuildProgress? progress,
+) {
+  if (progress == null) return null;
+  final zh = Localizations.localeOf(context).languageCode == 'zh';
+  return zh
+      ? 'ANN sidecar 进度：${progress.done}/${progress.total} 组，已写 ${progress.rowsWritten} 行。'
+      : 'ANN sidecar progress: ${progress.done}/${progress.total} group(s), ${progress.rowsWritten} row(s) written.';
 }

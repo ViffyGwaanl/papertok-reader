@@ -13,6 +13,7 @@ import 'package:papertok_reader/service/rag/ai_index_chapter_plan.dart';
 import 'package:papertok_reader/service/rag/ai_index_database.dart';
 import 'package:papertok_reader/service/rag/ai_index_resume_policy.dart';
 import 'package:papertok_reader/service/rag/ai_index_reuse_policy.dart';
+import 'package:papertok_reader/service/rag/ai_native_vector_index.dart';
 import 'package:papertok_reader/service/rag/ai_text_chunker.dart';
 import 'package:papertok_reader/service/rag/ai_vector_codec.dart';
 import 'package:papertok_reader/service/rag/vector_math.dart';
@@ -67,6 +68,12 @@ class AiBookIndexProgress {
 
 typedef AiBookIndexProgressCallback = void Function(AiBookIndexProgress p);
 typedef AiBookIndexCancellationCheck = bool Function();
+typedef AiBookEmbeddingDocuments = Future<List<List<double>>> Function(
+  List<String> texts, {
+  String model,
+  String? providerId,
+  int timeoutSeconds,
+});
 
 class AiBookIndexCancelledException implements Exception {
   const AiBookIndexCancelledException();
@@ -76,11 +83,16 @@ class AiBookIndexCancelledException implements Exception {
 }
 
 class AiBookIndexer {
-  AiBookIndexer(this.ref, {AiIndexDatabase? database})
-      : _database = database ?? AiIndexDatabase.instance;
+  AiBookIndexer(
+    this.ref, {
+    AiIndexDatabase? database,
+    AiBookEmbeddingDocuments? embedDocuments,
+  })  : _database = database ?? AiIndexDatabase.instance,
+        _embedDocuments = embedDocuments ?? AiEmbeddingsService.embedDocuments;
 
   final Ref ref;
   final AiIndexDatabase _database;
+  final AiBookEmbeddingDocuments _embedDocuments;
 
   /// Default maximum characters to fetch per chapter during indexing.
   ///
@@ -246,6 +258,7 @@ class AiBookIndexer {
         (embeddingProviderId ?? Prefs().selectedAiService).trim();
 
     final existing = await _database.getBookIndexInfo(bookId);
+    final db = await _database.database;
     if (!rebuild &&
         existing != null &&
         AiIndexReusePolicy.canReuse(
@@ -260,10 +273,28 @@ class AiBookIndexer {
           chunkOverlapChars: chunkOverlapChars,
           maxChapterCharacters: maxChapterCharacters,
         )) {
+      final repairedChunks = await _repairBookChunkEmbeddings(
+        db,
+        bookId: bookId,
+        providerId: providerId,
+        embeddingModel: embeddingModel,
+        embeddingBatchSize: embeddingBatchSize,
+        embeddingsTimeoutSeconds: embeddingsTimeoutSeconds,
+        onProgress: onProgress,
+        shouldCancel: shouldCancel,
+      );
+      if (repairedChunks > 0) {
+        await _finishBookAfterEmbeddingRepair(
+          db,
+          bookId: bookId,
+          totalChapters: existing.totalChapters ?? chapters.length,
+        );
+        final repairedInfo = await _database.getBookIndexInfo(bookId);
+        if (repairedInfo != null) return repairedInfo;
+      }
       return existing;
     }
 
-    final db = await _database.database;
     final canResume = !rebuild &&
         AiIndexResumePolicy.canResume(
           existing,
@@ -525,7 +556,7 @@ class AiBookIndexer {
                 growable: false,
               );
           throwIfCancelled();
-          final vectors = await AiEmbeddingsService.embedDocuments(
+          final vectors = await _embedDocuments(
             texts,
             model: embeddingModel,
             providerId: providerId,
@@ -611,7 +642,18 @@ class AiBookIndexer {
       }
 
       throwIfCancelled();
-      if (doneChunks > 0) {
+      final repairedChunks = await _repairBookChunkEmbeddings(
+        db,
+        bookId: bookId,
+        providerId: providerId,
+        embeddingModel: embeddingModel,
+        embeddingBatchSize: embeddingBatchSize,
+        embeddingsTimeoutSeconds: embeddingsTimeoutSeconds,
+        onProgress: onProgress,
+        shouldCancel: shouldCancel,
+      );
+
+      if (doneChunks > 0 || repairedChunks > 0) {
         onProgress?.call(
           AiBookIndexProgress(
             phase: 'global',
@@ -702,6 +744,198 @@ class AiBookIndexer {
     return (rows.first['c'] as num?)?.toInt() ?? 0;
   }
 
+  Future<int> _repairBookChunkEmbeddings(
+    DatabaseExecutor executor, {
+    required int bookId,
+    required String providerId,
+    required String embeddingModel,
+    required int embeddingBatchSize,
+    required int embeddingsTimeoutSeconds,
+    AiBookIndexProgressCallback? onProgress,
+    AiBookIndexCancellationCheck? shouldCancel,
+  }) async {
+    var repaired = 0;
+    int? targetDim;
+
+    while (true) {
+      if (shouldCancel?.call() == true) {
+        throw const AiBookIndexCancelledException();
+      }
+
+      final rows = await _loadBookChunkEmbeddingRows(executor, bookId);
+      if (rows.isEmpty) return repaired;
+
+      if (targetDim == null && _hasMixedEmbeddingDimensions(rows)) {
+        final probeRow = rows.firstWhere(
+          (row) => row.text.trim().isNotEmpty,
+          orElse: () => rows.first,
+        );
+        final vectors = await _embedDocuments(
+          [probeRow.text],
+          model: embeddingModel,
+          providerId: providerId,
+          timeoutSeconds: embeddingsTimeoutSeconds,
+        );
+        if (vectors.isNotEmpty) {
+          targetDim = vectors.first.length;
+        }
+      }
+
+      final repairRows = rows
+          .where((row) => row.needsEmbeddingRepair(targetDim: targetDim))
+          .toList(growable: false);
+      if (repairRows.isEmpty) return repaired;
+
+      final batchSize = embeddingBatchSize.clamp(1, 64);
+      for (var offset = 0; offset < repairRows.length; offset += batchSize) {
+        if (shouldCancel?.call() == true) {
+          throw const AiBookIndexCancelledException();
+        }
+        final batch = repairRows.skip(offset).take(batchSize).toList(
+              growable: false,
+            );
+        onProgress?.call(
+          AiBookIndexProgress(
+            phase: 'repair_embeddings',
+            doneChapters: 0,
+            totalChapters: 0,
+            doneChunks: repaired,
+            totalChunks: repaired + repairRows.length,
+            embeddingBatchIndex: (offset ~/ batchSize) + 1,
+            embeddingBatchTotal:
+                ((repairRows.length + batchSize - 1) / batchSize).ceil(),
+          ),
+        );
+
+        final vectors = await _embedDocuments(
+          batch.map((row) => row.text).toList(growable: false),
+          model: embeddingModel,
+          providerId: providerId,
+          timeoutSeconds: embeddingsTimeoutSeconds,
+        );
+        if (vectors.length != batch.length) {
+          throw StateError(
+            'Embeddings response size mismatch during repair: expected ${batch.length} got ${vectors.length}',
+          );
+        }
+        if (vectors.isNotEmpty) {
+          targetDim ??= vectors.first.length;
+        }
+
+        await _updateRepairedChunkEmbeddings(
+          executor,
+          batch: batch,
+          vectors: vectors,
+        );
+        repaired += batch.length;
+      }
+    }
+  }
+
+  Future<List<_ChunkEmbeddingRepairRow>> _loadBookChunkEmbeddingRows(
+    DatabaseExecutor executor,
+    int bookId,
+  ) async {
+    final rows = await executor.query(
+      'ai_chunks',
+      columns: [
+        'id',
+        'book_id',
+        'text',
+        'embedding_json',
+        'embedding_dim',
+      ],
+      where: 'book_id = ?',
+      whereArgs: [bookId],
+      orderBy: 'id ASC',
+    );
+    return rows
+        .map((row) => _ChunkEmbeddingRepairRow.fromDatabase(row))
+        .toList(growable: false);
+  }
+
+  bool _hasMixedEmbeddingDimensions(List<_ChunkEmbeddingRepairRow> rows) {
+    final dims = <int>{};
+    for (final row in rows) {
+      if (row.hasUsableEmbedding) {
+        dims.add(row.embeddingDim);
+      }
+    }
+    return dims.length > 1;
+  }
+
+  Future<void> _updateRepairedChunkEmbeddings(
+    DatabaseExecutor executor, {
+    required List<_ChunkEmbeddingRepairRow> batch,
+    required List<List<double>> vectors,
+  }) async {
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final repairedChunkIds = <int>[];
+    for (var i = 0; i < batch.length; i++) {
+      final row = batch[i];
+      final vector = vectors[i];
+      final norm = VectorMath.l2Norm(vector);
+      await executor.update(
+        'ai_chunks',
+        {
+          'embedding_json': jsonEncode(vector),
+          'embedding_blob': AiVectorCodec.encodeFloat32(vector),
+          'embedding_dim': vector.length,
+          'embedding_norm': norm,
+        },
+        where: 'id = ?',
+        whereArgs: [row.id],
+      );
+      repairedChunkIds.add(row.id);
+    }
+    if (repairedChunkIds.isNotEmpty) {
+      await const AiVectorIndexPurger().purgeChunks(
+        executor,
+        chunkIds: repairedChunkIds,
+      );
+    }
+    final bookIds =
+        batch.map((row) => row.bookId).where((id) => id > 0).toSet();
+    for (final bookId in bookIds) {
+      await executor.update(
+        'ai_book_index',
+        {'updated_at': nowMs},
+        where: 'book_id = ?',
+        whereArgs: [bookId],
+      );
+    }
+  }
+
+  Future<void> _finishBookAfterEmbeddingRepair(
+    DatabaseExecutor executor, {
+    required int bookId,
+    required int totalChapters,
+  }) async {
+    final indexedAt = DateTime.now().millisecondsSinceEpoch;
+    final actualChunkCount = await _countBookChunks(executor, bookId);
+    try {
+      await _globalIndexBuilder.rebuildBook(bookId: bookId);
+    } catch (e) {
+      AnxLog.warning(
+        'AiIndex: global layer rebuild after embedding repair failed bookId=$bookId error=$e',
+      );
+    }
+    await executor.update(
+      'ai_book_index',
+      {
+        'chunk_count': actualChunkCount,
+        'done_chapters': totalChapters,
+        'total_chapters': totalChapters,
+        'updated_at': indexedAt,
+        'indexed_at': indexedAt,
+        'index_status': 'succeeded',
+        'failed_reason': null,
+      },
+      where: 'book_id = ?',
+      whereArgs: [bookId],
+    );
+  }
+
   Future<int> _countChapterChunks(
     DatabaseExecutor executor,
     int bookId,
@@ -756,5 +990,53 @@ class AiBookIndexer {
       where: 'book_id = ?',
       whereArgs: [bookId],
     );
+  }
+}
+
+class _ChunkEmbeddingRepairRow {
+  const _ChunkEmbeddingRepairRow({
+    required this.id,
+    required this.bookId,
+    required this.text,
+    required this.embeddingJson,
+    required this.embeddingDim,
+  });
+
+  factory _ChunkEmbeddingRepairRow.fromDatabase(Map<String, Object?> row) {
+    return _ChunkEmbeddingRepairRow(
+      id: (row['id'] as num?)?.toInt() ?? 0,
+      bookId: (row['book_id'] as num?)?.toInt() ?? 0,
+      text: row['text']?.toString() ?? '',
+      embeddingJson: row['embedding_json']?.toString() ?? '',
+      embeddingDim: (row['embedding_dim'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  final int id;
+  final int bookId;
+  final String text;
+  final String embeddingJson;
+  final int embeddingDim;
+
+  bool get hasUsableEmbedding {
+    if (embeddingJson.trim().isEmpty || embeddingDim <= 0) return false;
+    final decodedLength = _decodedEmbeddingLength();
+    return decodedLength == null || decodedLength == embeddingDim;
+  }
+
+  bool needsEmbeddingRepair({required int? targetDim}) {
+    if (!hasUsableEmbedding) return true;
+    if (targetDim != null && embeddingDim != targetDim) return true;
+    return false;
+  }
+
+  int? _decodedEmbeddingLength() {
+    try {
+      final decoded = jsonDecode(embeddingJson);
+      if (decoded is List) return decoded.length;
+    } catch (_) {
+      return -1;
+    }
+    return -1;
   }
 }

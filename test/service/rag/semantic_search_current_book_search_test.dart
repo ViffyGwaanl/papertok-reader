@@ -218,6 +218,73 @@ void main() {
     expect(backend.seenMaxScanRows, [3]);
   });
 
+  test('current book vector backend rows are compacted before ranking',
+      () async {
+    final fixture = await _openSearchFixture();
+    final db = fixture.db;
+
+    await _insertBook(db, bookId: 34, chunkCount: 1);
+    final winnerId = await _insertChunk(
+      db,
+      bookId: 34,
+      chunkIndex: 0,
+      text: 'compact backend text',
+      rawText: 'compact backend raw',
+      vector: const [1, 0],
+    );
+
+    final backend = _CurrentBookRecordingVectorBackend(
+      rows: [
+        {
+          'chunk_id': winnerId,
+          'book_id': 34,
+          'chapter_href': 'Text/book34-ch0.xhtml',
+          'chapter_title': 'Book 34 Chapter 0',
+          'chunk_index': 0,
+          'text': 'heavy text should not stay in backend candidate',
+          'raw_text': 'heavy raw text should not stay in backend candidate',
+          'context_text': 'heavy context should not stay in backend candidate',
+          'embedding_blob': AiVectorCodec.encodeFloat32(const [1, 0]),
+          'embedding_json': '[1,0]',
+          'embedding_norm': 1.0,
+          'embedding_input_hash': 'hash-34-0',
+          'context_version': 1,
+          'context_created_at': 3,
+          'local_vector_score': 0.99,
+        },
+      ],
+    );
+    final observedBackendRows = <Map<String, Object?>>[];
+    final service = SemanticSearchCurrentBook(
+      database: fixture.database,
+      vectorSearch: backend,
+      embedQuery: (
+        text, {
+        required model,
+        providerId,
+      }) async =>
+          const [1, 0],
+      onVectorBackendRows: observedBackendRows.addAll,
+    );
+
+    final result = await service.search(
+      bookId: 34,
+      query: 'semantic-only',
+      maxResults: 1,
+    );
+
+    expect(result.ok, true);
+    expect(result.evidence.single.text, 'compact backend raw');
+    expect(observedBackendRows, hasLength(1));
+    expect(observedBackendRows.single.keys, isNot(contains('text')));
+    expect(observedBackendRows.single.keys, isNot(contains('raw_text')));
+    expect(observedBackendRows.single.keys, isNot(contains('context_text')));
+    expect(observedBackendRows.single.keys, isNot(contains('embedding_blob')));
+    expect(observedBackendRows.single.keys, isNot(contains('embedding_json')));
+    expect(observedBackendRows.single['id'], winnerId);
+    expect(observedBackendRows.single['local_vector_score'], 0.99);
+  });
+
   test('current book vector searches are serialized across direct callers',
       () async {
     final dir = await Directory.systemTemp.createTemp('current_book_rag_test');

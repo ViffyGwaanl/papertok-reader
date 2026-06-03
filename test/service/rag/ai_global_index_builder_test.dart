@@ -195,6 +195,24 @@ void main() {
     expect(await builder.getBookLayerStatus(999), isNull);
   });
 
+  test('ignores stale chunk metadata without stored chunks for backfill',
+      () async {
+    final aiDb = AiIndexDatabase.forTesting(
+      path: inMemoryDatabasePath,
+      factory: databaseFactoryFfi,
+    );
+    addTearDown(aiDb.close);
+    final db = await aiDb.database;
+
+    await _insertBook(db, 10);
+
+    final builder = AiGlobalIndexBuilder(database: aiDb);
+
+    expect(await builder.getBookLayerStatus(10), isNull);
+    final missing = await builder.listBooksMissingGlobalLayer();
+    expect(missing.map((status) => status.bookId), isNot(contains(10)));
+  });
+
   test('backfill cancellation reports cancelled and leaves remaining books',
       () async {
     final aiDb = AiIndexDatabase.forTesting(

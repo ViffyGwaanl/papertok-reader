@@ -96,12 +96,17 @@ class AiGlobalIndexBuilder {
       '''
 SELECT
   b.book_id,
-  COALESCE(b.chunk_count, 0) AS chunk_count,
+  COALESCE(cc.chunk_count, 0) AS chunk_count,
   COALESCE(r.raptor_nodes, 0) AS raptor_nodes,
   COALESCE(gn.graph_nodes, 0) AS graph_nodes,
   COALESCE(ge.graph_edges, 0) AS graph_edges,
   COALESCE(gc.graph_communities, 0) AS graph_communities
 FROM ai_book_index b
+LEFT JOIN (
+  SELECT book_id, COUNT(*) AS chunk_count
+  FROM ai_chunks
+  GROUP BY book_id
+) cc ON cc.book_id = b.book_id
 LEFT JOIN (
   SELECT book_id, COUNT(*) AS raptor_nodes
   FROM ai_raptor_nodes
@@ -123,7 +128,7 @@ LEFT JOIN (
   GROUP BY book_id
 ) gc ON gc.book_id = b.book_id
 WHERE b.book_id = ?
-  AND COALESCE(b.chunk_count, 0) > 0
+  AND COALESCE(cc.chunk_count, 0) > 0
   AND COALESCE(b.index_status, 'succeeded') = 'succeeded'
 LIMIT 1
 ''',
@@ -141,12 +146,17 @@ LIMIT 1
       '''
 SELECT
   b.book_id,
-  COALESCE(b.chunk_count, 0) AS chunk_count,
+  COALESCE(cc.chunk_count, 0) AS chunk_count,
   COALESCE(r.raptor_nodes, 0) AS raptor_nodes,
   COALESCE(gn.graph_nodes, 0) AS graph_nodes,
   COALESCE(ge.graph_edges, 0) AS graph_edges,
   COALESCE(gc.graph_communities, 0) AS graph_communities
 FROM ai_book_index b
+LEFT JOIN (
+  SELECT book_id, COUNT(*) AS chunk_count
+  FROM ai_chunks
+  GROUP BY book_id
+) cc ON cc.book_id = b.book_id
 LEFT JOIN (
   SELECT book_id, COUNT(*) AS raptor_nodes
   FROM ai_raptor_nodes
@@ -167,7 +177,7 @@ LEFT JOIN (
   FROM ai_graph_communities
   GROUP BY book_id
 ) gc ON gc.book_id = b.book_id
-WHERE COALESCE(b.chunk_count, 0) > 0
+WHERE COALESCE(cc.chunk_count, 0) > 0
   AND COALESCE(b.index_status, 'succeeded') = 'succeeded'
   AND COALESCE(r.raptor_nodes, 0) = 0
 ORDER BY COALESCE(b.indexed_at, b.updated_at, b.created_at, 0) DESC,

@@ -366,6 +366,67 @@ void main() {
     );
   });
 
+  test('vec1 builder rebuilds only the requested book sidecar', () async {
+    final globalTable = AiVec1VectorIndexBuilder.tableNameFor(
+      providerId: 'provider-a',
+      embeddingModel: 'model-a',
+      embeddingDim: 2,
+    );
+    final targetBookTable = AiVec1VectorIndexBuilder.tableNameForBook(
+      providerId: 'provider-a',
+      embeddingModel: 'model-a',
+      embeddingDim: 2,
+      bookId: 34,
+    );
+    final db = _RecordingVec1BuildDatabase(
+      tableName: globalTable,
+      vectorRows: [
+        {
+          'chunk_id': 41,
+          'book_id': 1,
+          'embedding_blob': AiVectorCodec.encodeFloat32(const [1, 0]),
+        },
+        {
+          'chunk_id': 52,
+          'book_id': 34,
+          'embedding_blob': AiVectorCodec.encodeFloat32(const [0, 1]),
+        },
+      ],
+    );
+
+    final result =
+        await const AiVec1VectorIndexBuilder().rebuildBookSidecarFromNativeRows(
+      db,
+      bookId: 34,
+    );
+
+    expect(result.available, true);
+    expect(result.tablesBuilt, 1);
+    expect(result.rowsWritten, 1);
+    expect(result.totalGroups, 1);
+    expect(db.executeLog, hasLength(1));
+    expect(db.executeLog.single, contains(targetBookTable));
+    expect(db.executeLog.single, isNot(contains(globalTable)));
+    expect(db.deleteLog, contains(targetBookTable));
+    expect(db.deleteLog, isNot(contains(globalTable)));
+    expect(
+      db.insertLog.where((e) => e.table == targetBookTable),
+      hasLength(1),
+    );
+    expect(
+      db.insertLog.where((e) => e.table == targetBookTable).single.values,
+      containsPair('book_id', 34),
+    );
+    expect(
+      db.insertLog.where((e) => e.table == db.bookTableName),
+      isEmpty,
+    );
+    expect(
+      db.insertLog.where((e) => e.table == 'ai_vector_index_meta'),
+      isEmpty,
+    );
+  });
+
   test('vec1 builder can cancel while writing a large table', () async {
     final tableName = AiVec1VectorIndexBuilder.tableNameFor(
       providerId: 'provider-a',
@@ -920,16 +981,32 @@ class _RecordingVec1Database implements Database {
 }
 
 class _RecordingVec1BuildDatabase implements Database {
-  _RecordingVec1BuildDatabase({required this.tableName})
-      : bookTableName = AiVec1VectorIndexBuilder.tableNameForBook(
+  _RecordingVec1BuildDatabase({
+    required this.tableName,
+    List<Map<String, Object?>>? vectorRows,
+  })  : bookTableName = AiVec1VectorIndexBuilder.tableNameForBook(
           providerId: 'provider-a',
           embeddingModel: 'model-a',
           embeddingDim: 2,
           bookId: 1,
-        );
+        ),
+        vectorRows = vectorRows ??
+            [
+              {
+                'chunk_id': 41,
+                'book_id': 1,
+                'embedding_blob': AiVectorCodec.encodeFloat32(const [1, 0]),
+              },
+              {
+                'chunk_id': 42,
+                'book_id': 1,
+                'embedding_blob': AiVectorCodec.encodeFloat32(const [0, 1]),
+              },
+            ];
 
   final String tableName;
   final String bookTableName;
+  final List<Map<String, Object?>> vectorRows;
   final executeLog = <String>[];
   final deleteLog = <String>[];
   final insertLog = <_RecordedInsert>[];
@@ -971,30 +1048,40 @@ class _RecordingVec1BuildDatabase implements Database {
       ];
     }
     if (sql.contains('GROUP BY provider_id')) {
-      return const [
+      final rows = _rowsForQuery(sql, arguments);
+      if (rows.isEmpty) return const [];
+      return [
         {
           'provider_id': 'provider-a',
           'embedding_model': 'model-a',
           'embedding_dim': 2,
-          'row_count': 2,
+          'row_count': rows.length,
         }
       ];
     }
     if (sql.contains('FROM ai_vector_index_rows')) {
-      return [
-        {
-          'chunk_id': 41,
-          'book_id': 1,
-          'embedding_blob': AiVectorCodec.encodeFloat32(const [1, 0]),
-        },
-        {
-          'chunk_id': 42,
-          'book_id': 1,
-          'embedding_blob': AiVectorCodec.encodeFloat32(const [0, 1]),
-        },
-      ];
+      return _rowsForQuery(sql, arguments);
     }
     return const [];
+  }
+
+  List<Map<String, Object?>> _rowsForQuery(
+    String sql,
+    List<Object?>? arguments,
+  ) {
+    if (!sql.contains('book_id = ?')) return vectorRows;
+    int? bookId;
+    for (final argument in arguments ?? const <Object?>[]) {
+      if (argument is int) {
+        bookId = argument;
+        break;
+      }
+    }
+    if (bookId == null) return vectorRows;
+    return [
+      for (final row in vectorRows)
+        if (row['book_id'] == bookId) row,
+    ];
   }
 
   @override

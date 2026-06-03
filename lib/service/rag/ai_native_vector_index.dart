@@ -703,6 +703,128 @@ ORDER BY chunk_id ASC
     );
   }
 
+  Future<AiVec1VectorIndexBuildResult> rebuildBookSidecarFromNativeRows(
+    Database db, {
+    required int bookId,
+    bool Function()? shouldCancel,
+    void Function(AiVec1VectorIndexBuildProgress progress)? onProgress,
+  }) async {
+    final availability = await inspectAvailability(db);
+    if (!availability.available) {
+      return AiVec1VectorIndexBuildResult(
+        available: false,
+        tablesBuilt: 0,
+        rowsWritten: 0,
+        lastError: availability.lastError,
+      );
+    }
+    if (bookId <= 0) {
+      return const AiVec1VectorIndexBuildResult(
+        available: true,
+        tablesBuilt: 0,
+        rowsWritten: 0,
+      );
+    }
+
+    final groups = await db.rawQuery(
+      '''
+SELECT provider_id, embedding_model, embedding_dim, COUNT(*) AS row_count
+FROM ai_vector_index_rows
+WHERE book_id = ?
+GROUP BY provider_id, embedding_model, embedding_dim
+ORDER BY provider_id, embedding_model, embedding_dim
+''',
+      [bookId],
+    );
+    var done = 0;
+    var tablesBuilt = 0;
+    var rowsWritten = 0;
+    var cancelled = false;
+
+    for (final group in groups) {
+      if (shouldCancel?.call() == true) {
+        cancelled = true;
+        break;
+      }
+      final providerId = group['provider_id']?.toString() ?? '';
+      final embeddingModel = group['embedding_model']?.toString() ?? '';
+      final embeddingDim = (group['embedding_dim'] as num?)?.toInt() ?? 0;
+      if (embeddingDim <= 0) continue;
+
+      final bookTableName = tableNameForBook(
+        providerId: providerId,
+        embeddingModel: embeddingModel,
+        embeddingDim: embeddingDim,
+        bookId: bookId,
+      );
+      await db.execute(
+        'CREATE VIRTUAL TABLE IF NOT EXISTS $bookTableName '
+        'USING vec1(embedding, chunk_id, book_id)',
+      );
+      await db.delete(bookTableName);
+
+      final vectorRows = await db.rawQuery(
+        '''
+SELECT chunk_id, book_id, embedding_blob
+FROM ai_vector_index_rows
+WHERE book_id = ?
+  AND COALESCE(provider_id, '') = ?
+  AND COALESCE(embedding_model, '') = ?
+  AND embedding_dim = ?
+ORDER BY chunk_id ASC
+''',
+        [bookId, providerId, embeddingModel, embeddingDim],
+      );
+      for (final row in vectorRows) {
+        if (shouldCancel?.call() == true) {
+          cancelled = true;
+          break;
+        }
+        final chunkId = (row['chunk_id'] as num?)?.toInt();
+        final blob = row['embedding_blob'];
+        if (chunkId == null || blob == null) continue;
+        final inserted = await db.insert(
+          bookTableName,
+          {
+            'rowid': chunkId,
+            'embedding': blob,
+            'chunk_id': chunkId,
+            'book_id': bookId,
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+        if (inserted != 0) {
+          rowsWritten += 1;
+        }
+        if (shouldCancel?.call() == true) {
+          cancelled = true;
+          break;
+        }
+      }
+
+      if (cancelled) {
+        break;
+      }
+      tablesBuilt += 1;
+      done += 1;
+      onProgress?.call(
+        AiVec1VectorIndexBuildProgress(
+          done: done,
+          total: groups.length,
+          rowsWritten: rowsWritten,
+        ),
+      );
+    }
+
+    return AiVec1VectorIndexBuildResult(
+      available: true,
+      tablesBuilt: tablesBuilt,
+      rowsWritten: rowsWritten,
+      totalGroups: groups.length,
+      cancelled: cancelled,
+    );
+  }
+
   Future<bool> hasMissingIndexedBookVectors(
     Database db, {
     required String providerId,
@@ -764,6 +886,55 @@ LIMIT 1
 
 class AiVectorIndexPurger {
   const AiVectorIndexPurger();
+
+  Future<void> purgeChunks(
+    DatabaseExecutor db, {
+    required Iterable<int> chunkIds,
+  }) async {
+    final ids = chunkIds.where((id) => id > 0).toSet().toList(growable: false);
+    if (ids.isEmpty) return;
+
+    final placeholders = List.filled(ids.length, '?').join(',');
+    final rows = await db.rawQuery(
+      '''
+SELECT chunk_id, book_id, provider_id, embedding_model, embedding_dim
+FROM ai_vector_index_rows
+WHERE chunk_id IN ($placeholders)
+ORDER BY provider_id, embedding_model, embedding_dim, book_id, chunk_id
+''',
+      ids,
+    );
+    if (rows.isEmpty) return;
+
+    await db.delete(
+      'ai_vector_index_rows',
+      where: 'chunk_id IN ($placeholders)',
+      whereArgs: ids,
+    );
+
+    final affectedBooksByKey = <_VectorMetaKey, Set<int>>{};
+    for (final row in rows) {
+      final key = _VectorMetaKey(
+        providerId: row['provider_id']?.toString() ?? '',
+        embeddingModel: row['embedding_model']?.toString() ?? '',
+        embeddingDim: (row['embedding_dim'] as num?)?.toInt() ?? 0,
+      );
+      final affectedBookIds = affectedBooksByKey.putIfAbsent(
+        key,
+        () => <int>{},
+      );
+      final bookId = (row['book_id'] as num?)?.toInt() ?? 0;
+      if (bookId <= 0) continue;
+      affectedBookIds.add(bookId);
+    }
+
+    for (final entry in affectedBooksByKey.entries) {
+      await _refreshNativeMeta(db, entry.key);
+      for (final bookId in entry.value) {
+        await _purgeVec1Group(db, entry.key, bookId: bookId);
+      }
+    }
+  }
 
   Future<void> purgeBook(
     DatabaseExecutor db, {

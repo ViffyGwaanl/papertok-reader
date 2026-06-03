@@ -22,6 +22,10 @@ typedef AiCurrentBookVectorScanObserver = void Function(
   List<Map<String, Object?>> rows,
 );
 
+typedef AiCurrentBookVectorBackendRowsObserver = void Function(
+  List<Map<String, Object?>> rows,
+);
+
 typedef AiCurrentBookSearchProgressObserver = void Function(
   AiCurrentBookSearchProgress progress,
 );
@@ -150,6 +154,8 @@ class SemanticSearchCurrentBook {
     AiVectorSearchBackend? vectorSearch,
     AiCurrentBookVectorPageScorer? scoreVectorPage,
     @visibleForTesting AiCurrentBookVectorScanObserver? onVectorScanPage,
+    @visibleForTesting
+    AiCurrentBookVectorBackendRowsObserver? onVectorBackendRows,
     @visibleForTesting int Function()? nowMs,
   })  : _db = database ?? AiIndexDatabase.instance,
         _embedQuery = embedQuery ?? _defaultEmbedQuery,
@@ -164,6 +170,7 @@ class SemanticSearchCurrentBook {
         _progressMinInterval = progressMinInterval,
         _scoreVectorPage = scoreVectorPage ?? _defaultScoreVectorPage,
         _onVectorScanPage = onVectorScanPage,
+        _onVectorBackendRows = onVectorBackendRows,
         _nowMs = nowMs ?? (() => DateTime.now().millisecondsSinceEpoch);
 
   static const int foregroundFallbackVectorRowBudget = 1024;
@@ -192,6 +199,7 @@ class SemanticSearchCurrentBook {
   final Duration _progressMinInterval;
   final AiCurrentBookVectorPageScorer _scoreVectorPage;
   final AiCurrentBookVectorScanObserver? _onVectorScanPage;
+  final AiCurrentBookVectorBackendRowsObserver? _onVectorBackendRows;
   final int Function() _nowMs;
 
   static Future<List<double>> _defaultEmbedQuery(
@@ -306,11 +314,14 @@ class SemanticSearchCurrentBook {
       limit: (k * 24).clamp(24, 120),
       maxScanRows: _fallbackTotalRows(info.chunkCount),
     );
+    final compactBackendRows = <Map<String, Object?>>[];
     for (final row in backendRows) {
+      final compactRow = _compactVectorBackendCandidateRow(row);
+      compactBackendRows.add(compactRow);
       _addScoredCandidate(
         scored,
         AiCurrentBookVectorCandidate(
-          row: row,
+          row: compactRow,
           score: _vectorBackendScore(
             row,
             queryVector: qVec,
@@ -320,6 +331,7 @@ class SemanticSearchCurrentBook {
         k,
       );
     }
+    _onVectorBackendRows?.call(compactBackendRows);
     final ftsCandidateIds = _enableFtsCandidatePrefilter
         ? await _loadFtsCandidateIds(
             db,
@@ -638,6 +650,22 @@ class SemanticSearchCurrentBook {
     final out = Map<String, Object?>.from(row);
     out['id'] ??= out['chunk_id'];
     return out;
+  }
+
+  Map<String, Object?> _compactVectorBackendCandidateRow(
+    Map<String, Object?> row,
+  ) {
+    return {
+      'id': row['id'] ?? row['chunk_id'],
+      'chapter_href': row['chapter_href'],
+      'chapter_title': row['chapter_title'],
+      'chunk_index': row['chunk_index'],
+      'embedding_input_hash': row['embedding_input_hash'],
+      'context_version': row['context_version'],
+      'context_created_at': row['context_created_at'],
+      if (row['local_vector_score'] != null)
+        'local_vector_score': row['local_vector_score'],
+    };
   }
 
   double _vectorBackendScore(
