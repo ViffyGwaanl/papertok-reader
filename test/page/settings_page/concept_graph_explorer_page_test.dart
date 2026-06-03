@@ -11,6 +11,7 @@ import 'package:papertok_reader/providers/concept_graph_explorer.dart';
 import 'package:papertok_reader/service/knowledge/derived_book_concept_graph_loader.dart';
 import 'package:papertok_reader/service/knowledge/concept_graph_store.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
+import 'package:papertok_reader/service/rag/ai_book_index_readiness.dart';
 import 'package:papertok_reader/service/rag/ai_global_index_builder.dart';
 import 'package:papertok_reader/service/rag/semantic_search_library.dart';
 import 'package:papertok_reader/service/review/review_item_store.dart';
@@ -44,15 +45,15 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
     await tester.pump(const Duration(milliseconds: 250));
-    await tester.pumpAndSettle();
-    await tester.pump(const Duration(milliseconds: 250));
 
     expect(find.text('Concept graph'), findsWidgets);
     expect(
       find.textContaining(
-          'AI assists this graph through reviewed Knowledge Cards'),
+        'AI previews draft nodes and relations inline',
+      ),
       findsOneWidget,
     );
+    expect(find.textContaining('reviewed Knowledge Cards'), findsNothing);
     expect(find.text('Attention'), findsOneWidget);
     expect(find.text('1 orphan / 1 broken'), findsOneWidget);
 
@@ -72,7 +73,7 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pump();
-    await tester.tap(find.text('Open source'));
+    await tester.tap(find.text('Open source').last);
     await tester.pump();
 
     expect(opened, hasLength(1));
@@ -123,12 +124,46 @@ void main() {
 
   testWidgets('book scoped explorer shows full-book derived graph preview',
       (tester) async {
+    tester.view.physicalSize = const Size(390, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           conceptGraphStoreProvider.overrideWithValue(store),
           conceptGraphDerivedBookLoaderProvider.overrideWithValue(
             _FakeDerivedBookConceptGraphLoader(),
+          ),
+          conceptGraphBookIndexReadinessProvider.overrideWithValue(
+            (bookId) async => AiBookIndexReadiness(
+              bookId: bookId,
+              baseIndex: const AiBookIndexLayerReadiness(
+                state: AiBookIndexLayerState.ready,
+                count: 24,
+              ),
+              nativeVector: const AiBookIndexLayerReadiness(
+                state: AiBookIndexLayerState.ready,
+                count: 24,
+                total: 24,
+              ),
+              annVector: const AiBookIndexLayerReadiness(
+                state: AiBookIndexLayerState.unavailable,
+                reason: 'Vec1/sqlite-vec extension is not loaded',
+              ),
+              globalLayer: const AiBookIndexLayerReadiness(
+                state: AiBookIndexLayerState.ready,
+                count: 3,
+              ),
+              graphLayer: const AiBookIndexLayerReadiness(
+                state: AiBookIndexLayerState.ready,
+                count: 2,
+                total: 1,
+              ),
+            ),
           ),
         ],
         child: const MaterialApp(
@@ -143,21 +178,90 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
     await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
 
     expect(find.text('Full-book derived graph'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('Working memory'),
-      120,
-      scrollable: find.byType(Scrollable).first,
+    expect(find.text('Book index readiness'), findsOneWidget);
+    expect(find.text('Base index'), findsOneWidget);
+    expect(find.text('ANN'), findsOneWidget);
+    expect(
+      find.textContaining('Vec1/sqlite-vec extension is not loaded'),
+      findsOneWidget,
     );
-    expect(find.text('Working memory'), findsWidgets);
-    expect(find.text('Attention control'), findsWidgets);
+    expect(find.text('Global summary'), findsOneWidget);
+    expect(find.text('Graph map'), findsOneWidget);
+    expect(find.text('Book map'), findsOneWidget);
     expect(find.text('2 nodes'), findsOneWidget);
     expect(find.text('1 relation'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('full-book-derived-graph-map')),
       findsOneWidget,
     );
+  });
+
+  testWidgets('wide book scoped explorer still shows index readiness',
+      (tester) async {
+    tester.view.physicalSize = const Size(900, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(store),
+          conceptGraphDerivedBookLoaderProvider.overrideWithValue(
+            _FakeDerivedBookConceptGraphLoader(),
+          ),
+          conceptGraphBookIndexReadinessProvider.overrideWithValue(
+            (bookId) async => AiBookIndexReadiness(
+              bookId: bookId,
+              baseIndex: const AiBookIndexLayerReadiness(
+                state: AiBookIndexLayerState.ready,
+                count: 24,
+              ),
+              nativeVector: const AiBookIndexLayerReadiness(
+                state: AiBookIndexLayerState.ready,
+                count: 24,
+                total: 24,
+              ),
+              annVector: const AiBookIndexLayerReadiness(
+                state: AiBookIndexLayerState.unavailable,
+                reason: 'Vec1/sqlite-vec extension is not loaded',
+              ),
+              globalLayer: const AiBookIndexLayerReadiness(
+                state: AiBookIndexLayerState.ready,
+                count: 3,
+              ),
+              graphLayer: const AiBookIndexLayerReadiness(
+                state: AiBookIndexLayerState.ready,
+                count: 2,
+                total: 1,
+              ),
+            ),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(bookId: 7),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Full-book derived graph'), findsOneWidget);
+    expect(find.text('Book index readiness'), findsOneWidget);
+    expect(find.text('Base index'), findsOneWidget);
+    expect(find.text('ANN'), findsOneWidget);
+    expect(find.text('Global summary'), findsOneWidget);
+    expect(find.text('Graph map'), findsOneWidget);
   });
 
   testWidgets('full-book derived graph node opens evidence details',
@@ -187,13 +291,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
     await tester.pump(const Duration(milliseconds: 250));
-
-    await tester.scrollUntilVisible(
-      find.text('Working memory'),
-      120,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     final graphMap = find.byKey(const ValueKey('full-book-derived-graph-map'));
     expect(graphMap, findsOneWidget);
@@ -208,7 +306,7 @@ void main() {
         findsOneWidget);
     expect(find.text('Working memory evidence.'), findsOneWidget);
 
-    await tester.tap(find.text('Open source'));
+    await tester.tap(find.text('Open source').last);
     await tester.pump();
 
     expect(opened, hasLength(1));
@@ -216,6 +314,1134 @@ void main() {
     expect(opened.single.host, 'reader');
     expect(opened.single.path, '/open');
     expect(opened.single.queryParameters['bookId'], '7');
+  });
+
+  testWidgets('full-book derived graph relation opens evidence details',
+      (tester) async {
+    final opened = <Uri>[];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(store),
+          conceptGraphDerivedBookLoaderProvider.overrideWithValue(
+            _FakeDerivedBookConceptGraphLoader(),
+          ),
+        ],
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(
+            bookId: 7,
+            sourceOpener: (_, uri) async => opened.add(uri),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
+
+    final graphMap = find.byKey(const ValueKey('full-book-derived-graph-map'));
+    await tester.tapAt(tester.getCenter(graphMap));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Working memory -> Attention control'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump();
+
+    await tester.tap(find.text('Working memory -> Attention control'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Selected full-book relation'), findsOneWidget);
+    expect(find.text('co_occurs'), findsWidgets);
+    expect(find.text('Working memory'), findsWidgets);
+    expect(find.text('Attention control'), findsWidgets);
+    expect(find.text('Working memory and attention co-occur.'), findsWidgets);
+
+    await tester.tap(find.text('Open source').last);
+    await tester.pump();
+
+    expect(opened, hasLength(1));
+    expect(opened.single.scheme, 'paperreader');
+    expect(opened.single.host, 'reader');
+    expect(opened.single.path, '/open');
+    expect(opened.single.queryParameters['bookId'], '7');
+  });
+
+  testWidgets('full-book derived graph relation adds a draft relation inline',
+      (tester) async {
+    tester.view.physicalSize = const Size(600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    final mutableStore = _MutableConceptGraphStore();
+    final reviewStore = _MemoryReviewItemStore();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(mutableStore),
+          conceptGraphReviewItemStoreProvider.overrideWithValue(reviewStore),
+          conceptGraphDerivedBookLoaderProvider.overrideWithValue(
+            _FakeDerivedBookConceptGraphLoader(),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(bookId: 7),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
+
+    final graphMap = find.byKey(const ValueKey('full-book-derived-graph-map'));
+    await tester.tapAt(tester.getCenter(graphMap));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Working memory -> Attention control'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump();
+
+    await tester.tap(find.text('Working memory -> Attention control'));
+    await tester.pumpAndSettle();
+
+    final relationButtonFinder = find.byKey(
+      const ValueKey('derived-relation-save-derived:edge:1'),
+    );
+    expect(relationButtonFinder, findsOneWidget);
+    expect(find.text('Add relation to my graph'), findsOneWidget);
+    await tester.tap(relationButtonFinder);
+    await tester.pumpAndSettle();
+
+    expect(mutableStore.nodes, hasLength(2));
+    expect(
+      mutableStore.nodes.map((node) => node.id),
+      containsAll(['derived:working-memory', 'derived:attention-control']),
+    );
+    expect(
+      mutableStore.nodes.every(
+        (node) =>
+            node.ownership == AiOutputOwnership.aiGeneratedDraft &&
+            node.hasEvidence,
+      ),
+      isTrue,
+    );
+    expect(mutableStore.edges, hasLength(1));
+    expect(mutableStore.edges.single.id, 'derived:edge:1');
+    expect(
+      mutableStore.edges.single.sourceNodeId,
+      'derived:working-memory',
+    );
+    expect(
+      mutableStore.edges.single.targetNodeId,
+      'derived:attention-control',
+    );
+    expect(mutableStore.edges.single.ownership,
+        AiOutputOwnership.aiGeneratedDraft);
+    expect(mutableStore.edges.single.hasEvidence, isTrue);
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ConceptGraphExplorerPage)),
+    );
+    expect(
+      container.read(conceptGraphExplorerProvider).edgesById,
+      contains('derived:edge:1'),
+    );
+    expect(reviewStore.items, isEmpty);
+    expect(find.text('Added relation to my graph'), findsOneWidget);
+
+    final graphMapAfterSave =
+        find.byKey(const ValueKey('full-book-derived-graph-map'));
+    await tester.tapAt(tester.getCenter(graphMapAfterSave));
+    await tester.pumpAndSettle();
+    final savedRelationRow =
+        find.text('Working memory -> Attention control').first;
+    await tester.scrollUntilVisible(
+      savedRelationRow,
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump();
+    await tester.tap(savedRelationRow);
+    await tester.pumpAndSettle();
+
+    final savedRelationButtonFinder = find.byKey(
+      const ValueKey('derived-relation-save-derived:edge:1'),
+      skipOffstage: false,
+    );
+    expect(savedRelationButtonFinder, findsOneWidget);
+    final savedRelationButton = tester.widget<TextButton>(
+      savedRelationButtonFinder,
+    );
+    expect(savedRelationButton.onPressed, isNull);
+    expect(
+      find.descendant(
+        of: savedRelationButtonFinder,
+        matching: find.text('Already in my graph', skipOffstage: false),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Add relation to my graph'), findsNothing);
+  });
+
+  testWidgets('full-book derived graph relation removes a saved draft relation',
+      (tester) async {
+    tester.view.physicalSize = const Size(600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    final mutableStore = _MutableConceptGraphStore();
+    final reviewStore = _MemoryReviewItemStore();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(mutableStore),
+          conceptGraphReviewItemStoreProvider.overrideWithValue(reviewStore),
+          conceptGraphDerivedBookLoaderProvider.overrideWithValue(
+            _FakeDerivedBookConceptGraphLoader(),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(bookId: 7),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
+
+    final graphMap = find.byKey(const ValueKey('full-book-derived-graph-map'));
+    await tester.tapAt(tester.getCenter(graphMap));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Working memory -> Attention control'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump();
+    await tester.tap(find.text('Working memory -> Attention control'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('derived-relation-save-derived:edge:1')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(mutableStore.edges, hasLength(1));
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+
+    await tester.tapAt(tester.getCenter(graphMap));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Working memory -> Attention control').first,
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump();
+    await tester.tap(find.text('Working memory -> Attention control').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Already in my graph'), findsOneWidget);
+    expect(find.text('Remove from my graph'), findsOneWidget);
+    final removeButton = find.byKey(
+      const ValueKey('derived-relation-remove-derived:edge:1'),
+    );
+    await tester.scrollUntilVisible(
+      removeButton,
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump();
+    await tester.tap(removeButton);
+    await tester.pumpAndSettle();
+
+    expect(mutableStore.edges, isEmpty);
+    expect(mutableStore.nodes, hasLength(2));
+    expect(reviewStore.items, isEmpty);
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ConceptGraphExplorerPage)),
+    );
+    expect(
+      container.read(conceptGraphExplorerProvider).edgesById,
+      isNot(contains('derived:edge:1')),
+    );
+    expect(find.text('Removed relation from my graph'), findsOneWidget);
+    expect(find.text('Add relation to my graph'), findsOneWidget);
+  });
+
+  testWidgets('full-book derived graph relation edits and saves inline',
+      (tester) async {
+    tester.view.physicalSize = const Size(600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    final mutableStore = _MutableConceptGraphStore();
+    final reviewStore = _MemoryReviewItemStore();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(mutableStore),
+          conceptGraphReviewItemStoreProvider.overrideWithValue(reviewStore),
+          conceptGraphDerivedBookLoaderProvider.overrideWithValue(
+            _FakeDerivedBookConceptGraphLoader(),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(bookId: 7),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
+
+    final graphMap = find.byKey(const ValueKey('full-book-derived-graph-map'));
+    await tester.tapAt(tester.getCenter(graphMap));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Working memory -> Attention control'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump();
+    await tester.tap(find.text('Working memory -> Attention control'));
+    await tester.pumpAndSettle();
+
+    final editButton = find.byKey(
+      const ValueKey('derived-relation-edit-derived:edge:1'),
+    );
+    expect(editButton, findsOneWidget);
+    await tester.tap(editButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit graph relation'), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const ValueKey('derived-relation-edit-label')),
+      'helps explain',
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('derived-relation-edit-type')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('supports').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(mutableStore.nodes, hasLength(2));
+    expect(mutableStore.edges, hasLength(1));
+    expect(mutableStore.edges.single.id, 'derived:edge:1');
+    expect(mutableStore.edges.single.label, 'helps explain');
+    expect(mutableStore.edges.single.type, ConceptEdgeType.supports);
+    expect(mutableStore.edges.single.ownership,
+        AiOutputOwnership.aiGeneratedDraft);
+    expect(mutableStore.edges.single.hasEvidence, isTrue);
+    expect(reviewStore.items, isEmpty);
+    expect(find.text('Saved relation to my graph'), findsOneWidget);
+  });
+
+  testWidgets(
+      'full-book graph ignores a derived preview relation for this page',
+      (tester) async {
+    tester.view.physicalSize = const Size(600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    final mutableStore = _MutableConceptGraphStore();
+    final reviewStore = _MemoryReviewItemStore();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(mutableStore),
+          conceptGraphReviewItemStoreProvider.overrideWithValue(reviewStore),
+          conceptGraphDerivedBookLoaderProvider.overrideWithValue(
+            _FakeDerivedBookConceptGraphLoader(),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(bookId: 7),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
+
+    final graphMap = find.byKey(const ValueKey('full-book-derived-graph-map'));
+    await tester.tapAt(tester.getCenter(graphMap));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Working memory -> Attention control'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump();
+    await tester.tap(find.text('Working memory -> Attention control'));
+    await tester.pumpAndSettle();
+
+    final ignoreButton = find.byKey(
+      const ValueKey('derived-relation-ignore-derived:edge:1'),
+    );
+    expect(ignoreButton, findsOneWidget);
+    await tester.tap(ignoreButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ignored relation for now'), findsOneWidget);
+    expect(find.text('Selected full-book relation'), findsNothing);
+    expect(find.text('Working memory -> Attention control'), findsNothing);
+    expect(find.text('Working memory'), findsWidgets);
+    expect(find.text('Attention control'), findsWidgets);
+    expect(mutableStore.edges, isEmpty);
+    expect(reviewStore.items, isEmpty);
+  });
+
+  testWidgets('full-book derived graph relation merges into an existing edge',
+      (tester) async {
+    tester.view.physicalSize = const Size(600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    final mutableStore = _MutableConceptGraphStore();
+    final reviewStore = _MemoryReviewItemStore();
+    mutableStore.nodes.addAll([
+      ConceptNode(
+        id: 'derived:working-memory',
+        type: ConceptNodeType.concept,
+        label: 'Working memory',
+        sourceRefs: [refFor('Existing working memory evidence.')],
+        ownership: AiOutputOwnership.aiGeneratedDraft,
+        createdAt: 10,
+      ),
+      ConceptNode(
+        id: 'derived:attention-control',
+        type: ConceptNodeType.concept,
+        label: 'Attention control',
+        sourceRefs: [refFor('Existing attention evidence.')],
+        ownership: AiOutputOwnership.aiGeneratedDraft,
+        createdAt: 11,
+      ),
+    ]);
+    mutableStore.edges.add(
+      ConceptEdge(
+        id: 'existing:working-attention',
+        sourceNodeId: 'derived:working-memory',
+        targetNodeId: 'derived:attention-control',
+        type: ConceptEdgeType.explains,
+        label: 'existing explains',
+        evidenceRefs: [refFor('Existing relation evidence.')],
+        ownership: AiOutputOwnership.aiGeneratedDraft,
+        createdAt: 12,
+      ),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(mutableStore),
+          conceptGraphReviewItemStoreProvider.overrideWithValue(reviewStore),
+          conceptGraphDerivedBookLoaderProvider.overrideWithValue(
+            _FakeDerivedBookConceptGraphLoader(),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(bookId: 7),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
+
+    final graphMap = find.byKey(const ValueKey('full-book-derived-graph-map'));
+    await tester.tapAt(tester.getCenter(graphMap));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Working memory -> Attention control'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump();
+    await tester.tap(find.text('Working memory -> Attention control'));
+    await tester.pumpAndSettle();
+
+    final mergeButton = find.byKey(
+      const ValueKey('derived-relation-merge-derived:edge:1'),
+    );
+    expect(mergeButton, findsOneWidget);
+    await tester.tap(mergeButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Merge into existing relation'), findsOneWidget);
+    await tester.tap(
+      find.byKey(
+        const ValueKey(
+          'derived-relation-merge-target-existing:working-attention',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(mutableStore.edges, hasLength(1));
+    expect(mutableStore.edges.single.id, 'existing:working-attention');
+    expect(mutableStore.edges.single.label, 'existing explains');
+    expect(mutableStore.edges.single.type, ConceptEdgeType.explains);
+    expect(mutableStore.edges.single.evidenceRefs, hasLength(2));
+    expect(mutableStore.edges.single.hasEvidence, isTrue);
+    expect(reviewStore.items, isEmpty);
+    expect(find.text('Merged relation into existing explains'), findsOneWidget);
+  });
+
+  testWidgets('full-book derived graph node adds a draft node inline',
+      (tester) async {
+    tester.view.physicalSize = const Size(600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    final mutableStore = _MutableConceptGraphStore();
+    final reviewStore = _MemoryReviewItemStore();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(mutableStore),
+          conceptGraphReviewItemStoreProvider.overrideWithValue(reviewStore),
+          conceptGraphDerivedBookLoaderProvider.overrideWithValue(
+            _FakeDerivedBookConceptGraphLoader(),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(bookId: 7),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
+
+    final graphMap = find.byKey(const ValueKey('full-book-derived-graph-map'));
+    await tester.tapAt(tester.getCenter(graphMap));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Add to my graph'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump();
+
+    await tester.tap(find.text('Add to my graph'));
+    await tester.pumpAndSettle();
+
+    expect(mutableStore.nodes, hasLength(1));
+    expect(mutableStore.nodes.single.id, 'derived:working-memory');
+    expect(mutableStore.nodes.single.ownership,
+        AiOutputOwnership.aiGeneratedDraft);
+    expect(mutableStore.nodes.single.hasEvidence, isTrue);
+    expect(reviewStore.items, isEmpty);
+    expect(find.text('Added to my graph'), findsOneWidget);
+
+    final graphMapAfterSave =
+        find.byKey(const ValueKey('full-book-derived-graph-map'));
+    await tester.tapAt(tester.getCenter(graphMapAfterSave));
+    await tester.pumpAndSettle();
+    expect(find.text('Already in my graph'), findsOneWidget);
+  });
+
+  testWidgets('full-book derived graph node removes a saved draft node inline',
+      (tester) async {
+    tester.view.physicalSize = const Size(600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    final mutableStore = _MutableConceptGraphStore();
+    final reviewStore = _MemoryReviewItemStore();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(mutableStore),
+          conceptGraphReviewItemStoreProvider.overrideWithValue(reviewStore),
+          conceptGraphDerivedBookLoaderProvider.overrideWithValue(
+            _FakeDerivedBookConceptGraphLoader(),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(bookId: 7),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
+
+    final graphMap = find.byKey(const ValueKey('full-book-derived-graph-map'));
+    await tester.tapAt(tester.getCenter(graphMap));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Add to my graph'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump();
+    await tester.tap(find.text('Add to my graph'));
+    await tester.pumpAndSettle();
+    expect(mutableStore.nodes, hasLength(1));
+
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+    await tester.tapAt(tester.getCenter(graphMap));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Already in my graph'), findsOneWidget);
+    final removeButton = find.byKey(
+      const ValueKey('derived-node-remove-derived:working-memory'),
+    );
+    expect(removeButton, findsOneWidget);
+    await tester.scrollUntilVisible(
+      removeButton,
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump();
+    await tester.tap(removeButton);
+    await tester.pumpAndSettle();
+
+    expect(mutableStore.nodes, isEmpty);
+    expect(mutableStore.edges, isEmpty);
+    expect(reviewStore.items, isEmpty);
+    expect(find.text('Removed from my graph'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      graphMap,
+      -240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump();
+    await tester.tapAt(tester.getCenter(graphMap));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add to my graph'), findsOneWidget);
+  });
+
+  testWidgets('full-book derived graph node edits and saves inline',
+      (tester) async {
+    tester.view.physicalSize = const Size(600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    final mutableStore = _MutableConceptGraphStore();
+    final reviewStore = _MemoryReviewItemStore();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(mutableStore),
+          conceptGraphReviewItemStoreProvider.overrideWithValue(reviewStore),
+          conceptGraphDerivedBookLoaderProvider.overrideWithValue(
+            _FakeDerivedBookConceptGraphLoader(),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(bookId: 7),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
+
+    final graphMap = find.byKey(const ValueKey('full-book-derived-graph-map'));
+    await tester.tapAt(tester.getCenter(graphMap));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit and save'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Edit and save'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump();
+    await tester.tap(find.text('Edit and save'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit graph node'), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const ValueKey('derived-node-edit-label')),
+      'Working memory model',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('derived-node-edit-summary')),
+      'A user-edited explanation for the whole-book concept.',
+    );
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(mutableStore.nodes, hasLength(1));
+    expect(mutableStore.nodes.single.id, 'derived:working-memory');
+    expect(mutableStore.nodes.single.label, 'Working memory model');
+    expect(mutableStore.nodes.single.summary,
+        'A user-edited explanation for the whole-book concept.');
+    expect(mutableStore.nodes.single.ownership,
+        AiOutputOwnership.aiGeneratedDraft);
+    expect(mutableStore.nodes.single.hasEvidence, isTrue);
+    expect(reviewStore.items, isEmpty);
+    expect(find.text('Saved to my graph'), findsOneWidget);
+  });
+
+  testWidgets('full-book derived graph node merges into an existing node',
+      (tester) async {
+    final mutableStore = _MutableConceptGraphStore();
+    final reviewStore = _MemoryReviewItemStore();
+    mutableStore.nodes.add(
+      ConceptNode(
+        id: 'memory',
+        type: ConceptNodeType.concept,
+        label: 'Memory model',
+        summary: 'Existing user wording stays intact.',
+        sourceRefs: [refFor('Existing memory evidence.')],
+        ownership: AiOutputOwnership.aiGeneratedDraft,
+        createdAt: 10,
+      ),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(mutableStore),
+          conceptGraphReviewItemStoreProvider.overrideWithValue(reviewStore),
+          conceptGraphDerivedBookLoaderProvider.overrideWithValue(
+            _FakeDerivedBookConceptGraphLoader(),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(bookId: 7),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
+
+    final graphMap = find.byKey(const ValueKey('full-book-derived-graph-map'));
+    await tester.tapAt(tester.getCenter(graphMap));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Merge'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Merge'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump();
+    await tester.tap(find.text('Merge'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Merge into existing concept'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey('derived-node-merge-target-memory')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(mutableStore.nodes, hasLength(1));
+    expect(mutableStore.nodes.single.id, 'memory');
+    expect(mutableStore.nodes.single.label, 'Memory model');
+    expect(mutableStore.nodes.single.summary,
+        'Existing user wording stays intact.');
+    expect(mutableStore.nodes.single.sourceRefs, hasLength(2));
+    expect(mutableStore.nodes.single.hasEvidence, isTrue);
+    expect(reviewStore.items, isEmpty);
+    expect(find.text('Merged into Memory model'), findsOneWidget);
+  });
+
+  testWidgets('full-book graph centers the most connected book concept',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(store),
+          conceptGraphDerivedBookLoaderProvider.overrideWithValue(
+            _HubDerivedBookConceptGraphLoader(),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(bookId: 7),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Book map'),
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Book map'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(
+        const ValueKey('full-book-reading-path-node-derived:central-theme'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Selected full-book node'), findsOneWidget);
+    expect(find.text('Central theme'), findsWidgets);
+    expect(find.text('The strongest connected concept in the book.'),
+        findsOneWidget);
+    expect(find.text('A low-value isolated mention.'), findsNothing);
+  });
+
+  testWidgets('full-book graph shows a guided reading path from core concepts',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(store),
+          conceptGraphDerivedBookLoaderProvider.overrideWithValue(
+            _HubDerivedBookConceptGraphLoader(),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(bookId: 7),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('full-book-reading-path')),
+      findsOneWidget,
+    );
+    expect(find.text('Reading path'), findsOneWidget);
+    expect(find.text('Start here'), findsOneWidget);
+    expect(find.text('Central theme'), findsWidgets);
+    expect(find.text('Support 1'), findsWidgets);
+    expect(find.text('co_occurs'), findsWidgets);
+    expect(find.text('1 evidence ref'), findsWidgets);
+    expect(find.text('Isolated mention'), findsNothing);
+
+    await tester.tap(
+      find.byKey(
+          const ValueKey('full-book-reading-path-node-derived:central-theme')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Selected full-book node'), findsOneWidget);
+    expect(find.text('Central theme evidence.'), findsOneWidget);
+  });
+
+  testWidgets('full-book reading path relation opens evidence details',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(store),
+          conceptGraphDerivedBookLoaderProvider.overrideWithValue(
+            _HubDerivedBookConceptGraphLoader(),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(bookId: 7),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(
+        const ValueKey(
+          'full-book-reading-path-edge-derived:central-support-1',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Selected full-book relation'), findsOneWidget);
+    expect(find.text('co_occurs'), findsWidgets);
+    expect(find.text('Central theme'), findsWidgets);
+    expect(find.text('Support 1'), findsWidgets);
+    expect(find.text('Central theme links to support 1.'), findsOneWidget);
+  });
+
+  testWidgets('full-book graph focuses derived path by selected text',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(store),
+          conceptGraphDerivedBookLoaderProvider.overrideWithValue(
+            _HubDerivedBookConceptGraphLoader(),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(
+            bookId: 7,
+            initialQuery: 'Support 5 practice',
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Focused by selection'), findsOneWidget);
+    expect(find.text('Reading path'), findsOneWidget);
+    expect(find.text('Central theme'), findsWidgets);
+    expect(find.text('Support 5'), findsWidgets);
+    expect(find.text('Central theme links to support 5.'), findsNothing);
+    expect(find.text('Support 1'), findsNothing);
+
+    await tester.tap(
+      find.byKey(
+        const ValueKey('full-book-reading-path-edge-derived:central-support-5'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Selected full-book relation'), findsOneWidget);
+    expect(find.text('Central theme links to support 5.'), findsOneWidget);
+  });
+
+  testWidgets('full-book graph shows a book map summary from core evidence',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(store),
+          conceptGraphDerivedBookLoaderProvider.overrideWithValue(
+            _HubDerivedBookConceptGraphLoader(),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(bookId: 7),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('full-book-map-summary')), findsOneWidget);
+    expect(find.text('Book map'), findsOneWidget);
+    expect(find.text('Core theme'), findsOneWidget);
+    expect(find.text('Central theme'), findsWidgets);
+    expect(find.text('8 key concepts'), findsOneWidget);
+    expect(find.text('7 backbone relations'), findsOneWidget);
+    expect(find.text('15 evidence refs'), findsOneWidget);
+    expect(find.text('Evidence sections'), findsOneWidget);
+    expect(find.text('Chapter 2: Core Argument / Chunk 4'), findsOneWidget);
+    expect(
+      find.text('Chapter 3: Supporting Evidence / Chunk 5'),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(
+        const ValueKey('full-book-map-core-node-derived:central-theme'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Selected full-book node'), findsOneWidget);
+    expect(find.text('The strongest connected concept in the book.'),
+        findsOneWidget);
+  });
+
+  testWidgets('full-book book map evidence sections open source nodes',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(store),
+          conceptGraphDerivedBookLoaderProvider.overrideWithValue(
+            _HubDerivedBookConceptGraphLoader(),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(bookId: 7),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(const ValueKey('full-book-map-summary')),
+      const Offset(-1600, 0),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(
+        const ValueKey(
+          'full-book-map-section-Chapter 3: Supporting Evidence / Chunk 5',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Selected full-book node'), findsOneWidget);
+    expect(find.text('A supporting concept 1.'), findsOneWidget);
+    expect(find.text('Support 1 evidence.'), findsOneWidget);
+  });
+
+  testWidgets('full-book graph ignores a derived preview node for this page',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(store),
+          conceptGraphDerivedBookLoaderProvider.overrideWithValue(
+            _HubDerivedBookConceptGraphLoader(),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(bookId: 7),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(
+        const ValueKey('full-book-reading-path-node-derived:central-theme'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Central theme'), findsWidgets);
+
+    expect(find.text('Ignore'), findsOneWidget);
+    await tester.tap(find.text('Ignore'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ignored for now'), findsOneWidget);
+    expect(find.text('Central theme'), findsNothing);
+
+    expect(
+      find.byKey(
+        const ValueKey('full-book-reading-path-node-derived:central-theme'),
+      ),
+      findsNothing,
+    );
   });
 
   testWidgets('book scoped explorer can build a missing global layer in place',
@@ -281,9 +1507,103 @@ void main() {
     await tester.pump(const Duration(milliseconds: 250));
 
     expect(rebuiltBookIds, [7]);
-    expect(find.text('Working memory'), findsWidgets);
+    expect(find.text('Book map'), findsOneWidget);
     expect(find.text('2 nodes'), findsOneWidget);
+    expect(find.text('1 relation'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('full-book-derived-graph-map')),
+      findsOneWidget,
+    );
     expect(find.text('Build global layer now'), findsNothing);
+  });
+
+  testWidgets(
+      'book scoped explorer does not rebuild when RAPTOR exists without graph nodes',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    final rebuiltBookIds = <int>[];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          conceptGraphStoreProvider.overrideWithValue(store),
+          conceptGraphDerivedBookLoaderProvider.overrideWithValue(
+            _EmptyDerivedBookConceptGraphLoader(),
+          ),
+          conceptGraphGlobalLayerStatusProvider.overrideWithValue(
+            (bookId) async => AiGlobalIndexBookLayerStatus(
+              bookId: bookId,
+              chunkCount: 4,
+              raptorNodes: 2,
+              graphNodes: 0,
+              graphEdges: 0,
+              graphCommunities: 0,
+            ),
+          ),
+          conceptGraphBookIndexReadinessProvider.overrideWithValue(
+            (bookId) async => AiBookIndexReadiness(
+              bookId: bookId,
+              baseIndex: const AiBookIndexLayerReadiness(
+                state: AiBookIndexLayerState.ready,
+                count: 4,
+              ),
+              nativeVector: const AiBookIndexLayerReadiness(
+                state: AiBookIndexLayerState.missing,
+              ),
+              annVector: const AiBookIndexLayerReadiness(
+                state: AiBookIndexLayerState.missing,
+              ),
+              globalLayer: const AiBookIndexLayerReadiness(
+                state: AiBookIndexLayerState.ready,
+                count: 2,
+                total: 4,
+              ),
+              graphLayer: const AiBookIndexLayerReadiness(
+                state: AiBookIndexLayerState.empty,
+                reason:
+                    'Global summary exists, but no displayable graph nodes were extracted.',
+              ),
+            ),
+          ),
+          conceptGraphGlobalLayerRebuilderProvider.overrideWithValue(
+            ({required int bookId}) async {
+              rebuiltBookIds.add(bookId);
+              return const AiGlobalIndexStats(
+                raptorNodes: 2,
+                graphNodes: 0,
+                graphEdges: 0,
+                graphCommunities: 0,
+              );
+            },
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: ConceptGraphExplorerPage(bookId: 7),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Book index readiness'), findsOneWidget);
+    expect(find.text('Graph map'), findsOneWidget);
+    expect(find.textContaining('No displayable nodes'), findsOneWidget);
+    expect(
+      find.textContaining('The global summary layer exists'),
+      findsOneWidget,
+    );
+    expect(find.text('Build global layer now'), findsNothing);
+    expect(rebuiltBookIds, isEmpty);
   });
 
   testWidgets('settings explorer can choose an indexed book full-book graph',
@@ -420,7 +1740,7 @@ void main() {
     expect(find.text('Attention'), findsNothing);
   });
 
-  testWidgets('empty state create draft candidate runs derived RAG handoff',
+  testWidgets('empty state draft candidate saves inline without Review',
       (tester) async {
     final mutableStore = _MutableConceptGraphStore();
     final reviewStore = _MemoryReviewItemStore();
@@ -485,18 +1805,12 @@ void main() {
     expect(find.text('No related concepts yet'), findsNothing);
     expect(find.text('attention memory'), findsWidgets);
     expect(find.text('Attention'), findsWidgets);
-    expect(find.text('Added to Review inbox'), findsOneWidget);
-    expect(
-      reviewStore.items.where(
-        (item) => item.sourceType == ReviewItemSourceType.conceptGraphRelation,
-      ),
-      hasLength(2),
-    );
-    expect(
-      reviewStore.items
-          .every((item) => item.status == ReviewItemStatus.pending),
-      true,
-    );
+    expect(find.text('Added to my graph'), findsOneWidget);
+    expect(mutableStore.nodes.map((node) => node.label), contains('Memory'));
+    expect(mutableStore.nodes.every((node) => node.hasEvidence), isTrue);
+    expect(mutableStore.edges, hasLength(2));
+    expect(mutableStore.edges.every((edge) => edge.hasEvidence), isTrue);
+    expect(reviewStore.items, isEmpty);
   });
 
   testWidgets('empty state draft action explains skipped handoff',
@@ -559,7 +1873,8 @@ void main() {
     expect(find.textContaining('missing-derived-rag-layer'), findsOneWidget);
   });
 
-  testWidgets('empty state Card action creates RAG KnowledgeCard review item',
+  testWidgets(
+      'empty state Card action saves a draft KnowledgeCard inline without Review',
       (tester) async {
     final mutableStore = _MutableConceptGraphStore();
     final cardStore = _MemoryKnowledgeCardStore();
@@ -626,22 +1941,30 @@ void main() {
     await tester.pump(const Duration(milliseconds: 250));
 
     expect(
-      reviewStore.items
-          .where(
-              (item) => item.sourceType == ReviewItemSourceType.knowledgeCard)
-          .length,
-      1,
+      reviewStore.items.where(
+        (item) => item.sourceType == ReviewItemSourceType.knowledgeCard,
+      ),
+      isEmpty,
     );
     expect(cardStore.cards.single.origin, KnowledgeCardOrigin.ragEvidence);
+    expect(cardStore.cards.single.reviewState, KnowledgeCardReviewState.draft);
+    expect(cardStore.cards.single.sourceRefs.single.canJumpBack, true);
     expect(mutableStore.nodes, isEmpty);
-    expect(find.text('Added to Review inbox'), findsOneWidget);
+    expect(find.text('Saved as draft knowledge card'), findsOneWidget);
   });
 }
 
-SourceRef refFor(String snippet) => SourceRef(
+SourceRef refFor(
+  String snippet, {
+  String? sourceTitle,
+  String? locationLabel,
+}) =>
+    SourceRef(
       bookId: 7,
       cfi: 'epubcfi(/6/8)',
       jumpLink: 'paperreader://reader/open?bookId=7&cfi=epubcfi%28/6/8%29',
+      sourceTitle: sourceTitle,
+      locationLabel: locationLabel,
       sourceTextSnippet: snippet,
       sourceKind: SourceRefKind.reader,
     );
@@ -703,6 +2026,12 @@ class _FakeConceptGraphStore extends ConceptGraphStore {
         memory,
         recall,
         orphan,
+      ];
+
+  @override
+  Future<List<ConceptEdge>> listEdges() async => [
+        attentionMemory,
+        brokenEdge,
       ];
 
   @override
@@ -807,6 +2136,28 @@ class _MutableConceptGraphStore extends ConceptGraphStore {
       edges.add(draft);
     }
     return draft;
+  }
+
+  @override
+  Future<bool> deleteNode(String nodeId) async {
+    final id = nodeId.trim();
+    final before = nodes.length;
+    nodes.removeWhere((node) => node.id == id);
+    final removed = nodes.length != before;
+    if (removed) {
+      edges.removeWhere(
+        (edge) => edge.sourceNodeId == id || edge.targetNodeId == id,
+      );
+    }
+    return removed;
+  }
+
+  @override
+  Future<bool> deleteEdge(String edgeId) async {
+    final id = edgeId.trim();
+    final before = edges.length;
+    edges.removeWhere((edge) => edge.id == id);
+    return edges.length != before;
   }
 
   @override
@@ -935,6 +2286,17 @@ class _FakeDerivedBookConceptGraphLoader
   }
 }
 
+class _EmptyDerivedBookConceptGraphLoader
+    implements DerivedBookConceptGraphLoader {
+  @override
+  Future<DerivedBookConceptGraphSnapshot> loadBook({
+    required int bookId,
+    int nodeLimit = 18,
+  }) async {
+    return DerivedBookConceptGraphSnapshot.empty(bookId);
+  }
+}
+
 class _MutableDerivedBookConceptGraphLoader
     implements DerivedBookConceptGraphLoader {
   bool hasGraph = false;
@@ -950,6 +2312,17 @@ class _MutableDerivedBookConceptGraphLoader
       return Future.value(DerivedBookConceptGraphSnapshot.empty(bookId));
     }
     return Future.value(_derivedBookGraphSnapshot(bookId));
+  }
+}
+
+class _HubDerivedBookConceptGraphLoader
+    implements DerivedBookConceptGraphLoader {
+  @override
+  Future<DerivedBookConceptGraphSnapshot> loadBook({
+    required int bookId,
+    int nodeLimit = 18,
+  }) async {
+    return _hubDerivedBookGraphSnapshot(bookId);
   }
 }
 
@@ -986,6 +2359,68 @@ DerivedBookConceptGraphSnapshot _derivedBookGraphSnapshot(int bookId) {
         ownership: AiOutputOwnership.derivedCache,
       ),
     ],
+  );
+}
+
+DerivedBookConceptGraphSnapshot _hubDerivedBookGraphSnapshot(int bookId) {
+  final nodes = [
+    ConceptNode(
+      id: 'derived:isolated-mention',
+      type: ConceptNodeType.concept,
+      label: 'Isolated mention',
+      summary: 'A low-value isolated mention.',
+      sourceRefs: [refFor('Isolated evidence.')],
+      ownership: AiOutputOwnership.derivedCache,
+    ),
+    ConceptNode(
+      id: 'derived:central-theme',
+      type: ConceptNodeType.concept,
+      label: 'Central theme',
+      summary: 'The strongest connected concept in the book.',
+      sourceRefs: [
+        refFor(
+          'Central theme evidence.',
+          sourceTitle: 'Chapter 2: Core Argument',
+          locationLabel: 'Chunk 4',
+        ),
+      ],
+      ownership: AiOutputOwnership.derivedCache,
+    ),
+    for (var i = 1; i <= 7; i += 1)
+      ConceptNode(
+        id: 'derived:support-$i',
+        type: ConceptNodeType.concept,
+        label: 'Support $i',
+        summary: 'A supporting concept $i.',
+        sourceRefs: [
+          refFor(
+            'Support $i evidence.',
+            sourceTitle: i <= 3
+                ? 'Chapter 3: Supporting Evidence'
+                : 'Chapter 4: Practice',
+            locationLabel: 'Chunk ${i + 4}',
+          ),
+        ],
+        ownership: AiOutputOwnership.derivedCache,
+      ),
+  ];
+  final edges = [
+    for (var i = 1; i <= 7; i += 1)
+      ConceptEdge(
+        id: 'derived:central-support-$i',
+        sourceNodeId: 'derived:central-theme',
+        targetNodeId: 'derived:support-$i',
+        type: ConceptEdgeType.relatedTo,
+        label: 'co_occurs',
+        evidenceRefs: [refFor('Central theme links to support $i.')],
+        confidence: 0.9 - (i * 0.02),
+        ownership: AiOutputOwnership.derivedCache,
+      ),
+  ];
+  return DerivedBookConceptGraphSnapshot(
+    bookId: bookId,
+    nodes: nodes,
+    edges: edges,
   );
 }
 

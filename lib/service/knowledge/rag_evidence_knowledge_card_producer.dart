@@ -37,6 +37,7 @@ class RagEvidenceKnowledgeCardProducer {
 
   Future<RagEvidenceKnowledgeCardProducerResult> createFromLibrarySearchResult(
     AiSemanticSearchLibraryResult result, {
+    bool createReviewItem = false,
     int? now,
   }) async {
     final query = _normalize(result.query);
@@ -64,7 +65,11 @@ class RagEvidenceKnowledgeCardProducer {
         .whereType<SourceRef>()
         .toList(growable: false);
     final quote = _quoteFromEvidence(evidence);
-    final explanation = _explanationFromEvidence(result, evidence);
+    final explanation = _explanationFromEvidence(
+      result,
+      evidence,
+      createReviewItem: createReviewItem,
+    );
     final candidate = KnowledgeCard(
       id: _cardId(query: query, sourceRefs: sourceRefs),
       title: _titleFromQuery(query),
@@ -72,7 +77,9 @@ class RagEvidenceKnowledgeCardProducer {
       explanation: explanation,
       sourceRefs: sourceRefs,
       tags: const ['rag-evidence'],
-      reviewState: KnowledgeCardReviewState.pending,
+      reviewState: createReviewItem
+          ? KnowledgeCardReviewState.pending
+          : KnowledgeCardReviewState.draft,
       origin: KnowledgeCardOrigin.ragEvidence,
       ownership: AiOutputOwnership.aiGeneratedDraft,
       createdAt: timestamp,
@@ -80,6 +87,15 @@ class RagEvidenceKnowledgeCardProducer {
     );
 
     final upsert = await cardStore.upsertCandidate(candidate);
+    if (!createReviewItem) {
+      return RagEvidenceKnowledgeCardProducerResult(
+        card: upsert.card,
+        inserted: upsert.inserted,
+        duplicateOfId: upsert.duplicateOfId,
+        addedToReviewInbox: false,
+      );
+    }
+
     final reviewItem = KnowledgeCardReviewAdapter.fromKnowledgeCard(
       upsert.card,
       now: timestamp,
@@ -126,8 +142,9 @@ class RagEvidenceKnowledgeCardProducer {
 
   static String _explanationFromEvidence(
     AiSemanticSearchLibraryResult result,
-    List<AiSemanticSearchLibraryEvidence> evidence,
-  ) {
+    List<AiSemanticSearchLibraryEvidence> evidence, {
+    required bool createReviewItem,
+  }) {
     final summary = evidence
         .map((item) => item.derivedSummary ?? '')
         .map(_normalize)
@@ -142,8 +159,9 @@ class RagEvidenceKnowledgeCardProducer {
         .take(3)
         .join(', ');
     final suffix = books.isEmpty ? '' : ' from $books';
+    final action = createReviewItem ? 'saved for review' : 'saved as draft';
     return _clip(
-      'RAG evidence saved for review$suffix.',
+      'RAG evidence $action$suffix.',
       maxExplanationChars,
     );
   }

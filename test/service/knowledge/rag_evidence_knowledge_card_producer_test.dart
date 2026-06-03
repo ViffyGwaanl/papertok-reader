@@ -31,8 +31,7 @@ void main() {
     }
   });
 
-  test('derived library RAG result becomes pending KnowledgeCard review item',
-      () async {
+  test('derived library RAG result defaults to draft without Review', () async {
     final result = await producer.createFromLibrarySearchResult(
       derivedResult(
         derivedSummary:
@@ -42,9 +41,10 @@ void main() {
     );
 
     expect(result.inserted, true);
-    expect(result.addedToReviewInbox, true);
+    expect(result.addedToReviewInbox, false);
+    expect(result.reviewItem, isNull);
     expect(result.card.origin, KnowledgeCardOrigin.ragEvidence);
-    expect(result.card.reviewState, KnowledgeCardReviewState.pending);
+    expect(result.card.reviewState, KnowledgeCardReviewState.draft);
     expect(result.card.ownership, AiOutputOwnership.aiGeneratedDraft);
     expect(result.card.title, contains('attention memory'));
     expect(result.card.explanation, contains('GraphRAG community'));
@@ -52,6 +52,23 @@ void main() {
     expect(result.card.quote, isNot(contains('GraphRAG community')));
     expect(result.card.sourceRefs.single.canJumpBack, true);
     expect(result.card.sourceRefs.single.hasDerivedChunkHint, true);
+
+    expect(await reviewStore.list(), isEmpty);
+  });
+
+  test('derived library RAG result can be explicitly sent to Review', () async {
+    final result = await producer.createFromLibrarySearchResult(
+      derivedResult(
+        derivedSummary:
+            'GraphRAG community: Key themes: Attention, Memory. Evidence.',
+      ),
+      createReviewItem: true,
+      now: 100,
+    );
+
+    expect(result.inserted, true);
+    expect(result.addedToReviewInbox, true);
+    expect(result.card.reviewState, KnowledgeCardReviewState.pending);
 
     final reviewItems = await reviewStore.list(
       status: ReviewItemStatus.pending,
@@ -62,7 +79,7 @@ void main() {
     expect(reviewItems.single.sourceRefs.single.canJumpBack, true);
   });
 
-  test('plain traceable library RAG result can become a pending card',
+  test('plain traceable library RAG result defaults to draft without Review',
       () async {
     final result = await producer.createFromLibrarySearchResult(
       derivedResult(derivedLayer: null, derivedSummary: null),
@@ -71,7 +88,38 @@ void main() {
 
     expect(result.card.origin, KnowledgeCardOrigin.ragEvidence);
     expect(result.card.explanation, contains('RAG evidence saved'));
-    expect(result.addedToReviewInbox, true);
+    expect(result.card.reviewState, KnowledgeCardReviewState.draft);
+    expect(result.addedToReviewInbox, false);
+    expect(await reviewStore.list(), isEmpty);
+  });
+
+  test('traceable RAG result can be saved as draft without Review', () async {
+    final result = await producer.createFromLibrarySearchResult(
+      derivedResult(),
+      createReviewItem: false,
+      now: 100,
+    );
+
+    expect(result.inserted, true);
+    expect(result.addedToReviewInbox, false);
+    expect(result.reviewItem, isNull);
+    expect(result.card.origin, KnowledgeCardOrigin.ragEvidence);
+    expect(result.card.reviewState, KnowledgeCardReviewState.draft);
+    expect(result.card.sourceRefs.single.canJumpBack, true);
+    expect(await reviewStore.list(), isEmpty);
+  });
+
+  test('draft RAG card fallback explanation does not mention Review', () async {
+    final result = await producer.createFromLibrarySearchResult(
+      derivedResult(derivedLayer: null, derivedSummary: null),
+      createReviewItem: false,
+      now: 100,
+    );
+
+    expect(result.card.reviewState, KnowledgeCardReviewState.draft);
+    expect(result.card.explanation, contains('RAG evidence saved as draft'));
+    expect(result.card.explanation, isNot(contains('review')));
+    expect(await reviewStore.list(), isEmpty);
   });
 
   test('duplicate RAG result does not create duplicate cards', () async {
@@ -167,6 +215,7 @@ void main() {
 
     final result = await producer.createFromLibrarySearchResult(
       derivedResult(derivedSummary: longSummary),
+      createReviewItem: true,
       now: 100,
     );
 

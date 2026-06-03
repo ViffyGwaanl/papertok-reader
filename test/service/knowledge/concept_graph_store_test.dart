@@ -153,6 +153,79 @@ void main() {
     expect(restoredEdge.isFormal, false);
   });
 
+  test('deleteEdge removes a relation without deleting endpoint nodes',
+      () async {
+    final store = ConceptGraphStore(rootDir: tempRoot);
+    await store.upsertNode(node(id: 'n1', label: 'Source concept'));
+    await store.upsertNode(node(id: 'n2', label: 'Target concept'));
+    await store.upsertEdge(edge(id: 'draft-edge'));
+
+    final removed = await store.deleteEdge('draft-edge');
+
+    expect(removed, isTrue);
+    expect(await store.listEdges(), isEmpty);
+    expect(
+      (await store.listNodes()).map((node) => node.id),
+      containsAll(['n1', 'n2']),
+    );
+  });
+
+  test('deleteNode removes the node and its incident relations', () async {
+    final store = ConceptGraphStore(rootDir: tempRoot);
+    await store.upsertNode(node(id: 'n1', label: 'Removed concept'));
+    await store.upsertNode(node(id: 'n2', label: 'Neighbor concept'));
+    await store.upsertNode(node(id: 'n3', label: 'Unrelated concept'));
+    await store.upsertEdge(
+      edge(id: 'incident-edge', sourceNodeId: 'n1', targetNodeId: 'n2'),
+    );
+    await store.upsertEdge(
+      edge(id: 'unrelated-edge', sourceNodeId: 'n2', targetNodeId: 'n3'),
+    );
+
+    final removed = await store.deleteNode('n1');
+
+    expect(removed, isTrue);
+    expect(
+      (await store.listNodes()).map((node) => node.id),
+      containsAll(['n2', 'n3']),
+    );
+    expect(
+      (await store.listNodes()).map((node) => node.id),
+      isNot(contains('n1')),
+    );
+    expect(
+      (await store.listEdges()).map((edge) => edge.id),
+      ['unrelated-edge'],
+    );
+  });
+
+  test('removeDraftNode only removes AI-generated draft nodes', () async {
+    final store = ConceptGraphStore(rootDir: tempRoot);
+    await store.ensureInitialized();
+    await store.graphFile.writeAsString(
+      const JsonEncoder.withIndent('  ').convert({
+        'version': 1,
+        'nodes': [
+          node(id: 'draft-node', label: 'Draft concept').toJson(),
+          node(
+            id: 'confirmed-node',
+            label: 'Confirmed concept',
+            ownership: AiOutputOwnership.aiGeneratedApproved,
+          ).toJson(),
+        ],
+        'edges': const <Map<String, dynamic>>[],
+      }),
+    );
+
+    final removedDraft = await store.removeDraftNode('draft-node');
+    final removedConfirmed = await store.removeDraftNode('confirmed-node');
+    final nodes = await store.listNodes();
+
+    expect(removedDraft, true);
+    expect(removedConfirmed, false);
+    expect(nodes.map((entry) => entry.id), ['confirmed-node']);
+  });
+
   test('applies concept relation review decision only on apply', () async {
     final store = ConceptGraphStore(rootDir: tempRoot);
     await store.upsertNode(node(id: 'n1'));

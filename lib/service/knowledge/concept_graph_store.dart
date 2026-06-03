@@ -79,6 +79,57 @@ class ConceptGraphStore {
     });
   }
 
+  Future<bool> deleteNode(String nodeId) {
+    return _enqueue(() async {
+      final id = nodeId.trim();
+      if (id.isEmpty) return false;
+      final graph = await _readGraphUnlocked();
+      final beforeNodes = graph.nodes.length;
+      graph.nodes.removeWhere((node) => node.id == id);
+      final removed = graph.nodes.length != beforeNodes;
+      if (removed) {
+        graph.edges.removeWhere(
+          (edge) => edge.sourceNodeId == id || edge.targetNodeId == id,
+        );
+        await _writeGraphUnlocked(graph.nodes, graph.edges);
+      }
+      return removed;
+    });
+  }
+
+  Future<bool> removeDraftNode(String nodeId) {
+    return _enqueue(() async {
+      final id = nodeId.trim();
+      if (id.isEmpty) return false;
+      final graph = await _readGraphUnlocked();
+      final index = graph.nodes.indexWhere((node) => node.id == id);
+      if (index < 0) return false;
+      final node = graph.nodes[index];
+      if (node.ownership != AiOutputOwnership.aiGeneratedDraft) return false;
+      graph.nodes.removeAt(index);
+      graph.edges.removeWhere(
+        (edge) => edge.sourceNodeId == id || edge.targetNodeId == id,
+      );
+      await _writeGraphUnlocked(graph.nodes, graph.edges);
+      return true;
+    });
+  }
+
+  Future<bool> deleteEdge(String edgeId) {
+    return _enqueue(() async {
+      final id = edgeId.trim();
+      if (id.isEmpty) return false;
+      final graph = await _readGraphUnlocked();
+      final before = graph.edges.length;
+      graph.edges.removeWhere((edge) => edge.id == id);
+      final removed = graph.edges.length != before;
+      if (removed) {
+        await _writeGraphUnlocked(graph.nodes, graph.edges);
+      }
+      return removed;
+    });
+  }
+
   Future<ConceptEdge> applyReviewDecision(
     ReviewItem item, {
     int? now,

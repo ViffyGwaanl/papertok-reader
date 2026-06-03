@@ -152,6 +152,7 @@ class ConceptGraphProducer {
     AiSemanticSearchLibraryResult result, {
     List<String> conceptRefs = const <String>[],
     int maxConcepts = 4,
+    bool createReviewItems = false,
   }) async {
     if (!result.ok) {
       return const ConceptGraphProducerResult(
@@ -259,12 +260,14 @@ class ConceptGraphProducer {
       producedEdges.add(relation);
       existingEdges[relation.id] = relation;
 
-      final reviewItem = await _upsertReviewItemForRelation(
-        relation,
-        now: timestamp,
-      );
-      if (reviewItem != null) {
-        producedReviewItems.add(reviewItem);
+      if (createReviewItems) {
+        final reviewItem = await _upsertReviewItemForRelation(
+          relation,
+          now: timestamp,
+        );
+        if (reviewItem != null) {
+          producedReviewItems.add(reviewItem);
+        }
       }
     }
 

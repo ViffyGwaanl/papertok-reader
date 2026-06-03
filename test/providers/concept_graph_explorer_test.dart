@@ -188,12 +188,8 @@ void main() {
     expect(
         state.nodes.value!.map((node) => node.id), contains('concept:memory'));
 
-    final reviewItems = await reviewStore.list(
-      sourceType: ReviewItemSourceType.conceptGraphRelation,
-    );
-    expect(reviewItems, hasLength(2));
-    expect(reviewItems.every((item) => item.status == ReviewItemStatus.pending),
-        isTrue);
+    expect(state.draftCandidate.value?.reviewItems, isEmpty);
+    expect(await reviewStore.list(), isEmpty);
   });
 
   test('plain library RAG result leaves draft candidate action skipped',
@@ -236,7 +232,8 @@ void main() {
     expect(await reviewStore.list(), isEmpty);
   });
 
-  test('create knowledge card from library RAG result leaves graph untouched',
+  test(
+      'create knowledge card from library RAG result saves draft inline and leaves graph untouched',
       () async {
     container.dispose();
     container = ProviderContainer(
@@ -256,12 +253,14 @@ void main() {
     final state = container.read(conceptGraphExplorerProvider);
     expect(state.ragKnowledgeCard.value?.card.origin,
         KnowledgeCardOrigin.ragEvidence);
+    expect(state.ragKnowledgeCard.value?.card.reviewState,
+        KnowledgeCardReviewState.draft);
+    expect(state.ragKnowledgeCard.value?.addedToReviewInbox, false);
 
     final reviewItems = await reviewStore.list(
       sourceType: ReviewItemSourceType.knowledgeCard,
     );
-    expect(reviewItems, hasLength(1));
-    expect(reviewItems.single.status, ReviewItemStatus.pending);
+    expect(reviewItems, isEmpty);
     expect(await store.listNodes(), isEmpty);
   });
 }

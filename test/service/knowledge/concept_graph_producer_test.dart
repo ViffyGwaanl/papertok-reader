@@ -236,7 +236,7 @@ void main() {
     expect(await reviewStore.list(), isEmpty);
   });
 
-  test('derived library RAG result creates draft graph candidates for review',
+  test('derived library RAG result defaults to draft graph without Review',
       () async {
     final result = await producer.createFromLibrarySearchResult(
       derivedRagResult(),
@@ -263,6 +263,19 @@ void main() {
       ),
       isTrue,
     );
+    expect(result.reviewItems, isEmpty);
+    expect(await reviewStore.list(), isEmpty);
+  });
+
+  test('derived library RAG result can explicitly create relation ReviewItems',
+      () async {
+    final result = await producer.createFromLibrarySearchResult(
+      derivedRagResult(),
+      createReviewItems: true,
+    );
+
+    expect(result.skippedReason, isNull);
+    expect(result.edges, hasLength(2));
     expect(result.reviewItems, hasLength(2));
     expect(
       result.reviewItems.every(
@@ -290,12 +303,7 @@ void main() {
 
     expect(await graphStore.listNodes(), hasLength(3));
     expect(await graphStore.listEdges(), hasLength(2));
-    expect(
-      await reviewStore.list(
-        sourceType: ReviewItemSourceType.conceptGraphRelation,
-      ),
-      hasLength(2),
-    );
+    expect(await reviewStore.list(), isEmpty);
   });
 
   test('plain library RAG result does not create graph noise', () async {

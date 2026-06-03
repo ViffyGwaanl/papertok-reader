@@ -133,6 +133,71 @@ void main() {
     expect(snapshot.isEmpty, true);
   });
 
+  test('keeps central grounded graph nodes before confidence-only isolates',
+      () async {
+    final aiDb = AiIndexDatabase.forTesting(
+      path: inMemoryDatabasePath,
+      factory: databaseFactoryFfi,
+    );
+    addTearDown(aiDb.close);
+    final db = await aiDb.database;
+
+    await _insertBook(db, 9);
+
+    final centralNodeId = await _insertGraphNode(
+      db,
+      bookId: 9,
+      name: 'Schema integration',
+      summary: 'A low confidence but central full-book concept.',
+      confidence: 0.2,
+      chunkCount: 3,
+    );
+    final supportNodeIds = <int>[];
+    for (var i = 1; i <= 3; i++) {
+      supportNodeIds.add(
+        await _insertGraphNode(
+          db,
+          bookId: 9,
+          name: 'Connected support $i',
+          summary: 'A support concept linked to the book center.',
+          confidence: 0.55,
+        ),
+      );
+    }
+    for (var i = 1; i <= 4; i++) {
+      await _insertGraphNode(
+        db,
+        bookId: 9,
+        name: 'High confidence isolate $i',
+        summary: 'An isolated mention with high local confidence.',
+        confidence: 0.99,
+      );
+    }
+    for (final supportNodeId in supportNodeIds) {
+      await db.insert('ai_graph_edges', {
+        'book_id': 9,
+        'src_node_id': centralNodeId,
+        'dst_node_id': supportNodeId,
+        'relation': 'supports',
+        'weight': 0.95,
+        'evidence_count': 4,
+        'created_at': 200,
+        'updated_at': 201,
+      });
+    }
+
+    final snapshot = await AiGlobalDerivedBookConceptGraphLoader(database: aiDb)
+        .loadBook(bookId: 9, nodeLimit: 4);
+    final labels = snapshot.nodes.map((node) => node.label).toList();
+
+    expect(labels, contains('Schema integration'));
+    expect(labels.where((label) => label.startsWith('Connected support')),
+        isNotEmpty);
+    expect(labels.where((label) => label.startsWith('High confidence isolate')),
+        hasLength(lessThan(4)));
+    expect(snapshot.edges, isNotEmpty);
+  });
+
   test('lists indexed books that have global graph layers', () async {
     final aiDb = AiIndexDatabase.forTesting(
       path: inMemoryDatabasePath,
@@ -218,6 +283,42 @@ Future<void> _insertBook(dynamic db, int bookId) async {
     'retry_count': 0,
     'index_version': 1,
   });
+}
+
+Future<int> _insertGraphNode(
+  dynamic db, {
+  required int bookId,
+  required String name,
+  required String summary,
+  required double confidence,
+  int chunkCount = 1,
+}) async {
+  final nodeId = await db.insert('ai_graph_nodes', {
+    'book_id': bookId,
+    'node_type': 'term',
+    'name': name,
+    'canonical_name': name.toLowerCase(),
+    'summary': summary,
+    'confidence': confidence,
+    'created_at': 123,
+    'updated_at': 124,
+  });
+  for (var i = 0; i < chunkCount; i++) {
+    final chunkId = await _insertChunk(
+      db,
+      bookId: bookId,
+      href: 'Text/$nodeId-$i.xhtml',
+      title: 'Chapter $nodeId',
+      chunkIndex: nodeId * 10 + i,
+      text: '$name evidence $i.',
+    );
+    await db.insert('ai_graph_node_chunks', {
+      'node_id': nodeId,
+      'chunk_id': chunkId,
+      'role': 'mention',
+    });
+  }
+  return nodeId;
 }
 
 Future<int> _insertChunk(

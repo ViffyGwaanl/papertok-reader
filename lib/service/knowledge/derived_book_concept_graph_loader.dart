@@ -1,5 +1,3 @@
-import 'dart:collection';
-
 import 'package:papertok_reader/models/concept_graph.dart';
 import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/service/ai/tools/repository/books_repository.dart';
@@ -177,6 +175,51 @@ class AiGlobalDerivedBookConceptGraphLoader
     final safeLimit = nodeLimit.clamp(2, 60).toInt();
     final nodeRows = await db.rawQuery(
       '''
+WITH edge_scores AS (
+  SELECT node_id, SUM(score) AS edge_score
+  FROM (
+    SELECT
+      src_node_id AS node_id,
+      10.0 + (COALESCE(weight, 0) * 6.0) + (COALESCE(evidence_count, 0) * 2.0) AS score
+    FROM ai_graph_edges
+    WHERE book_id = ?
+    UNION ALL
+    SELECT
+      dst_node_id AS node_id,
+      10.0 + (COALESCE(weight, 0) * 6.0) + (COALESCE(evidence_count, 0) * 2.0) AS score
+    FROM ai_graph_edges
+    WHERE book_id = ?
+  )
+  GROUP BY node_id
+),
+node_chunk_counts AS (
+  SELECT node_id, COUNT(*) AS chunk_count
+  FROM ai_graph_node_chunks
+  GROUP BY node_id
+),
+ranked_nodes AS (
+  SELECT
+    gn.id,
+    gn.name,
+    gn.summary,
+    gn.confidence,
+    gn.created_at,
+    gn.updated_at,
+    COALESCE(nc.chunk_count, 0) AS chunk_count,
+    (COALESCE(nc.chunk_count, 0) * 4.0)
+      + COALESCE(es.edge_score, 0)
+      + (COALESCE(gn.confidence, 0) * 0.1) AS node_score
+  FROM ai_graph_nodes gn
+  LEFT JOIN node_chunk_counts nc ON nc.node_id = gn.id
+  LEFT JOIN edge_scores es ON es.node_id = gn.id
+  WHERE gn.book_id = ?
+    AND COALESCE(nc.chunk_count, 0) > 0
+  ORDER BY node_score DESC,
+           chunk_count DESC,
+           COALESCE(gn.confidence, 0) DESC,
+           gn.id ASC
+  LIMIT ?
+)
 SELECT
   gn.id AS node_id,
   gn.name AS name,
@@ -189,21 +232,19 @@ SELECT
   c.chapter_title AS chapter_title,
   c.chunk_index AS chunk_index,
   COALESCE(NULLIF(c.raw_text, ''), c.text) AS snippet
-FROM (
-  SELECT id, name, summary, confidence, created_at, updated_at
-  FROM ai_graph_nodes
-  WHERE book_id = ?
-  ORDER BY COALESCE(confidence, 0) DESC, id ASC
-  LIMIT ?
-) gn
+FROM ranked_nodes gn
 LEFT JOIN ai_graph_node_chunks gnc ON gnc.node_id = gn.id
 LEFT JOIN ai_chunks c ON c.id = gnc.chunk_id
-ORDER BY COALESCE(gn.confidence, 0) DESC, gn.id ASC, c.id ASC
+ORDER BY gn.node_score DESC,
+         gn.chunk_count DESC,
+         COALESCE(gn.confidence, 0) DESC,
+         gn.id ASC,
+         c.id ASC
 ''',
-      [bookId, safeLimit],
+      [bookId, bookId, bookId, safeLimit],
     );
 
-    final builders = LinkedHashMap<int, _DerivedNodeBuilder>();
+    final builders = <int, _DerivedNodeBuilder>{};
     for (final row in nodeRows) {
       final nodeId = (row['node_id'] as num?)?.toInt();
       if (nodeId == null) continue;

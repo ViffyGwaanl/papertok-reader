@@ -10,6 +10,7 @@ import 'package:papertok_reader/providers/concept_graph_explorer.dart';
 import 'package:papertok_reader/service/deeplink/paperreader_reader_intent.dart';
 import 'package:papertok_reader/service/deeplink/paperreader_source_opener.dart';
 import 'package:papertok_reader/service/knowledge/derived_book_concept_graph_loader.dart';
+import 'package:papertok_reader/service/rag/ai_book_index_readiness.dart';
 import 'package:papertok_reader/service/rag/ai_global_index_builder.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
 
@@ -123,6 +124,7 @@ class _ConceptGraphBody extends StatelessWidget {
           _DerivedBookGraphBrowser(
             compact: compact,
             sourceOpener: sourceOpener,
+            selectionQuery: initialQuery,
           ),
           const SizedBox(height: 12),
         ];
@@ -132,6 +134,7 @@ class _ConceptGraphBody extends StatelessWidget {
           bookId: bookId!,
           compact: compact,
           sourceOpener: sourceOpener,
+          selectionQuery: initialQuery,
         ),
         const SizedBox(height: 12),
       ];
@@ -264,10 +267,12 @@ class _DerivedBookGraphBrowser extends ConsumerStatefulWidget {
   const _DerivedBookGraphBrowser({
     this.compact = false,
     required this.sourceOpener,
+    required this.selectionQuery,
   });
 
   final bool compact;
   final PaperReaderSourceOpener sourceOpener;
+  final String? selectionQuery;
 
   @override
   ConsumerState<_DerivedBookGraphBrowser> createState() =>
@@ -412,6 +417,7 @@ class _DerivedBookGraphBrowserState
                 bookId: selectedBookId,
                 compact: widget.compact,
                 sourceOpener: widget.sourceOpener,
+                selectionQuery: widget.selectionQuery,
               ),
             ],
           ],
@@ -438,11 +444,13 @@ class _DerivedBookGraphSection extends ConsumerStatefulWidget {
   const _DerivedBookGraphSection({
     required this.bookId,
     required this.sourceOpener,
+    required this.selectionQuery,
     this.compact = false,
   });
 
   final int bookId;
   final PaperReaderSourceOpener sourceOpener;
+  final String? selectionQuery;
   final bool compact;
 
   @override
@@ -454,9 +462,13 @@ class _DerivedBookGraphSectionState
     extends ConsumerState<_DerivedBookGraphSection> {
   late Future<DerivedBookConceptGraphSnapshot> _future;
   late Future<AiGlobalIndexBookLayerStatus?> _statusFuture;
+  Future<AiBookIndexReadiness>? _readinessFuture;
   bool _isRebuilding = false;
   String? _rebuildError;
   String? _selectedNodeId;
+  String? _selectedEdgeId;
+  final Set<String> _ignoredDerivedNodeIds = <String>{};
+  final Set<String> _ignoredDerivedEdgeIds = <String>{};
 
   @override
   void initState() {
@@ -471,9 +483,13 @@ class _DerivedBookGraphSectionState
     if (oldWidget.bookId != widget.bookId) {
       _future = _load();
       _statusFuture = _loadStatus();
+      _readinessFuture = null;
       _isRebuilding = false;
       _rebuildError = null;
       _selectedNodeId = null;
+      _selectedEdgeId = null;
+      _ignoredDerivedNodeIds.clear();
+      _ignoredDerivedEdgeIds.clear();
     }
   }
 
@@ -485,6 +501,14 @@ class _DerivedBookGraphSectionState
 
   Future<AiGlobalIndexBookLayerStatus?> _loadStatus() {
     return ref.read(conceptGraphGlobalLayerStatusProvider)(widget.bookId);
+  }
+
+  Future<AiBookIndexReadiness> _loadReadiness() {
+    return ref.read(conceptGraphBookIndexReadinessProvider)(widget.bookId);
+  }
+
+  Future<AiBookIndexReadiness> _ensureReadinessFuture() {
+    return _readinessFuture ??= _loadReadiness();
   }
 
   Future<void> _rebuildGlobalLayer() async {
@@ -500,6 +524,7 @@ class _DerivedBookGraphSectionState
       setState(() {
         _future = _load();
         _statusFuture = _loadStatus();
+        _readinessFuture = null;
         _isRebuilding = false;
       });
     } catch (error) {
@@ -562,12 +587,19 @@ class _DerivedBookGraphSectionState
                       ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  description,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: ClaudePalette.secondary(context),
-                      ),
+                if (!widget.compact) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    description,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: ClaudePalette.secondary(context),
+                        ),
+                  ),
+                ],
+                const SizedBox(height: 10),
+                _BookIndexReadinessStrip(
+                  readinessFuture: _ensureReadinessFuture(),
+                  compact: widget.compact,
                 ),
                 if (!loading && graph != null && graph.isEmpty) ...[
                   const SizedBox(height: 8),
@@ -597,39 +629,165 @@ class _DerivedBookGraphSectionState
                 ],
                 if (graph != null && !graph.isEmpty) ...[
                   const SizedBox(height: 12),
-                  _ConceptGraphCanvas(
-                    paintKey: const ValueKey('full-book-derived-graph-map'),
-                    height: widget.compact ? 120 : 180,
-                    nodes: graph.nodes.take(10).toList(growable: false),
-                    edges: graph.edges,
-                    centerNodeId: graph.nodes.first.id,
-                    onNodeSelected: (node) =>
-                        _handleDerivedNodeSelected(graph, node),
+                  Builder(
+                    builder: (context) {
+                      final visibleGraph = _visibleDerivedBookGraph(
+                        graph,
+                        _ignoredDerivedNodeIds,
+                        _ignoredDerivedEdgeIds,
+                      );
+                      final focus = _focusDerivedBookGraphForQuery(
+                        visibleGraph,
+                        widget.selectionQuery,
+                      );
+                      final displayGraph = focus.graph;
+                      final coreView = _coreDerivedBookGraphView(displayGraph);
+                      final readingPath = _derivedBookReadingPath(displayGraph);
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _DerivedBookMapSummary(
+                            graph: displayGraph,
+                            coreView: coreView,
+                            compact: widget.compact,
+                            focusedBySelection: focus.isFocused,
+                            onCoreNodeSelected: (node) =>
+                                _handleDerivedNodeSelected(
+                              displayGraph,
+                              node,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          if (!widget.compact) ...[
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _TinyChip(
+                                  label: zh ? '主干图' : 'Core map',
+                                ),
+                                _TinyChip(
+                                  label: zh
+                                      ? '${coreView.nodes.length} 个主干节点'
+                                      : '${coreView.nodes.length} core nodes',
+                                ),
+                                _TinyChip(
+                                  label: zh
+                                      ? '${coreView.edges.length} 条主干关系'
+                                      : '${coreView.edges.length} core relations',
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+                          _ConceptGraphCanvas(
+                            paintKey: const ValueKey(
+                              'full-book-derived-graph-map',
+                            ),
+                            height: widget.compact ? 96 : 180,
+                            nodes: coreView.nodes,
+                            edges: coreView.edges,
+                            centerNodeId: coreView.centerNodeId,
+                            onNodeSelected: (node) =>
+                                _handleDerivedNodeSelected(displayGraph, node),
+                            onEdgeSelected: (edge) =>
+                                _handleDerivedEdgeSelected(displayGraph, edge),
+                          ),
+                          if (readingPath.isNotEmpty) ...[
+                            const SizedBox(height: 10),
+                            _DerivedBookReadingPath(
+                              graph: displayGraph,
+                              nodes: readingPath,
+                              compact: widget.compact,
+                              onNodeSelected: (node) =>
+                                  _handleDerivedNodeSelected(
+                                displayGraph,
+                                node,
+                              ),
+                              onEdgeSelected: (edge) =>
+                                  _handleDerivedEdgeSelected(
+                                displayGraph,
+                                edge,
+                              ),
+                            ),
+                          ],
+                          if (displayGraph.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                zh
+                                    ? '本页已忽略所有派生节点。'
+                                    : 'All derived nodes are ignored for this page.',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: ClaudePalette.secondary(context),
+                                    ),
+                              ),
+                            ),
+                          if (!widget.compact) ...[
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                for (final node in coreView.nodes.take(8))
+                                  _MapNodePill(
+                                    node: node,
+                                    isCenter: node.id == _selectedNodeId ||
+                                        node.id == coreView.centerNodeId &&
+                                            _selectedNodeId == null,
+                                    onTap: () => _handleDerivedNodeSelected(
+                                      displayGraph,
+                                      node,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
+                          if (!widget.compact &&
+                              _selectedEdge(displayGraph) != null) ...[
+                            const SizedBox(height: 12),
+                            _DerivedBookGraphEdgeDetails(
+                              edge: _selectedEdge(displayGraph)!,
+                              nodesById: {
+                                for (final node in displayGraph.nodes)
+                                  node.id: node,
+                              },
+                              sourceOpener: widget.sourceOpener,
+                              onIgnore: () => _ignoreDerivedEdge(
+                                _selectedEdge(displayGraph)!,
+                              ),
+                            ),
+                          ] else if (!widget.compact &&
+                              _selectedNode(displayGraph) != null) ...[
+                            const SizedBox(height: 12),
+                            _DerivedBookGraphNodeDetails(
+                              node: _selectedNode(displayGraph)!,
+                              edges: _relatedEdges(
+                                displayGraph,
+                                _selectedNode(displayGraph)!.id,
+                              ),
+                              nodesById: {
+                                for (final node in displayGraph.nodes)
+                                  node.id: node,
+                              },
+                              sourceOpener: widget.sourceOpener,
+                              onEdgeSelected: (edge) =>
+                                  _handleDerivedEdgeSelected(
+                                displayGraph,
+                                edge,
+                              ),
+                              onIgnore: () => _ignoreDerivedNode(
+                                _selectedNode(displayGraph)!,
+                              ),
+                            ),
+                          ],
+                        ],
+                      );
+                    },
                   ),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final node in graph.nodes.take(8))
-                        _MapNodePill(
-                          node: node,
-                          isCenter: node.id == _selectedNodeId,
-                          onTap: () => _handleDerivedNodeSelected(graph, node),
-                        ),
-                    ],
-                  ),
-                  if (!widget.compact && _selectedNode(graph) != null) ...[
-                    const SizedBox(height: 12),
-                    _DerivedBookGraphNodeDetails(
-                      node: _selectedNode(graph)!,
-                      edges: _relatedEdges(graph, _selectedNode(graph)!.id),
-                      nodesById: {
-                        for (final node in graph.nodes) node.id: node,
-                      },
-                      sourceOpener: widget.sourceOpener,
-                    ),
-                  ],
                 ],
               ],
             ),
@@ -668,6 +826,15 @@ class _DerivedBookGraphSectionState
     return null;
   }
 
+  ConceptEdge? _selectedEdge(DerivedBookConceptGraphSnapshot graph) {
+    final selectedId = _selectedEdgeId;
+    if (selectedId == null) return null;
+    for (final edge in graph.edges) {
+      if (edge.id == selectedId) return edge;
+    }
+    return null;
+  }
+
   List<ConceptEdge> _relatedEdges(
     DerivedBookConceptGraphSnapshot graph,
     String nodeId,
@@ -684,7 +851,10 @@ class _DerivedBookGraphSectionState
     ConceptNode node,
   ) {
     if (!widget.compact) {
-      setState(() => _selectedNodeId = node.id);
+      setState(() {
+        _selectedNodeId = node.id;
+        _selectedEdgeId = null;
+      });
       return;
     }
     final edges = _relatedEdges(graph, node.id);
@@ -701,10 +871,85 @@ class _DerivedBookGraphSectionState
               edges: edges,
               nodesById: nodesById,
               sourceOpener: widget.sourceOpener,
+              onEdgeSelected: (edge) {
+                Navigator.of(context).maybePop();
+                _handleDerivedEdgeSelected(graph, edge);
+              },
+              onIgnore: () {
+                Navigator.of(context).maybePop();
+                _ignoreDerivedNode(node);
+              },
             ),
           ),
         );
       },
+    );
+  }
+
+  void _handleDerivedEdgeSelected(
+    DerivedBookConceptGraphSnapshot graph,
+    ConceptEdge edge,
+  ) {
+    if (!widget.compact) {
+      setState(() {
+        _selectedEdgeId = edge.id;
+        _selectedNodeId = null;
+      });
+      return;
+    }
+    final nodesById = {for (final item in graph.nodes) item.id: item};
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            child: _DerivedBookGraphEdgeDetails(
+              edge: edge,
+              nodesById: nodesById,
+              sourceOpener: widget.sourceOpener,
+              onIgnore: () {
+                Navigator.of(context).maybePop();
+                _ignoreDerivedEdge(edge);
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _ignoreDerivedNode(ConceptNode node) {
+    setState(() {
+      _ignoredDerivedNodeIds.add(node.id);
+      if (_selectedNodeId == node.id) _selectedNodeId = null;
+      _selectedEdgeId = null;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          Localizations.localeOf(context).languageCode == 'zh'
+              ? '已在本页忽略'
+              : 'Ignored for now',
+        ),
+      ),
+    );
+  }
+
+  void _ignoreDerivedEdge(ConceptEdge edge) {
+    setState(() {
+      _ignoredDerivedEdgeIds.add(edge.id);
+      if (_selectedEdgeId == edge.id) _selectedEdgeId = null;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          Localizations.localeOf(context).languageCode == 'zh'
+              ? '已在本页忽略关系'
+              : 'Ignored relation for now',
+        ),
+      ),
     );
   }
 }
@@ -715,12 +960,16 @@ class _DerivedBookGraphNodeDetails extends ConsumerWidget {
     required this.edges,
     required this.nodesById,
     required this.sourceOpener,
+    this.onEdgeSelected,
+    this.onIgnore,
   });
 
   final ConceptNode node;
   final List<ConceptEdge> edges;
   final Map<String, ConceptNode> nodesById;
   final PaperReaderSourceOpener sourceOpener;
+  final ValueChanged<ConceptEdge>? onEdgeSelected;
+  final VoidCallback? onIgnore;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -731,6 +980,13 @@ class _DerivedBookGraphNodeDetails extends ConsumerWidget {
     ];
     final firstIntent = _firstIntent(sourceRefs);
     final summary = node.summary?.trim();
+    final graphState = ref.watch(conceptGraphExplorerProvider);
+    final isSavedToGraph = graphState.nodes.valueOrNull
+            ?.any((existing) => existing.id == node.id) ??
+        false;
+    final mergeTargets = (graphState.nodes.valueOrNull ?? const <ConceptNode>[])
+        .where((existing) => existing.id != node.id)
+        .toList(growable: false);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -774,6 +1030,82 @@ class _DerivedBookGraphNodeDetails extends ConsumerWidget {
                     : '${sourceRefs.length} evidence'),
           ],
         ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerRight,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.end,
+            children: [
+              TextButton.icon(
+                icon: Icon(
+                  isSavedToGraph
+                      ? Icons.check_circle_outline
+                      : Icons.add_link_outlined,
+                ),
+                label: Text(
+                  isSavedToGraph
+                      ? (zh ? '已在我的图谱' : 'Already in my graph')
+                      : (zh ? '加入我的图谱' : 'Add to my graph'),
+                ),
+                onPressed: node.hasEvidence && !isSavedToGraph
+                    ? () => _addDerivedNodeToGraph(context, ref, zh)
+                    : null,
+              ),
+              TextButton.icon(
+                icon: const Icon(Icons.visibility_off_outlined),
+                label: Text(zh ? '忽略' : 'Ignore'),
+                onPressed: onIgnore,
+              ),
+              TextButton.icon(
+                icon: const Icon(Icons.merge_type_outlined),
+                label: Text(zh ? '合并' : 'Merge'),
+                onPressed: node.hasEvidence && mergeTargets.isNotEmpty
+                    ? () => _showMergeDerivedNodeDialog(
+                          context,
+                          ref,
+                          zh,
+                          mergeTargets,
+                        )
+                    : null,
+              ),
+              TextButton.icon(
+                icon: const Icon(Icons.edit_note_outlined),
+                label: Text(zh ? '编辑后保存' : 'Edit and save'),
+                onPressed: node.hasEvidence
+                    ? () => _showEditDerivedNodeDialog(context, ref, zh)
+                    : null,
+              ),
+              if (isSavedToGraph)
+                TextButton.icon(
+                  key: ValueKey('derived-node-remove-${node.id}'),
+                  icon: const Icon(Icons.delete_outline),
+                  label: Text(
+                    zh ? '从我的图谱移除' : 'Remove from my graph',
+                  ),
+                  onPressed: () => _removeDerivedNodeFromGraph(
+                    context,
+                    ref,
+                    zh,
+                  ),
+                ),
+              TextButton.icon(
+                icon: const Icon(Icons.open_in_new),
+                label: Text(
+                  zh ? '打开来源' : 'Open source',
+                ),
+                onPressed: firstIntent == null
+                    ? () => showPaperReaderSourceUnavailable(
+                          context,
+                          sourceRefs,
+                          zh ? '没有可追踪证据。' : 'No traceable evidence.',
+                        )
+                    : () => sourceOpener(ref, firstIntent.toUri()),
+              ),
+            ],
+          ),
+        ),
         if (edges.isNotEmpty) ...[
           const SizedBox(height: 12),
           Text(
@@ -782,7 +1114,12 @@ class _DerivedBookGraphNodeDetails extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           for (final edge in edges.take(4))
-            _LocalGraphEdgeSummary(edge: edge, nodesById: nodesById),
+            _LocalGraphEdgeSummary(
+              edge: edge,
+              nodesById: nodesById,
+              onTap:
+                  onEdgeSelected == null ? null : () => onEdgeSelected!(edge),
+            ),
         ],
         const SizedBox(height: 12),
         Text(
@@ -798,21 +1135,856 @@ class _DerivedBookGraphNodeDetails extends ConsumerWidget {
         else
           for (final sourceRef in sourceRefs.take(4))
             _EvidenceTile(sourceRef: sourceRef),
+      ],
+    );
+  }
+
+  Future<void> _addDerivedNodeToGraph(
+    BuildContext context,
+    WidgetRef ref,
+    bool zh,
+  ) async {
+    try {
+      await ref
+          .read(conceptGraphExplorerProvider.notifier)
+          .addDerivedNodePreview(node);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(zh ? '已加入我的图谱' : 'Added to my graph'),
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            zh
+                ? '无法加入我的图谱：${error.toString()}'
+                : 'Could not add to my graph: ${error.toString()}',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _removeDerivedNodeFromGraph(
+    BuildContext context,
+    WidgetRef ref,
+    bool zh,
+  ) async {
+    try {
+      final removed = await ref
+          .read(conceptGraphExplorerProvider.notifier)
+          .removeSavedNode(node.id);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            removed
+                ? (zh ? '已从我的图谱移除' : 'Removed from my graph')
+                : (zh ? '这个概念已不在我的图谱中' : 'Concept is no longer in my graph'),
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            zh
+                ? '无法移除图谱概念：${error.toString()}'
+                : 'Could not remove concept from my graph: ${error.toString()}',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _showMergeDerivedNodeDialog(
+    BuildContext context,
+    WidgetRef ref,
+    bool zh,
+    List<ConceptNode> targets,
+  ) async {
+    final target = await showDialog<ConceptNode>(
+      context: context,
+      builder: (_) => _DerivedNodeMergeDialog(
+        targets: targets,
+        zh: zh,
+      ),
+    );
+    if (target == null) return;
+    if (!context.mounted) return;
+    await _mergeDerivedNodeIntoGraph(context, ref, zh, target);
+  }
+
+  Future<void> _mergeDerivedNodeIntoGraph(
+    BuildContext context,
+    WidgetRef ref,
+    bool zh,
+    ConceptNode target,
+  ) async {
+    try {
+      final merged = await ref
+          .read(conceptGraphExplorerProvider.notifier)
+          .mergeDerivedNodePreview(
+            node,
+            targetNodeId: target.id,
+          );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            zh ? '已合并到 ${merged.label}' : 'Merged into ${merged.label}',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            zh
+                ? '无法合并到我的图谱：${error.toString()}'
+                : 'Could not merge into my graph: ${error.toString()}',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _showEditDerivedNodeDialog(
+    BuildContext context,
+    WidgetRef ref,
+    bool zh,
+  ) async {
+    final draft = await showDialog<_DerivedNodeEditDraft>(
+      context: context,
+      builder: (_) => _DerivedNodeEditDialog(
+        node: node,
+        zh: zh,
+      ),
+    );
+    if (draft == null) return;
+    if (!context.mounted) return;
+    await _saveEditedDerivedNodeToGraph(context, ref, zh, draft);
+  }
+
+  Future<void> _saveEditedDerivedNodeToGraph(
+    BuildContext context,
+    WidgetRef ref,
+    bool zh,
+    _DerivedNodeEditDraft draft,
+  ) async {
+    try {
+      await ref
+          .read(conceptGraphExplorerProvider.notifier)
+          .addDerivedNodePreview(
+            ConceptNode(
+              id: node.id,
+              type: node.type,
+              label: draft.label,
+              summary: draft.summary.isEmpty ? null : draft.summary,
+              sourceRefs: node.sourceRefs,
+              cardIds: node.cardIds,
+              ownership: AiOutputOwnership.derivedCache,
+              createdAt: node.createdAt,
+            ),
+          );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(zh ? '已保存到我的图谱' : 'Saved to my graph'),
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            zh
+                ? '无法保存到我的图谱：${error.toString()}'
+                : 'Could not save to my graph: ${error.toString()}',
+          ),
+        ),
+      );
+    }
+  }
+}
+
+class _DerivedBookGraphEdgeDetails extends ConsumerWidget {
+  const _DerivedBookGraphEdgeDetails({
+    required this.edge,
+    required this.nodesById,
+    required this.sourceOpener,
+    this.onIgnore,
+  });
+
+  final ConceptEdge edge;
+  final Map<String, ConceptNode> nodesById;
+  final PaperReaderSourceOpener sourceOpener;
+  final VoidCallback? onIgnore;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final graphState = ref.watch(conceptGraphExplorerProvider);
+    final sourceNode = nodesById[edge.sourceNodeId];
+    final targetNode = nodesById[edge.targetNodeId];
+    final sourceLabel = sourceNode?.label ?? edge.sourceNodeId;
+    final targetLabel = targetNode?.label ?? edge.targetNodeId;
+    final evidenceRefs =
+        edge.evidenceRefs.where((sourceRef) => sourceRef.hasEvidence).toList();
+    final firstIntent = _firstIntent(evidenceRefs);
+    final canAddRelation =
+        sourceNode != null && targetNode != null && evidenceRefs.isNotEmpty;
+    final isSavedToGraph = graphState.edgesById.containsKey(edge.id);
+    final mergeTargets = (graphState.edges.valueOrNull ?? const <ConceptEdge>[])
+        .where((candidate) =>
+            candidate.id != edge.id &&
+            candidate.hasEvidence &&
+            _sameConceptEdgeEndpoints(candidate, edge))
+        .toList(growable: false);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(height: 20),
+        Row(
+          children: [
+            const Icon(Icons.account_tree_outlined, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                zh ? '选中的全书关系' : 'Selected full-book relation',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+            ),
+            _TinyChip(label: zh ? '派生缓存' : 'Derived cache'),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '$sourceLabel -> $targetLabel',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _TinyChip(label: edge.label ?? edge.type.asString),
+            _TinyChip(label: edge.type.asString),
+            _TinyChip(
+              label: zh
+                  ? '${evidenceRefs.length} 条证据'
+                  : '${evidenceRefs.length} evidence',
+            ),
+            if (edge.confidence != null)
+              _TinyChip(
+                label: zh
+                    ? '置信度 ${(edge.confidence! * 100).round()}%'
+                    : 'Confidence ${(edge.confidence! * 100).round()}%',
+              ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _MapNodePill(
+              node: sourceNode ??
+                  ConceptNode(
+                    id: edge.sourceNodeId,
+                    type: ConceptNodeType.unknown,
+                    label: edge.sourceNodeId,
+                  ),
+            ),
+            _MapNodePill(
+              node: targetNode ??
+                  ConceptNode(
+                    id: edge.targetNodeId,
+                    type: ConceptNodeType.unknown,
+                    label: edge.targetNodeId,
+                  ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
         Align(
           alignment: Alignment.centerRight,
-          child: TextButton.icon(
-            icon: const Icon(Icons.open_in_new),
-            label: Text(
-              zh ? '打开来源' : 'Open source',
-            ),
-            onPressed: firstIntent == null
-                ? () => showPaperReaderSourceUnavailable(
-                      context,
-                      sourceRefs,
-                      zh ? '没有可追踪证据。' : 'No traceable evidence.',
-                    )
-                : () => sourceOpener(ref, firstIntent.toUri()),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.end,
+            children: [
+              TextButton.icon(
+                key: ValueKey('derived-relation-save-${edge.id}'),
+                icon: Icon(
+                  isSavedToGraph ? Icons.check_circle_outline : Icons.add_link,
+                ),
+                label: Text(
+                  isSavedToGraph
+                      ? (zh ? '已在我的图谱' : 'Already in my graph')
+                      : (zh ? '加入我的图谱关系' : 'Add relation to my graph'),
+                ),
+                onPressed: canAddRelation && !isSavedToGraph
+                    ? () => _addRelationToGraph(
+                          context,
+                          ref,
+                          zh,
+                          sourceNode,
+                          targetNode,
+                        )
+                    : null,
+              ),
+              TextButton.icon(
+                key: ValueKey('derived-relation-edit-${edge.id}'),
+                icon: const Icon(Icons.edit_outlined),
+                label: Text(zh ? '编辑后保存' : 'Edit and save'),
+                onPressed: canAddRelation
+                    ? () => _showEditDerivedEdgeDialog(
+                          context,
+                          ref,
+                          zh,
+                          sourceNode,
+                          targetNode,
+                        )
+                    : null,
+              ),
+              TextButton.icon(
+                key: ValueKey('derived-relation-merge-${edge.id}'),
+                icon: const Icon(Icons.merge_type_outlined),
+                label: Text(zh ? '合并' : 'Merge'),
+                onPressed: canAddRelation && mergeTargets.isNotEmpty
+                    ? () => _showMergeDerivedEdgeDialog(
+                          context,
+                          ref,
+                          zh,
+                          mergeTargets,
+                        )
+                    : null,
+              ),
+              TextButton.icon(
+                key: ValueKey('derived-relation-ignore-${edge.id}'),
+                icon: const Icon(Icons.visibility_off_outlined),
+                label: Text(zh ? '忽略' : 'Ignore'),
+                onPressed: onIgnore,
+              ),
+              if (isSavedToGraph)
+                TextButton.icon(
+                  key: ValueKey('derived-relation-remove-${edge.id}'),
+                  icon: const Icon(Icons.link_off),
+                  label: Text(
+                    zh ? '从我的图谱移除' : 'Remove from my graph',
+                  ),
+                  onPressed: () => _removeRelationFromGraph(context, ref, zh),
+                ),
+              TextButton.icon(
+                icon: const Icon(Icons.open_in_new),
+                label: Text(zh ? '打开来源' : 'Open source'),
+                onPressed: firstIntent == null
+                    ? () => showPaperReaderSourceUnavailable(
+                          context,
+                          evidenceRefs,
+                          zh ? '没有可追踪证据。' : 'No traceable evidence.',
+                        )
+                    : () => sourceOpener(ref, firstIntent.toUri()),
+              ),
+            ],
           ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          zh ? '证据' : 'Evidence',
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        const SizedBox(height: 4),
+        if (evidenceRefs.isEmpty)
+          Text(
+            zh ? '没有可追踪证据。' : 'No traceable evidence.',
+            style: TextStyle(color: ClaudePalette.secondary(context)),
+          )
+        else
+          for (final sourceRef in evidenceRefs.take(4))
+            _EvidenceTile(sourceRef: sourceRef),
+      ],
+    );
+  }
+
+  Future<void> _addRelationToGraph(
+    BuildContext context,
+    WidgetRef ref,
+    bool zh,
+    ConceptNode sourceNode,
+    ConceptNode targetNode,
+  ) async {
+    try {
+      await ref
+          .read(conceptGraphExplorerProvider.notifier)
+          .addDerivedEdgePreview(
+            edge,
+            sourceNode: sourceNode,
+            targetNode: targetNode,
+          );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            zh ? '已加入我的图谱关系' : 'Added relation to my graph',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            zh
+                ? '无法加入我的图谱关系：${error.toString()}'
+                : 'Could not add relation to my graph: ${error.toString()}',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _showEditDerivedEdgeDialog(
+    BuildContext context,
+    WidgetRef ref,
+    bool zh,
+    ConceptNode sourceNode,
+    ConceptNode targetNode,
+  ) async {
+    final draft = await showDialog<_DerivedEdgeEditDraft>(
+      context: context,
+      builder: (_) => _DerivedEdgeEditDialog(edge: edge, zh: zh),
+    );
+    if (draft == null || !context.mounted) return;
+    await _saveEditedRelationToGraph(
+      context,
+      ref,
+      zh,
+      sourceNode,
+      targetNode,
+      draft,
+    );
+  }
+
+  Future<void> _showMergeDerivedEdgeDialog(
+    BuildContext context,
+    WidgetRef ref,
+    bool zh,
+    List<ConceptEdge> targets,
+  ) async {
+    final target = await showDialog<ConceptEdge>(
+      context: context,
+      builder: (_) => _DerivedEdgeMergeDialog(
+        targets: targets,
+        nodesById: nodesById,
+        zh: zh,
+      ),
+    );
+    if (target == null || !context.mounted) return;
+    await _mergeDerivedRelationIntoGraph(context, ref, zh, target);
+  }
+
+  Future<void> _mergeDerivedRelationIntoGraph(
+    BuildContext context,
+    WidgetRef ref,
+    bool zh,
+    ConceptEdge target,
+  ) async {
+    try {
+      final merged = await ref
+          .read(conceptGraphExplorerProvider.notifier)
+          .mergeDerivedEdgePreview(edge, targetEdgeId: target.id);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            zh
+                ? '已合并到 ${_edgeDisplayLabel(merged)}'
+                : 'Merged relation into ${_edgeDisplayLabel(merged)}',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            zh
+                ? '无法合并图谱关系：${error.toString()}'
+                : 'Could not merge relation into my graph: ${error.toString()}',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _saveEditedRelationToGraph(
+    BuildContext context,
+    WidgetRef ref,
+    bool zh,
+    ConceptNode sourceNode,
+    ConceptNode targetNode,
+    _DerivedEdgeEditDraft draft,
+  ) async {
+    try {
+      await ref
+          .read(conceptGraphExplorerProvider.notifier)
+          .saveEditedDerivedEdgePreview(
+            edge,
+            sourceNode: sourceNode,
+            targetNode: targetNode,
+            type: draft.type,
+            label: draft.label,
+          );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            zh ? '已保存到我的图谱关系' : 'Saved relation to my graph',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            zh
+                ? '无法保存图谱关系：${error.toString()}'
+                : 'Could not save relation to my graph: ${error.toString()}',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _removeRelationFromGraph(
+    BuildContext context,
+    WidgetRef ref,
+    bool zh,
+  ) async {
+    try {
+      final removed = await ref
+          .read(conceptGraphExplorerProvider.notifier)
+          .removeSavedEdge(edge.id);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            removed
+                ? (zh ? '已从我的图谱移除关系' : 'Removed relation from my graph')
+                : (zh ? '这条关系已不在我的图谱中' : 'Relation is no longer in my graph'),
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            zh
+                ? '无法移除图谱关系：${error.toString()}'
+                : 'Could not remove relation from my graph: ${error.toString()}',
+          ),
+        ),
+      );
+    }
+  }
+}
+
+class _DerivedEdgeEditDraft {
+  const _DerivedEdgeEditDraft({
+    required this.type,
+    required this.label,
+  });
+
+  final ConceptEdgeType type;
+  final String label;
+}
+
+class _DerivedNodeEditDraft {
+  const _DerivedNodeEditDraft({
+    required this.label,
+    required this.summary,
+  });
+
+  final String label;
+  final String summary;
+}
+
+class _DerivedEdgeMergeDialog extends StatelessWidget {
+  const _DerivedEdgeMergeDialog({
+    required this.targets,
+    required this.nodesById,
+    required this.zh,
+  });
+
+  final List<ConceptEdge> targets;
+  final Map<String, ConceptNode> nodesById;
+  final bool zh;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(zh ? '合并到已有关系' : 'Merge into existing relation'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: ListView.separated(
+          shrinkWrap: true,
+          itemCount: targets.length,
+          separatorBuilder: (_, __) => const Divider(height: 1),
+          itemBuilder: (context, index) {
+            final target = targets[index];
+            final sourceLabel =
+                nodesById[target.sourceNodeId]?.label ?? target.sourceNodeId;
+            final targetLabel =
+                nodesById[target.targetNodeId]?.label ?? target.targetNodeId;
+            return ListTile(
+              key: ValueKey('derived-relation-merge-target-${target.id}'),
+              leading: const Icon(Icons.merge_type_outlined),
+              title: Text(_edgeDisplayLabel(target)),
+              subtitle: Text(
+                '$sourceLabel -> $targetLabel · ${target.type.asString}',
+              ),
+              onTap: () => Navigator.of(context).pop(target),
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(zh ? '取消' : 'Cancel'),
+        ),
+      ],
+    );
+  }
+}
+
+class _DerivedEdgeEditDialog extends StatefulWidget {
+  const _DerivedEdgeEditDialog({
+    required this.edge,
+    required this.zh,
+  });
+
+  final ConceptEdge edge;
+  final bool zh;
+
+  @override
+  State<_DerivedEdgeEditDialog> createState() => _DerivedEdgeEditDialogState();
+}
+
+class _DerivedEdgeEditDialogState extends State<_DerivedEdgeEditDialog> {
+  late final TextEditingController _labelController;
+  late ConceptEdgeType _type;
+
+  @override
+  void initState() {
+    super.initState();
+    _labelController =
+        TextEditingController(text: widget.edge.label?.trim() ?? '');
+    _type = widget.edge.type == ConceptEdgeType.unknown
+        ? ConceptEdgeType.relatedTo
+        : widget.edge.type;
+  }
+
+  @override
+  void dispose() {
+    _labelController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final zh = widget.zh;
+    final edgeTypes = ConceptEdgeType.values
+        .where((type) => type != ConceptEdgeType.unknown)
+        .toList(growable: false);
+    return AlertDialog(
+      title: Text(zh ? '编辑图谱关系' : 'Edit graph relation'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              key: const ValueKey('derived-relation-edit-label'),
+              controller: _labelController,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: zh ? '关系标签' : 'Relation label',
+              ),
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<ConceptEdgeType>(
+              key: const ValueKey('derived-relation-edit-type'),
+              initialValue: _type,
+              decoration: InputDecoration(
+                labelText: zh ? '关系类型' : 'Relation type',
+              ),
+              items: [
+                for (final type in edgeTypes)
+                  DropdownMenuItem(
+                    value: type,
+                    child: Text(type.asString),
+                  ),
+              ],
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() => _type = value);
+              },
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(zh ? '取消' : 'Cancel'),
+        ),
+        FilledButton(
+          onPressed: () {
+            Navigator.of(context).pop(
+              _DerivedEdgeEditDraft(
+                type: _type,
+                label: _labelController.text.trim(),
+              ),
+            );
+          },
+          child: Text(zh ? '保存' : 'Save'),
+        ),
+      ],
+    );
+  }
+}
+
+class _DerivedNodeMergeDialog extends StatelessWidget {
+  const _DerivedNodeMergeDialog({
+    required this.targets,
+    required this.zh,
+  });
+
+  final List<ConceptNode> targets;
+  final bool zh;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(zh ? '合并到已有概念' : 'Merge into existing concept'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: ListView.separated(
+          shrinkWrap: true,
+          itemCount: targets.length,
+          separatorBuilder: (_, __) => const Divider(height: 1),
+          itemBuilder: (context, index) {
+            final target = targets[index];
+            return ListTile(
+              key: ValueKey('derived-node-merge-target-${target.id}'),
+              leading: Icon(_nodeIcon(target.type)),
+              title: Text(target.label),
+              subtitle: target.summary == null ? null : Text(target.summary!),
+              onTap: () => Navigator.of(context).pop(target),
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(zh ? '取消' : 'Cancel'),
+        ),
+      ],
+    );
+  }
+}
+
+class _DerivedNodeEditDialog extends StatefulWidget {
+  const _DerivedNodeEditDialog({
+    required this.node,
+    required this.zh,
+  });
+
+  final ConceptNode node;
+  final bool zh;
+
+  @override
+  State<_DerivedNodeEditDialog> createState() => _DerivedNodeEditDialogState();
+}
+
+class _DerivedNodeEditDialogState extends State<_DerivedNodeEditDialog> {
+  late final TextEditingController _labelController;
+  late final TextEditingController _summaryController;
+
+  @override
+  void initState() {
+    super.initState();
+    _labelController = TextEditingController(text: widget.node.label.trim());
+    _summaryController =
+        TextEditingController(text: widget.node.summary?.trim() ?? '');
+  }
+
+  @override
+  void dispose() {
+    _labelController.dispose();
+    _summaryController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final zh = widget.zh;
+    return AlertDialog(
+      title: Text(zh ? '编辑图谱节点' : 'Edit graph node'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              key: const ValueKey('derived-node-edit-label'),
+              controller: _labelController,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: zh ? '名称' : 'Label',
+              ),
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              key: const ValueKey('derived-node-edit-summary'),
+              controller: _summaryController,
+              decoration: InputDecoration(
+                labelText: zh ? '摘要' : 'Summary',
+              ),
+              maxLines: 4,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(zh ? '取消' : 'Cancel'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final label = _labelController.text.trim();
+            if (label.isEmpty) return;
+            Navigator.of(context).pop(
+              _DerivedNodeEditDraft(
+                label: label,
+                summary: _summaryController.text.trim(),
+              ),
+            );
+          },
+          child: Text(zh ? '保存' : 'Save'),
         ),
       ],
     );
@@ -838,15 +2010,16 @@ class _GlobalLayerBuildAction extends StatelessWidget {
       builder: (context, snapshot) {
         final status = snapshot.data;
         if (snapshot.connectionState != ConnectionState.done) {
-          return Row(
-            mainAxisSize: MainAxisSize.min,
+          return Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               const SizedBox(
                 width: 16,
                 height: 16,
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
-              const SizedBox(width: 8),
               Text(
                 zh ? '正在检查全局层状态...' : 'Checking global layer status...',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -909,6 +2082,183 @@ class _GlobalLayerBuildAction extends StatelessWidget {
       },
     );
   }
+}
+
+class _BookIndexReadinessStrip extends StatelessWidget {
+  const _BookIndexReadinessStrip({
+    required this.readinessFuture,
+    required this.compact,
+  });
+
+  final Future<AiBookIndexReadiness> readinessFuture;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    return FutureBuilder<AiBookIndexReadiness>(
+      future: readinessFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const SizedBox.shrink();
+        }
+
+        final readiness = snapshot.data;
+        if (readiness == null || snapshot.hasError) {
+          return Text(
+            zh ? '无法读取书籍索引状态。' : 'Book index readiness could not be loaded.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: ClaudePalette.secondary(context),
+                ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              zh ? '书籍索引状态' : 'Book index readiness',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _ReadinessTile(
+                  label: zh ? '基础索引' : 'Base index',
+                  readiness: readiness.baseIndex,
+                  icon: Icons.library_books_outlined,
+                  compact: compact,
+                ),
+                _ReadinessTile(
+                  label: zh ? '向量层' : 'Vector layer',
+                  readiness: readiness.nativeVector,
+                  icon: Icons.view_in_ar_outlined,
+                  compact: compact,
+                ),
+                _ReadinessTile(
+                  label: 'ANN',
+                  readiness: readiness.annVector,
+                  icon: Icons.hub_outlined,
+                  compact: compact,
+                ),
+                _ReadinessTile(
+                  label: zh ? '全局摘要层' : 'Global summary',
+                  readiness: readiness.globalLayer,
+                  icon: Icons.schema_outlined,
+                  compact: compact,
+                ),
+                _ReadinessTile(
+                  label: zh ? '图谱层' : 'Graph map',
+                  readiness: readiness.graphLayer,
+                  icon: Icons.account_tree_outlined,
+                  compact: compact,
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ReadinessTile extends StatelessWidget {
+  const _ReadinessTile({
+    required this.label,
+    required this.readiness,
+    required this.icon,
+    required this.compact,
+  });
+
+  final String label;
+  final AiBookIndexLayerReadiness readiness;
+  final IconData icon;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _readinessColor(context, readiness.state);
+    final reason = readiness.reason?.trim();
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        minWidth: compact ? 118 : 142,
+        maxWidth: compact ? 180 : 220,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+                Text(
+                  _readinessStatusText(context, readiness),
+                  maxLines: compact ? 1 : 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: color,
+                      ),
+                ),
+                if (!compact && reason != null && reason.isNotEmpty)
+                  Text(
+                    reason,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: ClaudePalette.secondary(context),
+                        ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+Color _readinessColor(BuildContext context, AiBookIndexLayerState state) {
+  final scheme = Theme.of(context).colorScheme;
+  return switch (state) {
+    AiBookIndexLayerState.ready => scheme.primary,
+    AiBookIndexLayerState.running => scheme.tertiary,
+    AiBookIndexLayerState.failed => scheme.error,
+    AiBookIndexLayerState.unavailable => ClaudePalette.secondary(context),
+    AiBookIndexLayerState.empty => ClaudePalette.secondary(context),
+    AiBookIndexLayerState.missing => ClaudePalette.secondary(context),
+  };
+}
+
+String _readinessStatusText(
+  BuildContext context,
+  AiBookIndexLayerReadiness readiness,
+) {
+  final zh = Localizations.localeOf(context).languageCode == 'zh';
+  final base = switch (readiness.state) {
+    AiBookIndexLayerState.ready => zh ? '已就绪' : 'Ready',
+    AiBookIndexLayerState.missing => zh ? '缺失' : 'Missing',
+    AiBookIndexLayerState.running => zh ? '进行中' : 'Running',
+    AiBookIndexLayerState.failed => zh ? '失败' : 'Failed',
+    AiBookIndexLayerState.unavailable => zh ? '暂不可用' : 'Unavailable',
+    AiBookIndexLayerState.empty => zh ? '暂无可展示节点' : 'No displayable nodes',
+  };
+  if (readiness.total > 0) {
+    return '$base · ${readiness.count}/${readiness.total}';
+  }
+  if (readiness.count > 0) {
+    return '$base · ${readiness.count}';
+  }
+  return base;
 }
 
 class _NodeList extends ConsumerWidget {
@@ -1251,6 +2601,764 @@ class _LocalGraphMap extends StatelessWidget {
   }
 }
 
+DerivedBookConceptGraphSnapshot _visibleDerivedBookGraph(
+  DerivedBookConceptGraphSnapshot graph,
+  Set<String> ignoredNodeIds,
+  Set<String> ignoredEdgeIds,
+) {
+  if (ignoredNodeIds.isEmpty && ignoredEdgeIds.isEmpty) return graph;
+  final visibleNodes = graph.nodes
+      .where((node) => !ignoredNodeIds.contains(node.id))
+      .toList(growable: false);
+  final visibleNodeIds = visibleNodes.map((node) => node.id).toSet();
+  final visibleEdges = graph.edges
+      .where(
+        (edge) =>
+            !ignoredEdgeIds.contains(edge.id) &&
+            visibleNodeIds.contains(edge.sourceNodeId) &&
+            visibleNodeIds.contains(edge.targetNodeId),
+      )
+      .toList(growable: false);
+  return DerivedBookConceptGraphSnapshot(
+    bookId: graph.bookId,
+    nodes: visibleNodes,
+    edges: visibleEdges,
+  );
+}
+
+class _DerivedBookGraphFocusResult {
+  const _DerivedBookGraphFocusResult({
+    required this.graph,
+    required this.isFocused,
+  });
+
+  final DerivedBookConceptGraphSnapshot graph;
+  final bool isFocused;
+}
+
+_DerivedBookGraphFocusResult _focusDerivedBookGraphForQuery(
+  DerivedBookConceptGraphSnapshot graph,
+  String? query,
+) {
+  final normalizedQuery = _normalizeSearchText(query ?? '');
+  if (graph.isEmpty || normalizedQuery.isEmpty) {
+    return _DerivedBookGraphFocusResult(graph: graph, isFocused: false);
+  }
+  final terms = normalizedQuery
+      .split(' ')
+      .where((term) => term.length >= 3 || _hasAsciiDigit(term))
+      .toList(growable: false);
+  if (terms.isEmpty) {
+    return _DerivedBookGraphFocusResult(graph: graph, isFocused: false);
+  }
+
+  final nodesById = {for (final node in graph.nodes) node.id: node};
+  final matchedNodeIds = <String>{};
+  for (final node in graph.nodes) {
+    if (_derivedBookGraphQueryMatches(
+      _derivedNodeSearchText(node),
+      normalizedQuery: normalizedQuery,
+      terms: terms,
+    )) {
+      matchedNodeIds.add(node.id);
+    }
+  }
+
+  final matchedEdgeIds = <String>{};
+  for (final edge in graph.edges) {
+    final sourceNode = nodesById[edge.sourceNodeId];
+    final targetNode = nodesById[edge.targetNodeId];
+    if (_derivedBookGraphQueryMatches(
+      _derivedEdgeSearchText(edge, sourceNode, targetNode),
+      normalizedQuery: normalizedQuery,
+      terms: terms,
+    )) {
+      matchedEdgeIds.add(edge.id);
+    }
+  }
+
+  if (matchedNodeIds.isEmpty && matchedEdgeIds.isEmpty) {
+    return _DerivedBookGraphFocusResult(graph: graph, isFocused: false);
+  }
+
+  final keepNodeIds = <String>{...matchedNodeIds};
+  final keepEdgeIds = <String>{...matchedEdgeIds};
+  for (final edge in graph.edges) {
+    if (matchedEdgeIds.contains(edge.id) ||
+        matchedNodeIds.contains(edge.sourceNodeId) ||
+        matchedNodeIds.contains(edge.targetNodeId)) {
+      keepEdgeIds.add(edge.id);
+      keepNodeIds
+        ..add(edge.sourceNodeId)
+        ..add(edge.targetNodeId);
+    }
+  }
+
+  final focusedNodes = graph.nodes
+      .where((node) => keepNodeIds.contains(node.id))
+      .toList(growable: false);
+  final focusedNodeIds = focusedNodes.map((node) => node.id).toSet();
+  final focusedEdges = graph.edges
+      .where(
+        (edge) =>
+            keepEdgeIds.contains(edge.id) &&
+            focusedNodeIds.contains(edge.sourceNodeId) &&
+            focusedNodeIds.contains(edge.targetNodeId),
+      )
+      .toList(growable: false);
+  if (focusedNodes.isEmpty) {
+    return _DerivedBookGraphFocusResult(graph: graph, isFocused: false);
+  }
+
+  final focusedGraph = DerivedBookConceptGraphSnapshot(
+    bookId: graph.bookId,
+    nodes: focusedNodes,
+    edges: focusedEdges,
+  );
+  return _DerivedBookGraphFocusResult(
+    graph: focusedGraph,
+    isFocused: focusedNodes.length < graph.nodes.length ||
+        focusedEdges.length < graph.edges.length,
+  );
+}
+
+bool _derivedBookGraphQueryMatches(
+  String text, {
+  required String normalizedQuery,
+  required List<String> terms,
+}) {
+  final haystack = _normalizeSearchText(text);
+  if (haystack.isEmpty) return false;
+  final numericTerms = terms.where(_hasAsciiDigit).toList(growable: false);
+  if (numericTerms.isNotEmpty &&
+      numericTerms.any((term) => !haystack.contains(term))) {
+    return false;
+  }
+  if (haystack.contains(normalizedQuery)) return true;
+  final matchedTerms = terms.where((term) => haystack.contains(term)).length;
+  final minMatches = terms.length <= 2 ? 1 : (terms.length / 2).ceil();
+  return matchedTerms >= minMatches;
+}
+
+bool _hasAsciiDigit(String value) => value.contains(RegExp(r'[0-9]'));
+
+String _derivedNodeSearchText(ConceptNode node) {
+  return [
+    node.label,
+    node.summary,
+    node.type.asString,
+    ...node.sourceRefs.expand(_sourceRefSearchTerms),
+  ].whereType<String>().join(' ');
+}
+
+String _derivedEdgeSearchText(
+  ConceptEdge edge,
+  ConceptNode? sourceNode,
+  ConceptNode? targetNode,
+) {
+  return [
+    edge.label,
+    edge.type.asString,
+    sourceNode?.label,
+    sourceNode?.summary,
+    targetNode?.label,
+    targetNode?.summary,
+    ...edge.evidenceRefs.expand(_sourceRefSearchTerms),
+  ].whereType<String>().join(' ');
+}
+
+Iterable<String?> _sourceRefSearchTerms(SourceRef ref) sync* {
+  yield ref.sourceTextSnippet;
+  yield ref.sourceTitle;
+}
+
+bool _sameConceptEdgeEndpoints(ConceptEdge primary, ConceptEdge secondary) {
+  final primarySourceId = primary.sourceNodeId.trim();
+  final primaryTargetId = primary.targetNodeId.trim();
+  final secondarySourceId = secondary.sourceNodeId.trim();
+  final secondaryTargetId = secondary.targetNodeId.trim();
+  if (primarySourceId.isEmpty ||
+      primaryTargetId.isEmpty ||
+      secondarySourceId.isEmpty ||
+      secondaryTargetId.isEmpty) {
+    return false;
+  }
+  return primarySourceId == secondarySourceId &&
+          primaryTargetId == secondaryTargetId ||
+      primarySourceId == secondaryTargetId &&
+          primaryTargetId == secondarySourceId;
+}
+
+String _edgeDisplayLabel(ConceptEdge edge) {
+  final label = edge.label?.trim();
+  if (label != null && label.isNotEmpty) return label;
+  return edge.type.asString;
+}
+
+class _DerivedBookGraphCoreView {
+  const _DerivedBookGraphCoreView({
+    required this.nodes,
+    required this.edges,
+    required this.centerNodeId,
+  });
+
+  final List<ConceptNode> nodes;
+  final List<ConceptEdge> edges;
+  final String centerNodeId;
+}
+
+_DerivedBookGraphCoreView _coreDerivedBookGraphView(
+  DerivedBookConceptGraphSnapshot graph, {
+  int nodeLimit = 10,
+}) {
+  if (graph.nodes.isEmpty) {
+    return const _DerivedBookGraphCoreView(
+      nodes: <ConceptNode>[],
+      edges: <ConceptEdge>[],
+      centerNodeId: '',
+    );
+  }
+  final safeLimit = nodeLimit.clamp(2, 18).toInt();
+  final originalOrder = <String, int>{
+    for (var index = 0; index < graph.nodes.length; index++)
+      graph.nodes[index].id: index,
+  };
+  final scores = _scoreDerivedBookGraphNodes(graph);
+  final sortedNodes = graph.nodes.toList(growable: false)
+    ..sort((a, b) {
+      final scoreCompare = (scores[b.id] ?? 0).compareTo(scores[a.id] ?? 0);
+      if (scoreCompare != 0) return scoreCompare;
+      final evidenceCompare =
+          b.sourceRefs.length.compareTo(a.sourceRefs.length);
+      if (evidenceCompare != 0) return evidenceCompare;
+      return (originalOrder[a.id] ?? 0).compareTo(originalOrder[b.id] ?? 0);
+    });
+  final centerNode = sortedNodes.first;
+  final selected = <String, ConceptNode>{centerNode.id: centerNode};
+
+  final incidentEdges = graph.edges
+      .where(
+        (edge) =>
+            edge.sourceNodeId == centerNode.id ||
+            edge.targetNodeId == centerNode.id,
+      )
+      .toList(growable: false)
+    ..sort((a, b) {
+      final confidenceCompare =
+          (b.confidence ?? 0).compareTo(a.confidence ?? 0);
+      if (confidenceCompare != 0) return confidenceCompare;
+      final evidenceCompare =
+          b.evidenceRefs.length.compareTo(a.evidenceRefs.length);
+      if (evidenceCompare != 0) return evidenceCompare;
+      return a.id.compareTo(b.id);
+    });
+
+  final nodesById = {for (final node in graph.nodes) node.id: node};
+  for (final edge in incidentEdges) {
+    if (selected.length >= safeLimit) break;
+    final neighborId = edge.sourceNodeId == centerNode.id
+        ? edge.targetNodeId
+        : edge.sourceNodeId;
+    final neighbor = nodesById[neighborId];
+    if (neighbor != null) selected[neighbor.id] = neighbor;
+  }
+  for (final node in sortedNodes) {
+    if (selected.length >= safeLimit) break;
+    selected[node.id] = node;
+  }
+
+  final selectedIds = selected.keys.toSet();
+  final selectedEdges = graph.edges
+      .where(
+        (edge) =>
+            selectedIds.contains(edge.sourceNodeId) &&
+            selectedIds.contains(edge.targetNodeId),
+      )
+      .toList(growable: false)
+    ..sort((a, b) {
+      final confidenceCompare =
+          (b.confidence ?? 0).compareTo(a.confidence ?? 0);
+      if (confidenceCompare != 0) return confidenceCompare;
+      return a.id.compareTo(b.id);
+    });
+
+  return _DerivedBookGraphCoreView(
+    nodes: selected.values.toList(growable: false),
+    edges: selectedEdges,
+    centerNodeId: centerNode.id,
+  );
+}
+
+List<ConceptNode> _derivedBookReadingPath(
+  DerivedBookConceptGraphSnapshot graph, {
+  int nodeLimit = 6,
+}) {
+  if (graph.nodes.isEmpty) return const <ConceptNode>[];
+  final safeLimit = nodeLimit.clamp(2, 8).toInt();
+  final nodesById = {for (final node in graph.nodes) node.id: node};
+  final scores = _scoreDerivedBookGraphNodes(graph);
+  final coreView = _coreDerivedBookGraphView(
+    graph,
+    nodeLimit: safeLimit + 2,
+  );
+  final centerNode = nodesById[coreView.centerNodeId] ?? coreView.nodes.first;
+  final selected = <String, ConceptNode>{centerNode.id: centerNode};
+
+  final incidentEdges = graph.edges
+      .where(
+        (edge) =>
+            edge.sourceNodeId == centerNode.id ||
+            edge.targetNodeId == centerNode.id,
+      )
+      .toList(growable: false)
+    ..sort((a, b) {
+      final scoreCompare =
+          _readingPathEdgeScore(b).compareTo(_readingPathEdgeScore(a));
+      if (scoreCompare != 0) return scoreCompare;
+      return a.id.compareTo(b.id);
+    });
+
+  for (final edge in incidentEdges) {
+    if (selected.length >= safeLimit) break;
+    final neighborId = edge.sourceNodeId == centerNode.id
+        ? edge.targetNodeId
+        : edge.sourceNodeId;
+    final neighbor = nodesById[neighborId];
+    if (neighbor != null) selected[neighbor.id] = neighbor;
+  }
+
+  final connectedNodeIds = <String>{
+    for (final edge in graph.edges) ...[edge.sourceNodeId, edge.targetNodeId],
+  };
+  final remainingCoreNodes = coreView.nodes
+      .where(
+        (node) =>
+            !selected.containsKey(node.id) &&
+            connectedNodeIds.contains(node.id),
+      )
+      .toList(growable: false)
+    ..sort((a, b) {
+      final scoreCompare = (scores[b.id] ?? 0).compareTo(scores[a.id] ?? 0);
+      if (scoreCompare != 0) return scoreCompare;
+      return a.label.compareTo(b.label);
+    });
+  for (final node in remainingCoreNodes) {
+    if (selected.length >= safeLimit) break;
+    selected[node.id] = node;
+  }
+
+  if (selected.length == 1 && graph.edges.isEmpty) {
+    for (final node in coreView.nodes) {
+      if (selected.length >= safeLimit) break;
+      selected[node.id] = node;
+    }
+  }
+
+  return selected.values.toList(growable: false);
+}
+
+double _readingPathEdgeScore(ConceptEdge edge) {
+  final confidence = (edge.confidence ?? 0.5).clamp(0.0, 1.0).toDouble();
+  final evidenceCount =
+      edge.evidenceRefs.where((ref) => ref.hasEvidence).length;
+  return confidence * 10 + evidenceCount * 3;
+}
+
+Map<String, double> _scoreDerivedBookGraphNodes(
+  DerivedBookConceptGraphSnapshot graph,
+) {
+  final scores = <String, double>{
+    for (final node in graph.nodes)
+      node.id: node.sourceRefs.where((ref) => ref.hasEvidence).length * 4.0,
+  };
+  for (final edge in graph.edges) {
+    final edgeWeight = 10.0 + ((edge.confidence ?? 0.5).clamp(0.0, 1.0) * 6.0);
+    final evidenceWeight =
+        edge.evidenceRefs.where((ref) => ref.hasEvidence).length * 2.0;
+    scores[edge.sourceNodeId] =
+        (scores[edge.sourceNodeId] ?? 0) + edgeWeight + evidenceWeight;
+    scores[edge.targetNodeId] =
+        (scores[edge.targetNodeId] ?? 0) + edgeWeight + evidenceWeight;
+  }
+  return scores;
+}
+
+class _DerivedBookReadingPath extends StatelessWidget {
+  const _DerivedBookReadingPath({
+    required this.graph,
+    required this.nodes,
+    required this.compact,
+    required this.onNodeSelected,
+    required this.onEdgeSelected,
+  });
+
+  final DerivedBookConceptGraphSnapshot graph;
+  final List<ConceptNode> nodes;
+  final bool compact;
+  final ValueChanged<ConceptNode> onNodeSelected;
+  final ValueChanged<ConceptEdge> onEdgeSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final evidenceCount = _readingPathEvidenceCount(graph, nodes);
+    final pathNodes = compact ? nodes.take(4).toList(growable: false) : nodes;
+    final pathChips = <Widget>[
+      for (var index = 0; index < pathNodes.length; index += 1) ...[
+        ActionChip(
+          key: ValueKey('full-book-reading-path-node-${pathNodes[index].id}'),
+          avatar: CircleAvatar(
+            radius: 10,
+            child: Text(
+              '${index + 1}',
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
+          ),
+          label: Text(pathNodes[index].label),
+          onPressed: () => onNodeSelected(pathNodes[index]),
+        ),
+        if (index < pathNodes.length - 1)
+          ..._readingPathEdgeChips(
+            context,
+            edge: _readingPathEdgeBetween(
+              graph,
+              pathNodes[index].id,
+              pathNodes[index + 1].id,
+            ),
+            onEdgeSelected: onEdgeSelected,
+          ),
+      ],
+    ];
+    if (compact) {
+      return Wrap(
+        key: const ValueKey('full-book-reading-path'),
+        spacing: 8,
+        runSpacing: 6,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          const Icon(Icons.alt_route_outlined, size: 18),
+          Text(
+            zh ? '导读路径' : 'Reading path',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          _TinyChip(label: zh ? '从这里开始' : 'Start here'),
+          ...pathChips,
+        ],
+      );
+    }
+    return Column(
+      key: const ValueKey('full-book-reading-path'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.alt_route_outlined, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                zh ? '导读路径' : 'Reading path',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+            ),
+            _TinyChip(label: zh ? '从这里开始' : 'Start here'),
+            const SizedBox(width: 6),
+            _TinyChip(
+              label: zh
+                  ? '$evidenceCount 条证据'
+                  : evidenceCount == 1
+                      ? '1 evidence'
+                      : '$evidenceCount evidence',
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: pathChips,
+        ),
+      ],
+    );
+  }
+}
+
+List<Widget> _readingPathEdgeChips(
+  BuildContext context, {
+  required ConceptEdge? edge,
+  required ValueChanged<ConceptEdge> onEdgeSelected,
+}) {
+  if (edge == null) return const <Widget>[];
+  return [
+    ActionChip(
+      key: ValueKey('full-book-reading-path-edge-${edge.id}'),
+      avatar: const Icon(Icons.link, size: 16),
+      label: Text(_edgeDisplayLabel(edge)),
+      onPressed: () => onEdgeSelected(edge),
+    ),
+    _TinyChip(label: _readingPathEdgeEvidenceLabel(context, edge)),
+  ];
+}
+
+ConceptEdge? _readingPathEdgeBetween(
+  DerivedBookConceptGraphSnapshot graph,
+  String firstNodeId,
+  String secondNodeId,
+) {
+  final candidates = graph.edges
+      .where(
+        (edge) =>
+            edge.sourceNodeId == firstNodeId &&
+                edge.targetNodeId == secondNodeId ||
+            edge.sourceNodeId == secondNodeId &&
+                edge.targetNodeId == firstNodeId,
+      )
+      .toList(growable: false);
+  if (candidates.isEmpty) return null;
+  candidates.sort((a, b) {
+    final scoreCompare =
+        _readingPathEdgeScore(b).compareTo(_readingPathEdgeScore(a));
+    if (scoreCompare != 0) return scoreCompare;
+    return a.id.compareTo(b.id);
+  });
+  return candidates.first;
+}
+
+String _readingPathEdgeEvidenceLabel(BuildContext context, ConceptEdge edge) {
+  final zh = Localizations.localeOf(context).languageCode == 'zh';
+  final evidenceCount =
+      edge.evidenceRefs.where((ref) => ref.hasEvidence).length;
+  if (zh) return '$evidenceCount 条证据';
+  return evidenceCount == 1 ? '1 evidence ref' : '$evidenceCount evidence refs';
+}
+
+int _readingPathEvidenceCount(
+  DerivedBookConceptGraphSnapshot graph,
+  List<ConceptNode> nodes,
+) {
+  final nodeIds = nodes.map((node) => node.id).toSet();
+  final nodeEvidence = nodes.fold<int>(
+    0,
+    (count, node) =>
+        count + node.sourceRefs.where((ref) => ref.hasEvidence).length,
+  );
+  final edgeEvidence = graph.edges
+      .where(
+        (edge) =>
+            nodeIds.contains(edge.sourceNodeId) &&
+            nodeIds.contains(edge.targetNodeId),
+      )
+      .fold<int>(
+        0,
+        (count, edge) =>
+            count + edge.evidenceRefs.where((ref) => ref.hasEvidence).length,
+      );
+  return nodeEvidence + edgeEvidence;
+}
+
+class _DerivedBookMapSummary extends StatelessWidget {
+  const _DerivedBookMapSummary({
+    required this.graph,
+    required this.coreView,
+    required this.compact,
+    required this.focusedBySelection,
+    required this.onCoreNodeSelected,
+  });
+
+  final DerivedBookConceptGraphSnapshot graph;
+  final _DerivedBookGraphCoreView coreView;
+  final bool compact;
+  final bool focusedBySelection;
+  final ValueChanged<ConceptNode> onCoreNodeSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    if (graph.isEmpty || coreView.nodes.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final coreNode = coreView.nodes.firstWhere(
+      (node) => node.id == coreView.centerNodeId,
+      orElse: () => coreView.nodes.first,
+    );
+    final keyNodeIds = <String>{
+      coreNode.id,
+      for (final edge in coreView.edges) ...[
+        edge.sourceNodeId,
+        edge.targetNodeId,
+      ],
+    };
+    final keyConceptCount =
+        coreView.nodes.where((node) => keyNodeIds.contains(node.id)).length;
+    final evidenceCount = _bookMapEvidenceCount(
+      coreView,
+      keyNodeIds: keyNodeIds,
+    );
+    final evidenceSections = _bookMapEvidenceSections(
+      coreView,
+      keyNodeIds: keyNodeIds,
+    );
+    final summaryChildren = <Widget>[
+      const Icon(Icons.map_outlined, size: 18),
+      Text(
+        zh ? '本书地图' : 'Book map',
+        style: Theme.of(context).textTheme.titleSmall,
+      ),
+      _TinyChip(label: zh ? '核心主题' : 'Core theme'),
+      if (focusedBySelection)
+        _TinyChip(label: zh ? '按选中文本聚焦' : 'Focused by selection'),
+      ActionChip(
+        key: ValueKey('full-book-map-core-node-${coreNode.id}'),
+        avatar: Icon(_nodeIcon(coreNode.type), size: 16),
+        label: Text(coreNode.label),
+        onPressed: () => onCoreNodeSelected(coreNode),
+      ),
+      _TinyChip(
+        label: zh
+            ? '$keyConceptCount 个关键概念'
+            : keyConceptCount == 1
+                ? '1 key concept'
+                : '$keyConceptCount key concepts',
+      ),
+      _TinyChip(
+        label: zh
+            ? '${coreView.edges.length} 条主干关系'
+            : coreView.edges.length == 1
+                ? '1 backbone relation'
+                : '${coreView.edges.length} backbone relations',
+      ),
+      _TinyChip(
+        label: zh
+            ? '$evidenceCount 条证据'
+            : evidenceCount == 1
+                ? '1 evidence ref'
+                : '$evidenceCount evidence refs',
+      ),
+      if (evidenceSections.isNotEmpty)
+        _TinyChip(label: zh ? '证据章节' : 'Evidence sections'),
+      for (final section in evidenceSections.take(2))
+        ActionChip(
+          key: ValueKey('full-book-map-section-${section.label}'),
+          label: Text(section.label),
+          onPressed: () => onCoreNodeSelected(section.node),
+        ),
+    ];
+    if (compact) {
+      return SingleChildScrollView(
+        key: const ValueKey('full-book-map-summary'),
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (var index = 0; index < summaryChildren.length; index += 1) ...[
+              if (index > 0) const SizedBox(width: 8),
+              summaryChildren[index],
+            ],
+          ],
+        ),
+      );
+    }
+    return Column(
+      key: const ValueKey('full-book-map-summary'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.map_outlined, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                zh ? '本书地图' : 'Book map',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+            ),
+            _TinyChip(label: zh ? '派生预览' : 'Derived preview'),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: summaryChildren.skip(2).take(2).toList(growable: false),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: summaryChildren.skip(4).toList(growable: false),
+        ),
+      ],
+    );
+  }
+}
+
+class _BookMapEvidenceSection {
+  const _BookMapEvidenceSection({
+    required this.label,
+    required this.node,
+  });
+
+  final String label;
+  final ConceptNode node;
+}
+
+List<_BookMapEvidenceSection> _bookMapEvidenceSections(
+  _DerivedBookGraphCoreView coreView, {
+  required Set<String> keyNodeIds,
+  int limit = 3,
+}) {
+  final sections = <_BookMapEvidenceSection>[];
+  final seen = <String>{};
+  for (final node in coreView.nodes) {
+    if (!keyNodeIds.contains(node.id)) continue;
+    for (final sourceRef in node.sourceRefs) {
+      final label = _sourceRefSectionLabel(sourceRef);
+      if (label == null || !seen.add(label)) continue;
+      sections.add(_BookMapEvidenceSection(label: label, node: node));
+      if (sections.length >= limit) return sections;
+    }
+  }
+  return sections;
+}
+
+String? _sourceRefSectionLabel(SourceRef sourceRef) {
+  final title = sourceRef.sourceTitle?.trim();
+  final location = sourceRef.locationLabel?.trim();
+  if (title != null && title.isNotEmpty) {
+    if (location != null && location.isNotEmpty) {
+      return '$title / $location';
+    }
+    return title;
+  }
+  if (location != null && location.isNotEmpty) return location;
+  final href = sourceRef.href?.trim();
+  if (href != null && href.isNotEmpty) return href;
+  return null;
+}
+
+int _bookMapEvidenceCount(
+  _DerivedBookGraphCoreView coreView, {
+  required Set<String> keyNodeIds,
+}) {
+  final nodeEvidence =
+      coreView.nodes.where((node) => keyNodeIds.contains(node.id)).fold<int>(
+            0,
+            (count, node) =>
+                count + node.sourceRefs.where((ref) => ref.hasEvidence).length,
+          );
+  final edgeEvidence = coreView.edges
+      .where(
+        (edge) =>
+            keyNodeIds.contains(edge.sourceNodeId) &&
+            keyNodeIds.contains(edge.targetNodeId),
+      )
+      .fold<int>(
+        0,
+        (count, edge) =>
+            count + edge.evidenceRefs.where((ref) => ref.hasEvidence).length,
+      );
+  return nodeEvidence + edgeEvidence;
+}
+
 class _ConceptGraphCanvas extends StatelessWidget {
   const _ConceptGraphCanvas({
     this.paintKey = const ValueKey('concept-graph-visual-map'),
@@ -1259,6 +3367,7 @@ class _ConceptGraphCanvas extends StatelessWidget {
     required this.edges,
     required this.centerNodeId,
     this.onNodeSelected,
+    this.onEdgeSelected,
   });
 
   final Key paintKey;
@@ -1267,6 +3376,7 @@ class _ConceptGraphCanvas extends StatelessWidget {
   final List<ConceptEdge> edges;
   final String centerNodeId;
   final ValueChanged<ConceptNode>? onNodeSelected;
+  final ValueChanged<ConceptEdge>? onEdgeSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -1295,20 +3405,36 @@ class _ConceptGraphCanvas extends StatelessWidget {
       ),
     );
     final onSelected = onNodeSelected;
-    if (onSelected == null) return canvas;
+    final onEdgeSelected = this.onEdgeSelected;
+    if (onSelected == null && onEdgeSelected == null) return canvas;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapUp: (details) {
         final box = context.findRenderObject() as RenderBox?;
         final size = box?.size;
         if (size == null || size.isEmpty) return;
-        final node = _hitTestConceptGraphNode(
-          details.localPosition,
-          size,
-          nodes,
-          centerNodeId,
-        );
-        if (node != null) onSelected(node);
+        if (onSelected != null) {
+          final node = _hitTestConceptGraphNode(
+            details.localPosition,
+            size,
+            nodes,
+            centerNodeId,
+          );
+          if (node != null) {
+            onSelected(node);
+            return;
+          }
+        }
+        if (onEdgeSelected != null) {
+          final edge = _hitTestConceptGraphEdge(
+            details.localPosition,
+            size,
+            nodes,
+            edges,
+            centerNodeId,
+          );
+          if (edge != null) onEdgeSelected(edge);
+        }
       },
       child: canvas,
     );
@@ -1476,13 +3602,17 @@ Map<String, Offset> _layoutConceptGraphNodes(
     54.0,
     math.min(size.width, size.height) * 0.34,
   );
+  final minX = math.min(34.0, size.width / 2);
+  final maxX = math.max(minX, size.width - 34.0);
+  final minY = math.min(34.0, size.height / 2);
+  final maxY = math.max(minY, size.height - 42.0);
   for (var i = 0; i < others.length; i++) {
     final angle = -math.pi / 2 + (math.pi * 2 * i / others.length);
     final x = center.dx + math.cos(angle) * ringRadius;
     final y = center.dy + math.sin(angle) * ringRadius;
     positions[others[i].id] = Offset(
-      x.clamp(34.0, size.width - 34.0).toDouble(),
-      y.clamp(34.0, size.height - 42.0).toDouble(),
+      x.clamp(minX, maxX).toDouble(),
+      y.clamp(minY, maxY).toDouble(),
     );
   }
   return positions;
@@ -1508,6 +3638,44 @@ ConceptNode? _hitTestConceptGraphNode(
     }
   }
   return closest;
+}
+
+ConceptEdge? _hitTestConceptGraphEdge(
+  Offset localPosition,
+  Size size,
+  List<ConceptNode> nodes,
+  List<ConceptEdge> edges,
+  String centerNodeId,
+) {
+  final positions = _layoutConceptGraphNodes(size, nodes, centerNodeId);
+  ConceptEdge? closest;
+  var closestDistance = double.infinity;
+  for (final edge in edges) {
+    final source = positions[edge.sourceNodeId];
+    final target = positions[edge.targetNodeId];
+    if (source == null || target == null) continue;
+    final distance = _distanceToSegment(localPosition, source, target);
+    if (distance <= 12 && distance < closestDistance) {
+      closest = edge;
+      closestDistance = distance;
+    }
+  }
+  return closest;
+}
+
+double _distanceToSegment(Offset point, Offset start, Offset end) {
+  final segment = end - start;
+  final lengthSquared = segment.dx * segment.dx + segment.dy * segment.dy;
+  if (lengthSquared == 0) return (point - start).distance;
+  final relative = point - start;
+  final projection =
+      (relative.dx * segment.dx + relative.dy * segment.dy) / lengthSquared;
+  final t = projection.clamp(0.0, 1.0).toDouble();
+  final closest = Offset(
+    start.dx + segment.dx * t,
+    start.dy + segment.dy * t,
+  );
+  return (point - closest).distance;
 }
 
 class _MapNodePill extends StatelessWidget {
@@ -1596,10 +3764,12 @@ class _LocalGraphEdgeSummary extends StatelessWidget {
   const _LocalGraphEdgeSummary({
     required this.edge,
     required this.nodesById,
+    this.onTap,
   });
 
   final ConceptEdge edge;
   final Map<String, ConceptNode> nodesById;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1618,6 +3788,7 @@ class _LocalGraphEdgeSummary extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
+      onTap: onTap,
       subtitle: Wrap(
         spacing: 6,
         runSpacing: 6,
@@ -1865,7 +4036,9 @@ List<Widget> _conceptGraphActionFeedback(
   if (!state.isCreatingDraftCandidate && draftResult != null) {
     final skippedReason = draftResult.skippedReason;
     final text = draftResult.createdAny
-        ? l10n.knowledgeCardAddedToReviewInbox
+        ? draftResult.reviewItems.isNotEmpty
+            ? l10n.knowledgeCardAddedToReviewInbox
+            : l10n.conceptGraphAddedToMyGraph
         : skippedReason == null
             ? l10n.conceptGraphNoEvidence
             : '${l10n.conceptGraphNoEvidence}: $skippedReason';
@@ -1878,7 +4051,9 @@ List<Widget> _conceptGraphActionFeedback(
         ? (cardResult.inserted
             ? l10n.knowledgeCardAddedToReviewInbox
             : l10n.knowledgeCardAlreadyInReviewInbox)
-        : l10n.knowledgeCardAlreadySaved;
+        : cardResult.inserted
+            ? l10n.knowledgeCardSavedInline
+            : l10n.knowledgeCardAlreadySaved;
     feedback.add(_ActionFeedback(text: text));
   }
 
