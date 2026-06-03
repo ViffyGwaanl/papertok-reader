@@ -1411,6 +1411,10 @@ void main() {
       expect(find.text('综合总结'), findsOneWidget);
       expect(find.text('synthesizer response'), findsOneWidget);
       expect(find.text('可追踪证据：3 条'), findsOneWidget);
+      expect(find.text('异常送审内容'), findsOneWidget);
+      expect(find.text('综合总结：1 项'), findsOneWidget);
+      expect(find.text('知识卡候选：0 项'), findsOneWidget);
+      expect(find.text('复习候选：0 项'), findsOneWidget);
       expect(find.text('普通学习保存请优先使用知识卡、复习或我的图谱。'), findsOneWidget);
 
       await tester.tap(find.text('异常送审'));

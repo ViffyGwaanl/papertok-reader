@@ -5099,6 +5099,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 _buildSeminarRunSnapshot(
                   card.sessionId,
                   card.snapshot!,
+                  runtimeState,
                 ),
                 key: card.sessionId == null
                     ? null
@@ -6366,6 +6367,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   Widget _buildSeminarRunSnapshot(
     String? sessionId,
     AiSeminarRunCardSnapshot snapshot,
+    AiSeminarRuntimeState runtimeState,
   ) {
     final allEvidence = snapshot.evidence
         .where((item) => !item.isEmpty)
@@ -6418,6 +6420,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         selectedSubview == _SeminarRunSnapshotSubview.whiteboard;
     final showDisagreements =
         selectedSubview == _SeminarRunSnapshotSubview.disagreements;
+    final activeSynthesis =
+        runtimeState.session?.id == sessionId ? runtimeState.synthesis : null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -6539,6 +6543,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           _seminarSnapshotReviewPreview(
             synthesis: synthesis,
             evidenceCount: allEvidence.length,
+            activeSynthesis: activeSynthesis,
           ),
         ],
         if (showWhiteboard &&
@@ -7051,8 +7056,17 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   Widget _seminarSnapshotReviewPreview({
     required String? synthesis,
     required int evidenceCount,
+    AiSeminarSynthesis? activeSynthesis,
   }) {
     final summary = synthesis?.trim() ?? '';
+    final canPreviewHandoff = activeSynthesis != null &&
+        activeSynthesis.readyForReview &&
+        activeSynthesis.hasTraceableHandoff;
+    final candidateCardCount =
+        canPreviewHandoff ? activeSynthesis.candidateCards.length : 0;
+    final flashcardCandidateCount = canPreviewHandoff
+        ? _seminarReviewQuestionCount(activeSynthesis.candidateReviewQuestions)
+        : 0;
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
@@ -7107,11 +7121,48 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     : 'Traceable evidence: $evidenceCount sources',
               ),
             ),
+            if (canPreviewHandoff) ...[
+              const SizedBox(height: 8),
+              _seminarSnapshotDetailLabel(
+                _localizedSeminarCardText(
+                  zh: '异常送审内容',
+                  en: 'Exception Review payload',
+                ),
+              ),
+              const SizedBox(height: 4),
+              _seminarSnapshotReviewLine(
+                Icons.summarize_outlined,
+                _localizedSeminarCardText(
+                  zh: '综合总结：1 项',
+                  en: 'Synthesis: 1 item',
+                ),
+              ),
+              const SizedBox(height: 4),
+              _seminarSnapshotReviewLine(
+                Icons.style_outlined,
+                _localizedSeminarCardText(
+                  zh: '知识卡候选：$candidateCardCount 项',
+                  en: candidateCardCount == 1
+                      ? 'KnowledgeCard candidates: 1 item'
+                      : 'KnowledgeCard candidates: $candidateCardCount items',
+                ),
+              ),
+              const SizedBox(height: 4),
+              _seminarSnapshotReviewLine(
+                Icons.quiz_outlined,
+                _localizedSeminarCardText(
+                  zh: '复习候选：$flashcardCandidateCount 项',
+                  en: flashcardCandidateCount == 1
+                      ? 'Spaced Review candidates: 1 item'
+                      : 'Spaced Review candidates: $flashcardCandidateCount items',
+                ),
+              ),
+            ],
             const SizedBox(height: 6),
             Text(
               _localizedSeminarCardText(
                 zh: '普通学习保存请优先使用知识卡、复习或我的图谱。',
-                en: 'For normal learning saves, use KnowledgeCard, Review, or My Graph first.',
+                en: 'For normal learning saves, use KnowledgeCard, Spaced Review, or My Graph first.',
               ),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: ClaudePalette.secondary(context),
@@ -7122,6 +7173,16 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         ),
       ),
     );
+  }
+
+  int _seminarReviewQuestionCount(List<String> questions) {
+    final seen = <String>{};
+    for (final raw in questions) {
+      final question = raw.trim();
+      if (question.isEmpty) continue;
+      seen.add(question.toLowerCase());
+    }
+    return seen.length;
   }
 
   Widget _seminarSnapshotReviewLine(IconData icon, String text) {
