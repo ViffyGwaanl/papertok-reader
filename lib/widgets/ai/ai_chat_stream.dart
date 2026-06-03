@@ -7105,6 +7105,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final reviewQuestions = canPreviewHandoff
         ? _seminarReviewQuestionItems(activeSynthesis)
         : const <_SeminarReviewPreviewItem>[];
+    final reviewReasons = canPreviewHandoff
+        ? _seminarReviewReasonTexts(activeSynthesis)
+        : const <String>[];
     final candidateCardCount =
         canPreviewHandoff ? activeSynthesis.candidateCards.length : 0;
     final flashcardCandidateCount = reviewQuestions.length;
@@ -7162,6 +7165,23 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     : 'Traceable evidence: $evidenceCount sources',
               ),
             ),
+            if (reviewReasons.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              _seminarSnapshotDetailLabel(
+                _localizedSeminarCardText(
+                  zh: '异常原因',
+                  en: 'Review reasons',
+                ),
+              ),
+              const SizedBox(height: 4),
+              for (final reason in reviewReasons) ...[
+                _seminarSnapshotReviewLine(
+                  Icons.warning_amber_outlined,
+                  reason,
+                ),
+                const SizedBox(height: 4),
+              ],
+            ],
             if (canPreviewHandoff) ...[
               const SizedBox(height: 8),
               _seminarSnapshotDetailLabel(
@@ -7242,6 +7262,45 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         ),
       ),
     );
+  }
+
+  List<String> _seminarReviewReasonTexts(AiSeminarSynthesis synthesis) {
+    final disagreementCount = synthesis.disagreements
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .length;
+    final cardCount = synthesis.candidateCards
+        .map((item) => item.text.trim())
+        .where((item) => item.isNotEmpty)
+        .length;
+    final reviewQuestionCount = synthesis.candidateReviewQuestions
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .length;
+
+    return [
+      if (disagreementCount > 0)
+        _localizedSeminarCardText(
+          zh: '存在未解决分歧：$disagreementCount 项',
+          en: disagreementCount == 1
+              ? 'Unresolved disagreements: 1 item'
+              : 'Unresolved disagreements: $disagreementCount items',
+        ),
+      if (cardCount > 0)
+        _localizedSeminarCardText(
+          zh: '包含知识卡候选：$cardCount 项',
+          en: cardCount == 1
+              ? 'KnowledgeCard candidates included: 1 item'
+              : 'KnowledgeCard candidates included: $cardCount items',
+        ),
+      if (reviewQuestionCount > 0)
+        _localizedSeminarCardText(
+          zh: '包含复习候选：$reviewQuestionCount 项',
+          en: reviewQuestionCount == 1
+              ? 'Spaced Review candidates included: 1 item'
+              : 'Spaced Review candidates included: $reviewQuestionCount items',
+        ),
+    ];
   }
 
   List<_SeminarReviewPreviewItem> _seminarReviewCandidateCardItems(

@@ -1408,6 +1408,10 @@ void main() {
       expect(find.byType(AiSeminarRuntimePanel), findsNothing);
       expect(find.text('异常处理预览'), findsOneWidget);
       expect(find.text('只在低置信、冲突或来源异常时发送到 Review Inbox'), findsOneWidget);
+      expect(find.text('异常原因'), findsOneWidget);
+      expect(find.text('存在未解决分歧：1 项'), findsOneWidget);
+      expect(find.text('包含知识卡候选：1 项'), findsOneWidget);
+      expect(find.text('包含复习候选：1 项'), findsOneWidget);
       expect(find.text('综合总结'), findsOneWidget);
       expect(find.text('synthesizer response'), findsOneWidget);
       expect(find.text('可追踪证据：3 条'), findsOneWidget);
