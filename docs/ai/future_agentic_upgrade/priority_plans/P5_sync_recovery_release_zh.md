@@ -1,7 +1,7 @@
 # P5 Sync Recovery Release
 
 > 状态：In Progress
-> 最后更新：2026-06-03
+> 最后更新：2026-06-08
 > 目标：把 P1-P4 的 AI 闭环做成可恢复、可同步、可测试、可发布的产品能力。
 
 ## 1. 用户价值
@@ -23,6 +23,7 @@
 - Seminar checkpoint、scoped runtime、queued job 和 provider/budget 诊断。
 - AI Index 层状态、部分修复入口和失败提示。
 - 既有 release/TestFlight 脚本和构建经验。
+- `2026-06-08` 已把当前分支 HEAD `a24a1a8a52408b30aed21a0004507cd18ac365b8` 推送并完成一次 release promotion：版本 `1.68.7+6512`，iOS 上传 App Store Connect/TestFlight 后 build `6512` 状态为 `VALID`，GitHub Release `android-v1.68.7-6512` 已包含 Android APK、macOS zip 和 `CHECKSUMS.txt`。
 
 当前主要问题：
 
@@ -30,7 +31,7 @@
 - P2 AI semantic graph builder 会引入长任务、成本、失败重试和派生缓存失效。
 - P3 ANN/AI graph 构建需要真机资源 gate 和可恢复 job。
 - P4 Review Inbox 重新定位后，需要迁移旧 pending 项和旧文案。
-- 发布版迁移和用户说明还没有围绕 v7 新目标重写。
+- 本次 build `1.68.7+6512` 是当前分支切片的 TestFlight/GitHub 预发布，不等于 v7 全部完成；P1-P4 的新闭环、迁移说明、资源 gate 和后续稳定版发布边界仍要继续收口。
 
 ## 3. 阶段计划
 
@@ -97,6 +98,13 @@
 - Android/macOS artifact 或明确边界。
 - 发布说明写清用户能用什么、还不能用什么、旧数据如何处理。
 
+当前证据：
+
+- `2026-06-08` 已完成 build `1.68.7+6512` 首次 promotion：target commit `a24a1a8a52408b30aed21a0004507cd18ac365b8`。
+- iOS 日志：`/Users/gwaanl/.openclaw/workspace/artifacts/papertok-reader/a24a1a8a-20260608045634/logs/ios.log` 记录上传成功；ASC build state 查询返回 `buildNumber=6512`、`processingState=VALID`、`uploadedDate=2026-06-08T02:03:42-07:00`。
+- Android/macOS artifact：GitHub Release `https://github.com/ViffyGwaanl/papertok-reader/releases/tag/android-v1.68.7-6512` 已包含 `papertok-reader-1.68.7-6512.apk`、`PaperTok-Reader-macOS-1.68.7-6512.zip` 和 `CHECKSUMS.txt`。macOS app 是脚本构建出的 unsigned `.app`，本轮以 zip artifact 发布，不等同于签名/公证完成。
+- release 脚本最终有 `cleanup_paths[@]: unbound variable` 清理警告，但命令 exit `0`，iOS/Android/macOS/GitHub release 证据均已单独验证。
+
 ## 4. 不做事项
 
 - 不在 P1/P2 主闭环未完成前用发布收尾掩盖体验缺口。
@@ -115,4 +123,5 @@
 
 ## 6. 状态更新记录
 
+- 2026-06-08：完成 build `1.68.7+6512` release promotion。`git push origin codex/future-agentic-upgrade` 已把 HEAD `a24a1a8a52408b30aed21a0004507cd18ac365b8` 推到远端；`FORCE_MANUAL_SIGNING=1 ./scripts/release_from_commit.sh a24a1a8a52408b30aed21a0004507cd18ac365b8` 构建并上传 iOS/TestFlight、Android APK、macOS unsigned app，GitHub Release 为 `android-v1.68.7-6512`；后续手动补传 macOS zip 并更新 `CHECKSUMS.txt`。本轮关闭了“当前分支完全没有 release promotion”的旧口径，但 P5 仍为 In Progress，因为跨设备后台同步、迁移说明、P1-P4 完整 gate 和稳定版边界仍未完成。
 - 2026-06-03：建立 P5 详细计划。当前状态为 In Progress；已有同步/恢复/发布底座，但需要围绕 v7 的 P1-P4 新闭环重新收口。

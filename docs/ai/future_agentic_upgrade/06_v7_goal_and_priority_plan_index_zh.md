@@ -64,6 +64,8 @@ P1 已有 Seminar runtime、AI Chat 原生任务卡、卡内 `开始研讨`、re
 
 P1 最新产品取舍：旧 LLM/provider stream 的“原地续传”先不做，且不再作为 P1 可用版 gate。P1 先完成用户能稳定使用的恢复/重试闭环：保留已收集 evidence、保留已完成角色回合，断点后从缺失或失败角色重新生成；中断 child role 走 `resume-agent`，失败 child role 走 `retry-agent-control`，整场失败仍在当前 AI Chat 卡内重试。旧 stream 原地续传后续只在 provider 能力明确支持时作为增强项评估。
 
+P5 最新补充：当前分支 HEAD `a24a1a8a52408b30aed21a0004507cd18ac365b8` 已在 `2026-06-08` 完成 build `1.68.7+6512` release promotion。iOS/TestFlight build `6512` 已上传 App Store Connect 且 `processingState=VALID`；GitHub Release `android-v1.68.7-6512` 指向同一 commit，并包含 Android APK、macOS unsigned app zip 和 `CHECKSUMS.txt`。这说明当前分支切片已有 TestFlight/GitHub 预发布证据，但不等于 v7 全部完成、main/stable 已合并，或 P1-P4 的恢复、同步、迁移和资源 gate 已全部关闭。
+
 P1 最新补充：AI Chat Seminar 的 `取消工具调用 / cancel-tool-call` 现在会写入 graph `cancel_request`，并在 AI Chat 原生历史里恢复为 `reader_turn(label=cancel-tool-call,status=completed)`。此前工具取消只体现为工具调用和 child run 进入 `shutdown`，缺少“用户取消了这次工具调用”的可回放执行记录；现在 `cancelSeminarRunCardToolCall(...)` 会保留目标 `toolId/query`，UI 在 `研讨流` 中显示 `取消工具调用 · 批判者`、`工具：书内语义检索`、`查询：...` 和 `已处理`。验证覆盖 adapter focused、provider focused、widget focused，adapter 相邻 `14 passed`、provider 相邻 `27 passed`、widget 工具控制相邻 `5 passed`；format `0 changed`，diff check 通过；analyzer exit `0` 但仍有既有 custom_lint TLS 错误和 `ai_chat_stream.dart` 旧 warning/info。当前仍只是工具取消操作留痕和原生历史呈现，不是 provider 级单工具硬中断、完整 tool wait/cancel 执行器、完整 streaming tool-call 组件或角色自由多轮工具 loop。
 
 P1 最新补充：AI Chat Seminar 的 `等待工具调用 / wait-tool-call` reader-turn 已开始显示目标工具和查询上下文。此前工具等待记录在数据层有 `toolId/query`，但默认 `研讨流` 只显示等待动作和状态；现在会显示本地化工具名和查询，例如 `工具：笔记搜索`、`查询：agency notes`。验证覆盖 focused 红绿、reader/control 相邻 `7 passed`、工具控制窄相邻 `4 passed`、单独 live tool error focused `1 passed`；一次更宽工具控制组合因 live signal 超时，且该用例单独复跑通过，不能作为通过或失败证据。当前只是工具等待读者操作的上下文可见性补强，不是 provider stream 阻塞等待、完整 tool wait/cancel 执行器、完整 streaming tool-call 组件或角色自由多轮工具 loop。
@@ -342,7 +344,7 @@ P3 已有 semantic search、hybrid recall、native vector、Vec1/ANN 方向和 r
 
 P4 已经把部分普通 AI 产物从默认 Review 迁回当前页内联保存，并在 completed Seminar 异常 handoff 中补上 `AI 预审建议` 首片，但 AI 辅助预审还不完整。Review Inbox 要继续收窄为异常中心，并让 AI 先做统一风险分类、重复/冲突检查和处理建议。
 
-P5 已有同步导出、远端 preview、部分恢复、Seminar checkpoint 和发布脚本经验，但还需要围绕 P1-P4 的新闭环补真机资源 gate、恢复 gate、发布 gate 和迁移说明。
+P5 已有同步导出、远端 preview、部分恢复、Seminar checkpoint、发布脚本经验，并已把 build `1.68.7+6512` 推到 TestFlight/GitHub 预发布；但还需要围绕 P1-P4 的新闭环补真机资源 gate、恢复 gate、迁移说明、跨设备后台同步和后续稳定版发布边界。
 
 ## 5. 目标执行准则
 
