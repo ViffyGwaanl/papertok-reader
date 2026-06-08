@@ -39,8 +39,8 @@ OpenMAIC 的 discussion loop 更强在角色调度和互动呈现；它并没有
 AI Chat 已经有插件、工具调用、thinking 能力和同一输入框。Seminar 的主路径应在 AI Chat 里完成：
 
 - `AI 研讨会` 是 Chat run action，不是 `Choose style` 的一个普通 prompt 风格。
-- `Choose style / 选择风格` 保留普通 skill/prompt 选择；其中的 `研讨会设置` 只进入配置页。
-- 独立 `AiSeminarRuntimePage` 保留为详情、调试、恢复和兼容入口。
+- `Choose style / 选择风格` 只保留普通 skill/prompt 选择，不再出现 Seminar 行或 Seminar 设置行。
+- 旧独立 `AiSeminarRuntimePage` / runtime panel 已删除；详情、恢复和后续调试能力都应落在 AI Chat 原生 run card 内。
 - 完整体验应是一张可展开的 Chat run card，含证据、角色发言、分歧、白板、总结、内联保存动作和异常送审子视图。
 
 ### 3.2 当前实现事实
@@ -51,40 +51,46 @@ PaperTok 当前已经具备这些地基：
 - `AiSeminarRoleProfile` 已支持角色显示名和 custom prompt。
 - Settings 全局默认已支持角色启用状态、会话证据提示和只读工具白名单；AI Chat 的 `本次研讨设置` 已支持单次 run 的角色 prompt、启用状态、verifier 和 `maxRounds`，不写回全局 Settings。
 - runtime prompt 会注入角色 profile，同时仍要求只引用 supplied evidence ids。
-- AI Chat 已可从 `+ -> AI 研讨会` 打开内嵌 runtime panel。
-- 阅读页选中文本 `研讨` 已会进入阅读页 AI Chat 内嵌面板，并带入 reader `SourceRef`。
+- AI Chat 已可从 `+ -> AI 研讨会` 写入原生 run card。
+- 阅读页选中文本 `研讨` 已会进入阅读页 AI Chat 原生 run card，并带入 reader `SourceRef`。
 - `AiSeminarDirectorState` 已能记录轮次、已完成角色、证据账本、白板账本、分歧、用户插话和 next intent。
 - `askUser` 状态下已支持让指定角色回应、重新找证据、整理总结。
 - disagreement 在轮次预算内已能自动触发 evidence refresh。
 - AI Chat 的 `AI 研讨会` 历史任务卡已能随 `conversationV2` 保存，并在 runtime 状态变化时按 `seminarSessionId` 回写 evidence/role/synthesis snapshot、分歧数、开放问题数和真实可追踪来源数量。
+- running AI Chat Seminar 任务卡现在会在 evidence bundle 返回后显示证据调用，并在当前 role stream 产生 partial 文本时显示 `角色发言生成中`、角色身份和 partial 文本；该 partial 也已开始写入 `messageParts.type=role_partial`，历史卡可从 role-partial part 恢复生成中状态；这仍不是旧 LLM stream 原地续传或完整 role turn 终态。
+- completed AI Chat Seminar 任务卡现在会把证据调用写成 `messageParts.type=tool_call`，把完成角色写成 `messageParts.type=role_turn`，把综合总结写成 `messageParts.type=synthesis`，把完成读者回合写成 `messageParts.type=reader_turn`，把分歧扫描写成 `messageParts.type=contradiction_scan`；历史卡可只靠这些 parts 渲染调用视图、时间线、本轮 evidence、研讨总结、读者参与和 `分歧扫描`，这是 message part migration 的第一组首片，不覆盖完整 scanner 策略。
 - 阅读页/外部 `研讨` 入口没有传入 session id 时，AI Chat 会生成 `seminar-chat-*`，并把同一 `seminarSessionId` 的任务卡写入当前 `conversationV2`，让进程死亡后的恢复路径不只依赖临时内嵌面板。
 - completed AI Chat Seminar 历史任务卡已接入首片 run-scoped `读者参与` composer，用户可在同一张卡里输入回复，并选择让所选角色回应、重新找证据或整理总结；这些动作复用现有 Seminar runtime 的 user-turn ledger，不触发普通 AI Chat 单轮回复。
 - completed AI Chat Seminar 历史任务卡如果已有 disagreement 且仍匹配当前 scoped runtime，会显示 `分歧继续讨论` 快捷区；用户可以默认让 critical 围绕该分歧追加反驳 turn，如果本场没有启用 critical，则退回到当前可用角色回应；也可以围绕该分歧重新找 evidence 并重跑讨论。这是 OpenMAIC-style 多轮交锋的首片交互，不是完整 contradiction scanner。
 - AI Chat Seminar 历史卡的 `分歧` 子视图已从纯字符串列表升级为首片结构化详情：`AiSeminarRunCardDisagreementDetail` 保存分歧正文、关联角色和关联 evidence 摘录；runtime 完成后会从白板 disagreement entry 生成详情。该结构只借鉴 OpenMAIC whiteboard ledger 的“把行动和讨论状态显性化”思路，不复制 OpenMAIC 的白板 action 或 AGPL prompt。
+- completed 分歧会派生 `messageParts.type=contradiction_scan` 第一片，历史卡即使没有 legacy `disagreementDetails` 也能显示 `分歧扫描`、关联角色和关联 evidence；这只是 scanner 结果持久化和恢复首片，不是完整 contradiction gap scan。
 
 当前还不是完整 OpenMAIC-style Chat Seminar：
 
-- AI Chat 嵌入路径的 per-run runtime state 隔离第一片已接入：`aiSeminarRuntimeScopedProvider` 按 `seminarSessionId` 保存独立 turns/evidence/budget/job id；历史任务卡、inline runtime panel、snapshot 回写和异常送审已读取同一 scoped runtime。
+- AI Chat 原生路径的 per-run runtime state 隔离第一片已接入：`aiSeminarRuntimeScopedProvider` 按 `seminarSessionId` 保存独立 turns/evidence/budget/job id；历史任务卡、snapshot 回写和异常送审已读取同一 scoped runtime。
 - 外部/阅读页入口没有传入 session id 时，AI Chat 会生成 `seminar-chat-*`，避免 embedded Seminar 回落到 legacy global runtime，并写入同 session 的 AI Chat 任务卡作为用户可见恢复锚点。
-- scoped 本机恢复缓存使用 `aiSeminarRuntimeStateV1:<seminarSessionId>`，普通 prefs backup 会跳过 global 与 scoped runtime cache；Settings 独立入口仍保留旧 global runtime key。
+- scoped 本机恢复缓存使用 `aiSeminarRuntimeStateV1:<seminarSessionId>`，普通 prefs backup 会跳过 global 与 scoped runtime cache；Settings 只保留角色默认配置入口，不再保留旧独立 runtime 入口。
 - scoped state 只隔离状态，不放开并行模型调用；不同 scoped runtime 的 Seminar model stream 由本机 coordinator 串行化。
-- 历史任务卡已有只读 snapshot、白板正文首片、卡内异常送审首片、异常送审内容计数、候选明细、知识卡候选证据摘录和复习候选综合证据、completed 卡片内 `读者参与` composer、分歧快捷继续讨论入口，以及 `全部 / 证据 / 角色 / 分歧 / 白板 / 总结 / 异常` snapshot 子视图首片，但还不是包含完整异常送审详情表、完整 contradiction 详情 tab 和 schema migration 的完整结构化 Chat message part。
+- 历史任务卡已有只读 snapshot、运行中证据调用首片、运行中角色 partial 发言首片、running role-partial message part 首片、completed tool-call message part 首片、completed evidence message part 首片、completed role-turn message part 首片、completed synthesis message part 首片、completed disagreement message part 首片、completed contradiction-scan message part 首片、completed reader-turn message part 首片、白板正文首片、卡内异常送审首片、异常送审内容计数、候选明细、知识卡候选证据摘录、复习候选综合证据和 AI 预审建议、completed 卡片内 `读者参与` composer、分歧快捷继续讨论入口，以及 `全部 / 调用 / 证据 / 角色 / 分歧 / 白板 / 总结 / 异常` snapshot 子视图首片，但还不是包含完整异常送审详情表和完整 AI reviewer service、完整 contradiction gap scanner/tab、running/askUser composer 和 schema migration 的完整结构化 Chat message part。
+- Contradiction scan 的 overview、下一步建议、优先处理队列和 evidence-gap 首片已接入：无可追踪 evidence refs 的 scan 可显示 `证据缺口` 和 `缺少可追踪证据`，并在多条 scan 混排时先显示 evidence-gap；同一张卡有两条以上 evidence-gap scan 时，会显示 `证据缺口汇总` 和缺口数量；逐条 scan 前会显示 `分歧扫描概览`、总扫描数、证据缺口数和已有证据分歧数，并提示先补证据、再让角色反驳已有证据分歧；`优先处理` 队列会把补证据分歧排在已有证据反驳分歧前；active `refreshEvidence` 状态会保留旧 scan 队列并允许从 evidence-gap 优先项手动补证据；同 session active runtime 下，已有证据反驳优先项可直接触发 `askRole`，默认让 critical 追加反驳并写回 `messageParts.disagreement_rebuttal`。这仍不是完整多因素优先级排序或自动 rebuttal policy。
+- Director `refreshEvidence` cue 已有原生 `messageParts.type=director_state` 首片：证据为空或不可追踪导致 `needsEvidence` 时，历史卡能恢复 `主持人准备重新找证据` 和刷新原因；这仍不是完整 contradiction gap scanner 或 Director 自动 rebuttal loop。
+- 用户触发 `synthesize / 整理总结` 后的 `end` cue 已有原生 `messageParts.type=director_state` 验收：历史卡能恢复 `主持人已完成本轮研讨` 和 synthesis 文本；这仍不是完整 Director 自动调度或独立 `synthesize` pre-execute cue。
 - 还没有完整 contradiction gap scan 和 Director 自动选择的针锋相对 rebuttal loop；当前是用户从卡片分歧快捷区显式触发反驳或重找 evidence。
 - 角色配置还缺空 prompt 显式提示、角色级证据过滤、角色级预算和真实角色工具调用 loop；当前证据提示会合并到整场 evidence bundle，不是每个角色独立检索。
-- 独立详情页仍未迁移到同一个 scoped runtime store；从 card 跳详情页仍属于兼容/调试路径，不是完整 run detail。
-- `seminar_mode` 仍是普通 AI Chat prompt 风格，不等同于真正的 `AiSeminarRuntime`；文案和入口需要持续区分。
+- 旧独立详情页已删除；剩余完整 run detail 必须继续补到同一张 AI Chat run card 内。
+- `seminar_mode` 只保留为空 prompt 的内部 native Seminar marker，不再是普通 AI Chat prompt 风格；文案和入口必须持续指向 AI Chat 原生 `AI 研讨会` run action。
 - OpenMAIC 当前源码没有强制最终总结节点，主要依赖角色自然总结或 Director `END`；PaperTok 必须保留明确的 `synthesizer` 终局节点，因为 Review、KnowledgeCard 和 Spaced Review 都需要结构化输出。
 
 ### 3.3 下一批任务
 
 | TaskID | Goal | Acceptance |
 | --- | --- | --- |
-| E01-C05-T11 | 把 AI Chat Seminar run card 升级为完整 message part。 | 已完成证据、角色、分歧、白板、总结、送审首片、completed 卡片内读者参与首片、分歧快捷继续讨论首片和 snapshot 子视图首片；剩余是送审详情子视图、完整 contradiction 详情 tab、message part schema migration；不把 Seminar 卡片当普通 assistant 回答生成知识卡或记忆。 |
+| E01-C05-T11 | 把 AI Chat Seminar run card 升级为完整 message part。 | 已完成证据、角色、分歧、白板、总结、送审首片、运行中证据调用首片、运行中角色 partial 发言首片、running role-partial message part 首片、completed tool-call message part 首片、completed evidence message part 首片、completed role-turn message part 首片、completed synthesis message part 首片、completed disagreement message part 首片、completed contradiction-scan message part 首片、contradiction evidence-gap 首片、evidence-gap 优先显示首片、多 evidence-gap 汇总首片、分歧扫描概览/下一步建议/优先处理队列首片、active refreshEvidence 保留旧 scan 队列并从 evidence-gap 优先项手动补证据首片、已有证据优先项手动触发 askRole 反驳首片、completed 卡片内读者参与首片、askUser / refreshEvidence director_state 首片、用户触发 synthesize 后的 end director_state 验收、分歧快捷继续讨论首片和 snapshot 子视图首片；剩余是送审详情子视图、完整 contradiction gap scanner/tab、多因素优先级排序、自动 rebuttal policy、独立 `synthesize` pre-execute cue、旧 stream 原地续传和完整 message part schema migration；不把 Seminar 卡片当普通 assistant 回答生成知识卡或记忆。 |
 | E01-C05-T12 | 增加 role profile governance v2。 | 已完成 Settings 全局默认和 AI Chat 本次 run 第一片：角色显示名、custom prompt、启用状态、会话证据提示和只读工具白名单可保存并注入新 run；secret-like prompt、写工具、联网工具、unknown tool 和递归 sub-agent 被拒绝。剩余验收是空 prompt 显式提示、角色级证据过滤、角色级预算和真实角色工具调用 loop。 |
-| E01-C05-T13 | 接入 contradiction gap scan 和 rebuttal turn。 | 首片已完成：completed Chat run card 可从第一条分歧默认让 critical 反驳，critical 未启用时退回当前可用角色；剩余是分歧绑定两个以上 role turns/evidence ids、Director 自动选择重找证据或让指定角色反驳、预算耗尽进入用户确认。 |
-| E01-C05-T14 | 把用户插话接入 Chat run composer。 | 首片已完成：completed Chat run card 内可问某角色、围绕分歧默认让 critical 反驳或退回当前可用角色、围绕分歧重找证据、手动重找证据或整理总结；输入只写 user-turn ledger，不进入 formal evidence。剩余是 running/askUser cue 下的完整 message part 路由。 |
-| E01-C05-T15 | 实现 per-run runtime state 隔离。 | 第一片已完成：AI Chat inline panel、历史任务卡 snapshot、卡内异常送审、卡内读者参与 composer 和 scoped 恢复缓存按 `seminarSessionId` 隔离；剩余是独立详情页迁移到同一 store。 |
-| E01-C05-T16 | 区分 `seminar_mode` prompt 风格和 `AiSeminarRuntime` 多角色研讨。 | UI 文案、设置入口和历史卡都不把普通多视角回复风格描述成多 agent runtime；旧 skill 保留降级用途。 |
+| E01-C05-T13 | 接入 contradiction gap scan 和 rebuttal turn。 | 首片已完成：completed Chat run card 可从第一条分歧默认让 critical 反驳，critical 未启用时退回当前可用角色；completed 分歧会保存 `messageParts.type=contradiction_scan` 并可在历史卡恢复 `分歧扫描`；无可追踪 evidence 的 scan 会标记 `evidence-gap` 并在混排时优先显示；多条 evidence-gap 会聚合显示缺口数量；逐条 scan 前会显示 scanner coverage 概览、下一步建议和手动优先处理队列；active `refreshEvidence` 状态会保留旧 scan 队列，并可从 evidence-gap 优先项手动重找证据；同 session active runtime 下，已有证据优先项可直接触发 critical 反驳并写回 `disagreement_rebuttal`。剩余是分歧绑定两个以上 role turns/evidence ids、Director 自动选择重找证据或让指定角色反驳，以及预算耗尽进入用户确认。 |
+| E01-C05-T14 | 把用户插话接入 Chat run composer。 | 首片已完成：completed Chat run card 内可问某角色、围绕分歧默认让 critical 反驳或退回当前可用角色、围绕分歧重找证据、手动重找证据或整理总结；`askUser` composer、`refreshEvidence` Director cue 和用户触发整理总结后的 `end` cue 已能随 message parts 恢复；输入只写 user-turn ledger，不进入 formal evidence。剩余是独立 `synthesize` pre-execute cue、旧 stream 原地续传和完整 composer schema。 |
+| E01-C05-T15 | 实现 per-run runtime state 隔离。 | 第一片已完成：AI Chat 原生任务卡、历史任务卡 snapshot、卡内异常送审、卡内读者参与 composer 和 scoped 恢复缓存按 `seminarSessionId` 隔离；旧独立详情页已删除，剩余是把完整 run detail 继续补到同一张 AI Chat run card。 |
+| E01-C05-T16 | 区分 native Seminar marker 和 AI Chat 原生多角色研讨。 | UI 文案、设置入口和历史卡都不把普通 skill/prompt 风格描述成多 agent runtime；旧 `seminar_mode` 只作内部 marker，不作为降级 prompt skill。 |
 | E01-C05-T17 | 做 PaperTok evidence board action protocol。 | role turn 可以产生 `claim / counterclaim / evidence_request / open_question / review_candidate`；每个 formal claim 必须绑定 SourceRef 或保持 draft。 |
 
 ## 4. 许可边界
