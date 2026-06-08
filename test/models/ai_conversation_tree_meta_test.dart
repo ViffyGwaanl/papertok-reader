@@ -29,6 +29,26 @@ void main() {
                 snippet: 'The source passage grounds the disagreement.',
               ),
             ],
+            toolCalls: [
+              AiSeminarRunCardToolCallSnapshot(
+                id: 'tool-call-1',
+                toolId: 'semantic_search_current_book',
+                status: 'running',
+                query: 'How should I read this claim?',
+                resultCount: 1,
+                startedAt: 1717516800000,
+                completedAt: 1717516801000,
+                roleIds: ['critical', 'supportive'],
+                actionIds: ['wait-tool-call', 'cancel-tool-call'],
+                evidenceRefs: [
+                  AiSeminarRunCardEvidenceSnapshot(
+                    id: 'e1',
+                    title: 'Chapter 2',
+                    snippet: 'The source passage grounds the disagreement.',
+                  ),
+                ],
+              ),
+            ],
             roleSummaries: [
               AiSeminarRunCardRoleSummary(
                 roleId: 'critical',
@@ -41,12 +61,133 @@ void main() {
                 summary: 'The surrounding paragraph supports it.',
               ),
             ],
+            messageParts: [
+              AiSeminarRunCardMessagePart(
+                type: 'tool_call',
+                id: 'tool-call-1',
+                toolId: 'semantic_search_current_book',
+                status: 'running',
+                label: 'Book semantic search',
+                query: 'How should I read this claim?',
+                resultCount: 1,
+                startedAt: 1717516800000,
+                completedAt: 1717516801000,
+                roleIds: ['critical', 'supportive'],
+                actionIds: ['wait-tool-call', 'cancel-tool-call'],
+                evidenceRefs: [
+                  AiSeminarRunCardEvidenceSnapshot(
+                    id: 'e1',
+                    title: 'Chapter 2',
+                    snippet: 'The source passage grounds the disagreement.',
+                  ),
+                ],
+              ),
+              AiSeminarRunCardMessagePart(
+                type: 'evidence',
+                id: 'evidence-bundle-1',
+                label: 'Evidence snapshot',
+                evidenceRefs: [
+                  AiSeminarRunCardEvidenceSnapshot(
+                    id: 'e1',
+                    title: 'Chapter 2',
+                    snippet: 'The source passage grounds the disagreement.',
+                  ),
+                ],
+              ),
+              AiSeminarRunCardMessagePart(
+                type: 'role_turn',
+                roleId: 'critical',
+                label: 'Critical',
+                text: 'This claim needs a boundary condition.',
+                evidenceRefs: [
+                  AiSeminarRunCardEvidenceSnapshot(
+                    id: 'e1',
+                    title: 'Chapter 2',
+                    snippet: 'The source passage grounds the disagreement.',
+                  ),
+                ],
+              ),
+              AiSeminarRunCardMessagePart(
+                type: 'role_partial',
+                roleId: 'supportive',
+                label: 'Supportive',
+                text: 'Streaming support response...',
+              ),
+              AiSeminarRunCardMessagePart(
+                type: 'agent_status',
+                id: 'status-critical-running',
+                agentRunId: 'seminar-session-1:role-critical-0',
+                parentRunId: 'seminar-session-1',
+                roleId: 'critical',
+                status: 'role-running',
+                label: 'role-running',
+                text: 'Critical is running.',
+                allowedToolIds: [
+                  'semantic_search_current_book',
+                  'notes_search',
+                ],
+              ),
+              AiSeminarRunCardMessagePart(
+                type: 'reader_turn',
+                id: 'user-1',
+                roleId: 'critical',
+                label: 'ask-role',
+                text: 'Please let the critic respond to the scope dispute.',
+                completedAt: 1717516802000,
+              ),
+              AiSeminarRunCardMessagePart(
+                type: 'director_state',
+                id: 'director-seminar-session-1',
+                label: 'ask-user',
+                text: 'Which chapter resolves the edge case?',
+              ),
+              AiSeminarRunCardMessagePart(
+                type: 'reader_composer',
+                id: 'composer-seminar-session-1',
+                label: 'ask-user',
+                text: 'Which chapter resolves the edge case?',
+                defaultActionId: 'ask-role',
+                defaultRoleId: 'critical',
+                selectedActionId: 'ask-role',
+                selectedRoleId: 'supportive',
+                draftText: 'I want the supporter to test this question.',
+                roleIds: ['critical', 'supportive'],
+                actionIds: ['ask-role', 'refresh-evidence', 'synthesize'],
+              ),
+              AiSeminarRunCardMessagePart(
+                type: 'synthesis',
+                text: 'The group agrees on the mechanism but not the scope.',
+                evidenceRefs: [
+                  AiSeminarRunCardEvidenceSnapshot(
+                    id: 'e1',
+                    title: 'Chapter 2',
+                    snippet: 'The source passage grounds the disagreement.',
+                  ),
+                ],
+              ),
+              AiSeminarRunCardMessagePart(
+                type: 'disagreement',
+                agentRunId: 'seminar-session-1:director:disagreement',
+                parentRunId: 'seminar-session-1',
+                text: 'Scope remains disputed.',
+                roleIds: ['critical', 'supportive'],
+                evidenceRefs: [
+                  AiSeminarRunCardEvidenceSnapshot(
+                    id: 'e1',
+                    title: 'Chapter 2',
+                    snippet: 'The source passage grounds the disagreement.',
+                  ),
+                ],
+              ),
+            ],
             synthesisSummary:
                 'The group agrees on the mechanism but not the scope.',
             disagreements: ['Scope remains disputed.'],
             disagreementDetails: [
               AiSeminarRunCardDisagreementDetail(
                 text: 'Scope remains disputed.',
+                agentRunId: 'seminar-session-1:director:disagreement',
+                parentRunId: 'seminar-session-1',
                 roleIds: ['critical', 'supportive'],
                 evidenceRefs: [
                   AiSeminarRunCardEvidenceSnapshot(
@@ -80,8 +221,100 @@ void main() {
       expect(restored.seminarRunCard?.createdAt, 1234);
       expect(restored.seminarRunCard?.snapshot?.evidence.single.title,
           'Chapter 2');
+      expect(restored.seminarRunCard?.snapshot?.toolCalls.single.toolId,
+          'semantic_search_current_book');
+      expect(restored.seminarRunCard?.snapshot?.toolCalls.single.status,
+          'running');
+      expect(restored.seminarRunCard?.snapshot?.toolCalls.single.query,
+          'How should I read this claim?');
+      expect(
+          restored.seminarRunCard?.snapshot?.toolCalls.single.resultCount, 1);
+      expect(restored.seminarRunCard?.snapshot?.toolCalls.single.startedAt,
+          1717516800000);
+      expect(restored.seminarRunCard?.snapshot?.toolCalls.single.completedAt,
+          1717516801000);
+      expect(
+          restored.seminarRunCard?.snapshot?.toolCalls.single.evidenceRefs
+              .single.id,
+          'e1');
+      expect(restored.seminarRunCard?.snapshot?.toolCalls.single.roleIds,
+          ['critical', 'supportive']);
       expect(restored.seminarRunCard?.snapshot?.roleSummaries.first.roleId,
           'critical');
+      final messageParts =
+          restored.seminarRunCard?.snapshot?.messageParts ?? const [];
+      final toolPart =
+          messageParts.singleWhere((part) => part.type == 'tool_call');
+      expect(toolPart.id, 'tool-call-1');
+      expect(toolPart.toolId, 'semantic_search_current_book');
+      expect(toolPart.status, 'running');
+      expect(toolPart.query, 'How should I read this claim?');
+      expect(toolPart.resultCount, 1);
+      expect(toolPart.startedAt, 1717516800000);
+      expect(toolPart.completedAt, 1717516801000);
+      expect(toolPart.roleIds, ['critical', 'supportive']);
+      expect(toolPart.evidenceRefs.single.id, 'e1');
+      final evidencePart =
+          messageParts.singleWhere((part) => part.type == 'evidence');
+      expect(evidencePart.id, 'evidence-bundle-1');
+      expect(evidencePart.label, 'Evidence snapshot');
+      expect(evidencePart.evidenceRefs.single.id, 'e1');
+      final rolePart =
+          messageParts.singleWhere((part) => part.type == 'role_turn');
+      expect(rolePart.roleId, 'critical');
+      expect(rolePart.text, 'This claim needs a boundary condition.');
+      expect(rolePart.evidenceRefs.single.id, 'e1');
+      final partialPart =
+          messageParts.singleWhere((part) => part.type == 'role_partial');
+      expect(partialPart.roleId, 'supportive');
+      expect(partialPart.label, 'Supportive');
+      expect(partialPart.text, 'Streaming support response...');
+      final agentStatusPart =
+          messageParts.singleWhere((part) => part.type == 'agent_status');
+      expect(agentStatusPart.agentRunId, 'seminar-session-1:role-critical-0');
+      expect(agentStatusPart.allowedToolIds, [
+        'semantic_search_current_book',
+        'notes_search',
+      ]);
+      final readerPart =
+          messageParts.singleWhere((part) => part.type == 'reader_turn');
+      expect(readerPart.id, 'user-1');
+      expect(readerPart.roleId, 'critical');
+      expect(readerPart.label, 'ask-role');
+      expect(readerPart.text,
+          'Please let the critic respond to the scope dispute.');
+      final directorPart =
+          messageParts.singleWhere((part) => part.type == 'director_state');
+      expect(directorPart.id, 'director-seminar-session-1');
+      expect(directorPart.label, 'ask-user');
+      expect(directorPart.text, 'Which chapter resolves the edge case?');
+      final composerPart =
+          messageParts.singleWhere((part) => part.type == 'reader_composer');
+      expect(composerPart.id, 'composer-seminar-session-1');
+      expect(composerPart.label, 'ask-user');
+      expect(composerPart.text, 'Which chapter resolves the edge case?');
+      expect(composerPart.defaultActionId, 'ask-role');
+      expect(composerPart.defaultRoleId, 'critical');
+      expect(composerPart.selectedActionId, 'ask-role');
+      expect(composerPart.selectedRoleId, 'supportive');
+      expect(composerPart.draftText,
+          'I want the supporter to test this question.');
+      expect(composerPart.roleIds, ['critical', 'supportive']);
+      expect(composerPart.actionIds,
+          ['ask-role', 'refresh-evidence', 'synthesize']);
+      final synthesisPart =
+          messageParts.singleWhere((part) => part.type == 'synthesis');
+      expect(synthesisPart.text,
+          'The group agrees on the mechanism but not the scope.');
+      expect(synthesisPart.evidenceRefs.single.id, 'e1');
+      final disagreementPart =
+          messageParts.singleWhere((part) => part.type == 'disagreement');
+      expect(disagreementPart.text, 'Scope remains disputed.');
+      expect(disagreementPart.agentRunId,
+          'seminar-session-1:director:disagreement');
+      expect(disagreementPart.parentRunId, 'seminar-session-1');
+      expect(disagreementPart.roleIds, ['critical', 'supportive']);
+      expect(disagreementPart.evidenceRefs.single.id, 'e1');
       expect(restored.seminarRunCard?.snapshot?.synthesisSummary,
           'The group agrees on the mechanism but not the scope.');
       expect(restored.seminarRunCard?.snapshot?.disagreements,
@@ -89,6 +322,9 @@ void main() {
       final restoredDisagreement =
           restored.seminarRunCard?.snapshot?.disagreementDetails.single;
       expect(restoredDisagreement?.text, 'Scope remains disputed.');
+      expect(restoredDisagreement?.agentRunId,
+          'seminar-session-1:director:disagreement');
+      expect(restoredDisagreement?.parentRunId, 'seminar-session-1');
       expect(restoredDisagreement?.roleIds, ['critical', 'supportive']);
       expect(restoredDisagreement?.evidenceRefs.single.id, 'e1');
       expect(restoredDisagreement?.evidenceRefs.single.title, 'Chapter 2');

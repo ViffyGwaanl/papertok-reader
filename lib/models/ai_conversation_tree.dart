@@ -583,11 +583,15 @@ class AiSeminarRunCardRoleSummary {
 class AiSeminarRunCardDisagreementDetail {
   const AiSeminarRunCardDisagreementDetail({
     required this.text,
+    this.agentRunId,
+    this.parentRunId,
     this.roleIds = const <String>[],
     this.evidenceRefs = const <AiSeminarRunCardEvidenceSnapshot>[],
   });
 
   final String text;
+  final String? agentRunId;
+  final String? parentRunId;
   final List<String> roleIds;
   final List<AiSeminarRunCardEvidenceSnapshot> evidenceRefs;
 
@@ -598,6 +602,10 @@ class AiSeminarRunCardDisagreementDetail {
 
   Map<String, dynamic> toJson() => {
         if (text.trim().isNotEmpty) 'text': text.trim(),
+        if (agentRunId?.trim().isNotEmpty == true)
+          'agentRunId': agentRunId!.trim(),
+        if (parentRunId?.trim().isNotEmpty == true)
+          'parentRunId': parentRunId!.trim(),
         if (roleIds.where((item) => item.trim().isNotEmpty).isNotEmpty)
           'roleIds': roleIds
               .map((item) => item.trim())
@@ -615,6 +623,8 @@ class AiSeminarRunCardDisagreementDetail {
   ) {
     return AiSeminarRunCardDisagreementDetail(
       text: json['text']?.toString().trim() ?? '',
+      agentRunId: json['agentRunId']?.toString().trim(),
+      parentRunId: json['parentRunId']?.toString().trim(),
       roleIds: AiSeminarRunCardSnapshot._stringList(json['roleIds']),
       evidenceRefs: (json['evidenceRefs'] as List?)
               ?.whereType<Map>()
@@ -631,10 +641,326 @@ class AiSeminarRunCardDisagreementDetail {
 }
 
 @immutable
+class AiSeminarRunCardToolCallSnapshot {
+  const AiSeminarRunCardToolCallSnapshot({
+    this.id,
+    this.agentRunId,
+    this.parentRunId,
+    required this.toolId,
+    this.status,
+    this.label,
+    this.text,
+    required this.query,
+    required this.resultCount,
+    this.startedAt,
+    this.completedAt,
+    this.roleIds = const <String>[],
+    this.actionIds = const <String>[],
+    this.evidenceRefs = const <AiSeminarRunCardEvidenceSnapshot>[],
+  });
+
+  final String? id;
+  final String? agentRunId;
+  final String? parentRunId;
+  final String toolId;
+  final String? status;
+  final String? label;
+  final String? text;
+  final String query;
+  final int resultCount;
+  final int? startedAt;
+  final int? completedAt;
+  final List<String> roleIds;
+  final List<String> actionIds;
+  final List<AiSeminarRunCardEvidenceSnapshot> evidenceRefs;
+
+  bool get isEmpty =>
+      (id == null || id!.trim().isEmpty) &&
+      (agentRunId == null || agentRunId!.trim().isEmpty) &&
+      (parentRunId == null || parentRunId!.trim().isEmpty) &&
+      toolId.trim().isEmpty &&
+      (status == null || status!.trim().isEmpty) &&
+      (label == null || label!.trim().isEmpty) &&
+      (text == null || text!.trim().isEmpty) &&
+      query.trim().isEmpty &&
+      resultCount <= 0 &&
+      (startedAt == null || startedAt! <= 0) &&
+      (completedAt == null || completedAt! <= 0) &&
+      roleIds.where((item) => item.trim().isNotEmpty).isEmpty &&
+      actionIds.where((item) => item.trim().isNotEmpty).isEmpty &&
+      evidenceRefs.where((item) => !item.isEmpty).isEmpty;
+
+  Map<String, dynamic> toJson() => {
+        if (id != null && id!.trim().isNotEmpty) 'id': id!.trim(),
+        if (agentRunId != null && agentRunId!.trim().isNotEmpty)
+          'agentRunId': agentRunId!.trim(),
+        if (parentRunId != null && parentRunId!.trim().isNotEmpty)
+          'parentRunId': parentRunId!.trim(),
+        if (toolId.trim().isNotEmpty) 'toolId': toolId.trim(),
+        if (status != null && status!.trim().isNotEmpty)
+          'status': status!.trim(),
+        if (label != null && label!.trim().isNotEmpty) 'label': label!.trim(),
+        if (text != null && text!.trim().isNotEmpty) 'text': text!.trim(),
+        if (query.trim().isNotEmpty) 'query': query.trim(),
+        if (resultCount > 0) 'resultCount': resultCount,
+        if (startedAt != null && startedAt! > 0) 'startedAt': startedAt,
+        if (completedAt != null && completedAt! > 0) 'completedAt': completedAt,
+        if (roleIds.where((item) => item.trim().isNotEmpty).isNotEmpty)
+          'roleIds': roleIds
+              .map((item) => item.trim())
+              .where((item) => item.isNotEmpty)
+              .toList(growable: false),
+        if (actionIds.where((item) => item.trim().isNotEmpty).isNotEmpty)
+          'actionIds': actionIds
+              .map((item) => item.trim())
+              .where((item) => item.isNotEmpty)
+              .toList(growable: false),
+        if (evidenceRefs.where((item) => !item.isEmpty).isNotEmpty)
+          'evidenceRefs': evidenceRefs
+              .where((item) => !item.isEmpty)
+              .map((item) => item.toJson())
+              .toList(growable: false),
+      };
+
+  factory AiSeminarRunCardToolCallSnapshot.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    return AiSeminarRunCardToolCallSnapshot(
+      id: _trimmedOrNull(json['id']),
+      agentRunId: _trimmedOrNull(json['agentRunId']),
+      parentRunId: _trimmedOrNull(json['parentRunId']),
+      toolId: json['toolId']?.toString().trim() ?? '',
+      status: _trimmedOrNull(json['status']),
+      label: _trimmedOrNull(json['label']),
+      text: _trimmedOrNull(json['text']),
+      query: json['query']?.toString().trim() ?? '',
+      resultCount: _nonNegativeInt(json['resultCount']),
+      startedAt: _positiveIntOrNull(json['startedAt']),
+      completedAt: _positiveIntOrNull(json['completedAt']),
+      roleIds: AiSeminarRunCardSnapshot._stringList(json['roleIds']),
+      actionIds: AiSeminarRunCardSnapshot._stringList(json['actionIds']),
+      evidenceRefs: (json['evidenceRefs'] as List?)
+              ?.whereType<Map>()
+              .map(
+                (item) => AiSeminarRunCardEvidenceSnapshot.fromJson(
+                  item.map((key, value) => MapEntry(key.toString(), value)),
+                ),
+              )
+              .where((item) => !item.isEmpty)
+              .toList(growable: false) ??
+          const <AiSeminarRunCardEvidenceSnapshot>[],
+    );
+  }
+
+  static String? _trimmedOrNull(Object? value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty) return null;
+    return text;
+  }
+
+  static int _nonNegativeInt(Object? raw) {
+    if (raw is int) return raw < 0 ? 0 : raw;
+    if (raw is num) return raw < 0 ? 0 : raw.toInt();
+    final parsed = int.tryParse(raw?.toString() ?? '') ?? 0;
+    return parsed < 0 ? 0 : parsed;
+  }
+
+  static int? _positiveIntOrNull(Object? raw) {
+    final value = _nonNegativeInt(raw);
+    return value > 0 ? value : null;
+  }
+}
+
+@immutable
+class AiSeminarRunCardMessagePart {
+  const AiSeminarRunCardMessagePart({
+    required this.type,
+    this.id,
+    this.agentRunId,
+    this.parentRunId,
+    this.roleId,
+    this.roleIds = const <String>[],
+    this.actionIds = const <String>[],
+    this.allowedToolIds = const <String>[],
+    this.defaultRoleId,
+    this.defaultActionId,
+    this.selectedRoleId,
+    this.selectedActionId,
+    this.draftText,
+    this.toolId,
+    this.status,
+    this.label,
+    this.text,
+    this.query,
+    this.resultCount = 0,
+    this.startedAt,
+    this.completedAt,
+    this.evidenceRefs = const <AiSeminarRunCardEvidenceSnapshot>[],
+  });
+
+  final String type;
+  final String? id;
+  final String? agentRunId;
+  final String? parentRunId;
+  final String? roleId;
+  final List<String> roleIds;
+  final List<String> actionIds;
+  final List<String> allowedToolIds;
+  final String? defaultRoleId;
+  final String? defaultActionId;
+  final String? selectedRoleId;
+  final String? selectedActionId;
+  final String? draftText;
+  final String? toolId;
+  final String? status;
+  final String? label;
+  final String? text;
+  final String? query;
+  final int resultCount;
+  final int? startedAt;
+  final int? completedAt;
+  final List<AiSeminarRunCardEvidenceSnapshot> evidenceRefs;
+
+  bool get isEmpty =>
+      type.trim().isEmpty &&
+      (id == null || id!.trim().isEmpty) &&
+      (agentRunId == null || agentRunId!.trim().isEmpty) &&
+      (parentRunId == null || parentRunId!.trim().isEmpty) &&
+      (roleId == null || roleId!.trim().isEmpty) &&
+      roleIds.where((item) => item.trim().isNotEmpty).isEmpty &&
+      actionIds.where((item) => item.trim().isNotEmpty).isEmpty &&
+      allowedToolIds.where((item) => item.trim().isNotEmpty).isEmpty &&
+      (defaultRoleId == null || defaultRoleId!.trim().isEmpty) &&
+      (defaultActionId == null || defaultActionId!.trim().isEmpty) &&
+      (selectedRoleId == null || selectedRoleId!.trim().isEmpty) &&
+      (selectedActionId == null || selectedActionId!.trim().isEmpty) &&
+      (draftText == null || draftText!.trim().isEmpty) &&
+      (toolId == null || toolId!.trim().isEmpty) &&
+      (status == null || status!.trim().isEmpty) &&
+      (label == null || label!.trim().isEmpty) &&
+      (text == null || text!.trim().isEmpty) &&
+      (query == null || query!.trim().isEmpty) &&
+      resultCount <= 0 &&
+      (startedAt == null || startedAt! <= 0) &&
+      (completedAt == null || completedAt! <= 0) &&
+      evidenceRefs.where((item) => !item.isEmpty).isEmpty;
+
+  Map<String, dynamic> toJson() => {
+        if (type.trim().isNotEmpty) 'type': type.trim(),
+        if (id != null && id!.trim().isNotEmpty) 'id': id!.trim(),
+        if (agentRunId != null && agentRunId!.trim().isNotEmpty)
+          'agentRunId': agentRunId!.trim(),
+        if (parentRunId != null && parentRunId!.trim().isNotEmpty)
+          'parentRunId': parentRunId!.trim(),
+        if (roleId != null && roleId!.trim().isNotEmpty)
+          'roleId': roleId!.trim(),
+        if (roleIds.where((item) => item.trim().isNotEmpty).isNotEmpty)
+          'roleIds': roleIds
+              .map((item) => item.trim())
+              .where((item) => item.isNotEmpty)
+              .toList(growable: false),
+        if (actionIds.where((item) => item.trim().isNotEmpty).isNotEmpty)
+          'actionIds': actionIds
+              .map((item) => item.trim())
+              .where((item) => item.isNotEmpty)
+              .toList(growable: false),
+        if (allowedToolIds.where((item) => item.trim().isNotEmpty).isNotEmpty)
+          'allowedToolIds': allowedToolIds
+              .map((item) => item.trim())
+              .where((item) => item.isNotEmpty)
+              .toList(growable: false),
+        if (defaultRoleId != null && defaultRoleId!.trim().isNotEmpty)
+          'defaultRoleId': defaultRoleId!.trim(),
+        if (defaultActionId != null && defaultActionId!.trim().isNotEmpty)
+          'defaultActionId': defaultActionId!.trim(),
+        if (selectedRoleId != null && selectedRoleId!.trim().isNotEmpty)
+          'selectedRoleId': selectedRoleId!.trim(),
+        if (selectedActionId != null && selectedActionId!.trim().isNotEmpty)
+          'selectedActionId': selectedActionId!.trim(),
+        if (draftText != null && draftText!.trim().isNotEmpty)
+          'draftText': draftText!.trim(),
+        if (toolId != null && toolId!.trim().isNotEmpty)
+          'toolId': toolId!.trim(),
+        if (status != null && status!.trim().isNotEmpty)
+          'status': status!.trim(),
+        if (label != null && label!.trim().isNotEmpty) 'label': label!.trim(),
+        if (text != null && text!.trim().isNotEmpty) 'text': text!.trim(),
+        if (query != null && query!.trim().isNotEmpty) 'query': query!.trim(),
+        if (resultCount > 0) 'resultCount': resultCount,
+        if (startedAt != null && startedAt! > 0) 'startedAt': startedAt,
+        if (completedAt != null && completedAt! > 0) 'completedAt': completedAt,
+        if (evidenceRefs.where((item) => !item.isEmpty).isNotEmpty)
+          'evidenceRefs': evidenceRefs
+              .where((item) => !item.isEmpty)
+              .map((item) => item.toJson())
+              .toList(growable: false),
+      };
+
+  factory AiSeminarRunCardMessagePart.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    return AiSeminarRunCardMessagePart(
+      type: json['type']?.toString().trim() ?? '',
+      id: _trimmedOrNull(json['id']),
+      agentRunId: _trimmedOrNull(json['agentRunId']),
+      parentRunId: _trimmedOrNull(json['parentRunId']),
+      roleId: _trimmedOrNull(json['roleId']),
+      roleIds: AiSeminarRunCardSnapshot._stringList(json['roleIds']),
+      actionIds: AiSeminarRunCardSnapshot._stringList(json['actionIds']),
+      allowedToolIds:
+          AiSeminarRunCardSnapshot._stringList(json['allowedToolIds']),
+      defaultRoleId: _trimmedOrNull(json['defaultRoleId']),
+      defaultActionId: _trimmedOrNull(json['defaultActionId']),
+      selectedRoleId: _trimmedOrNull(json['selectedRoleId']),
+      selectedActionId: _trimmedOrNull(json['selectedActionId']),
+      draftText: _trimmedOrNull(json['draftText']),
+      toolId: _trimmedOrNull(json['toolId']),
+      status: _trimmedOrNull(json['status']),
+      label: _trimmedOrNull(json['label']),
+      text: _trimmedOrNull(json['text']),
+      query: _trimmedOrNull(json['query']),
+      resultCount: _nonNegativeInt(json['resultCount']),
+      startedAt: _positiveIntOrNull(json['startedAt']),
+      completedAt: _positiveIntOrNull(json['completedAt']),
+      evidenceRefs: (json['evidenceRefs'] as List?)
+              ?.whereType<Map>()
+              .map(
+                (item) => AiSeminarRunCardEvidenceSnapshot.fromJson(
+                  item.map((key, value) => MapEntry(key.toString(), value)),
+                ),
+              )
+              .where((item) => !item.isEmpty)
+              .toList(growable: false) ??
+          const <AiSeminarRunCardEvidenceSnapshot>[],
+    );
+  }
+
+  static String? _trimmedOrNull(Object? value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty) return null;
+    return text;
+  }
+
+  static int _nonNegativeInt(Object? raw) {
+    if (raw is int) return raw < 0 ? 0 : raw;
+    if (raw is num) return raw < 0 ? 0 : raw.toInt();
+    final parsed = int.tryParse(raw?.toString() ?? '') ?? 0;
+    return parsed < 0 ? 0 : parsed;
+  }
+
+  static int? _positiveIntOrNull(Object? raw) {
+    final value = _nonNegativeInt(raw);
+    return value > 0 ? value : null;
+  }
+}
+
+@immutable
 class AiSeminarRunCardSnapshot {
   const AiSeminarRunCardSnapshot({
     this.evidence = const <AiSeminarRunCardEvidenceSnapshot>[],
+    this.toolCalls = const <AiSeminarRunCardToolCallSnapshot>[],
     this.roleSummaries = const <AiSeminarRunCardRoleSummary>[],
+    this.messageParts = const <AiSeminarRunCardMessagePart>[],
     this.synthesisSummary,
     this.disagreements = const <String>[],
     this.disagreementDetails = const <AiSeminarRunCardDisagreementDetail>[],
@@ -642,7 +968,9 @@ class AiSeminarRunCardSnapshot {
   });
 
   final List<AiSeminarRunCardEvidenceSnapshot> evidence;
+  final List<AiSeminarRunCardToolCallSnapshot> toolCalls;
   final List<AiSeminarRunCardRoleSummary> roleSummaries;
+  final List<AiSeminarRunCardMessagePart> messageParts;
   final String? synthesisSummary;
   final List<String> disagreements;
   final List<AiSeminarRunCardDisagreementDetail> disagreementDetails;
@@ -650,7 +978,9 @@ class AiSeminarRunCardSnapshot {
 
   bool get isEmpty =>
       evidence.where((item) => !item.isEmpty).isEmpty &&
+      toolCalls.where((item) => !item.isEmpty).isEmpty &&
       roleSummaries.where((item) => !item.isEmpty).isEmpty &&
+      messageParts.where((item) => !item.isEmpty).isEmpty &&
       (synthesisSummary == null || synthesisSummary!.trim().isEmpty) &&
       disagreements.where((item) => item.trim().isNotEmpty).isEmpty &&
       disagreementDetails.where((item) => !item.isEmpty).isEmpty &&
@@ -662,8 +992,18 @@ class AiSeminarRunCardSnapshot {
               .where((item) => !item.isEmpty)
               .map((item) => item.toJson())
               .toList(growable: false),
+        if (toolCalls.where((item) => !item.isEmpty).isNotEmpty)
+          'toolCalls': toolCalls
+              .where((item) => !item.isEmpty)
+              .map((item) => item.toJson())
+              .toList(growable: false),
         if (roleSummaries.where((item) => !item.isEmpty).isNotEmpty)
           'roleSummaries': roleSummaries
+              .where((item) => !item.isEmpty)
+              .map((item) => item.toJson())
+              .toList(growable: false),
+        if (messageParts.where((item) => !item.isEmpty).isNotEmpty)
+          'messageParts': messageParts
               .where((item) => !item.isEmpty)
               .map((item) => item.toJson())
               .toList(growable: false),
@@ -698,6 +1038,16 @@ class AiSeminarRunCardSnapshot {
               .where((item) => !item.isEmpty)
               .toList(growable: false) ??
           const <AiSeminarRunCardEvidenceSnapshot>[],
+      toolCalls: (json['toolCalls'] as List?)
+              ?.whereType<Map>()
+              .map(
+                (item) => AiSeminarRunCardToolCallSnapshot.fromJson(
+                  item.map((key, value) => MapEntry(key.toString(), value)),
+                ),
+              )
+              .where((item) => !item.isEmpty)
+              .toList(growable: false) ??
+          const <AiSeminarRunCardToolCallSnapshot>[],
       roleSummaries: (json['roleSummaries'] as List?)
               ?.whereType<Map>()
               .map(
@@ -708,6 +1058,16 @@ class AiSeminarRunCardSnapshot {
               .where((item) => !item.isEmpty)
               .toList(growable: false) ??
           const <AiSeminarRunCardRoleSummary>[],
+      messageParts: (json['messageParts'] as List?)
+              ?.whereType<Map>()
+              .map(
+                (item) => AiSeminarRunCardMessagePart.fromJson(
+                  item.map((key, value) => MapEntry(key.toString(), value)),
+                ),
+              )
+              .where((item) => !item.isEmpty)
+              .toList(growable: false) ??
+          const <AiSeminarRunCardMessagePart>[],
       synthesisSummary: _trimmedOrNull(json['synthesisSummary']),
       disagreements: _stringList(json['disagreements']),
       disagreementDetails: (json['disagreementDetails'] as List?)
@@ -782,23 +1142,28 @@ class AiSeminarRunCardMeta {
   final AiSeminarRunCardSnapshot? snapshot;
 
   AiSeminarRunCardMeta copyWith({
+    String? question,
     String? status,
+    List<String>? roleIds,
+    List<String>? evidenceScopeIds,
+    int? maxRounds,
+    List<AiSeminarRoleProfile>? roleProfiles,
     int? sourceRefCount,
     AiSeminarRunCardSnapshot? snapshot,
   }) {
     return AiSeminarRunCardMeta(
-      question: question,
+      question: question ?? this.question,
       sessionId: sessionId,
       bookId: bookId,
       sourceRef: sourceRef,
       status: status ?? this.status,
-      roleIds: roleIds,
-      evidenceScopeIds: evidenceScopeIds,
+      roleIds: roleIds ?? this.roleIds,
+      evidenceScopeIds: evidenceScopeIds ?? this.evidenceScopeIds,
       sourceRefCount: sourceRefCount ?? this.sourceRefCount,
       allowWeb: allowWeb,
       writeRequiresApproval: writeRequiresApproval,
-      maxRounds: maxRounds,
-      roleProfiles: roleProfiles,
+      maxRounds: maxRounds ?? this.maxRounds,
+      roleProfiles: roleProfiles ?? this.roleProfiles,
       createdAt: createdAt,
       snapshot: snapshot ?? this.snapshot,
     );
