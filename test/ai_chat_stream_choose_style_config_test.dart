@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/ai_provider_meta.dart';
-import 'package:papertok_reader/page/settings_page/ai_seminar_config.dart';
 import 'package:papertok_reader/page/settings_page/custom_skills.dart';
 import 'package:papertok_reader/service/ai/skills/custom_skill_store.dart';
 import 'package:papertok_reader/widgets/ai/ai_chat_stream.dart';
@@ -156,7 +155,7 @@ void main() {
   );
 
   testWidgets(
-    'Choose style Seminar row opens Seminar settings without selecting it',
+    'Choose style excludes native Seminar entry from normal skill rows',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(900, 1400));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -199,14 +198,18 @@ void main() {
       await tester.tap(find.text('Choose style'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Seminar Mode'), findsOneWidget);
-      expect(find.text('Seminar settings'), findsOneWidget);
-
-      await tester.tap(find.text('Seminar settings'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(AiSeminarConfigPage), findsOneWidget);
-      expect(find.text('Role prompt profiles'), findsOneWidget);
+      expect(
+        find.text('Seminar Mode'),
+        findsNothing,
+        reason:
+            'AI Seminar is a native AI Chat run entry, not a normal prompt style.',
+      );
+      expect(
+        find.text('Seminar settings'),
+        findsNothing,
+        reason:
+            'Seminar settings should not be surfaced through the normal chat style picker.',
+      );
       expect(Prefs().activeAiSkillId, 'reading_companion');
     },
   );

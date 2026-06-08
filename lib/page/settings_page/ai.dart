@@ -9,7 +9,6 @@ import 'package:papertok_reader/service/ai/ai_services.dart';
 import 'package:papertok_reader/service/ai/skills/ai_skill_registry.dart';
 import 'package:papertok_reader/page/settings_page/ai_provider_center/ai_provider_center_page.dart';
 import 'package:papertok_reader/page/settings_page/ai_seminar_config.dart';
-import 'package:papertok_reader/page/settings_page/ai_seminar_runtime.dart';
 import 'package:papertok_reader/page/settings_page/ai_title_generation.dart';
 import 'package:papertok_reader/page/settings_page/ai_tools.dart';
 import 'package:papertok_reader/page/settings_page/concept_graph_explorer.dart';
@@ -364,16 +363,6 @@ class _AISettingsState extends ConsumerState<AISettings> {
         title: Text(l10n.settingsAiFeatures),
         tiles: [
           SettingsTile.navigation(
-            leading: const Icon(Icons.groups_2_outlined),
-            title: Text(l10n.aiSkillSeminarModeName),
-            description: Text(l10n.aiSkillSeminarModeDesc),
-            onPressed: (context) {
-              Navigator.of(context).push(
-                CupertinoStyleRoute(page: const AiSeminarRuntimePage()),
-              );
-            },
-          ),
-          SettingsTile.navigation(
             leading: const Icon(Icons.tune_outlined),
             title: Text(l10n.seminarConfigTitle),
             description: Text(l10n.seminarConfigEntryDesc),
@@ -635,8 +624,9 @@ class _AISettingsState extends ConsumerState<AISettings> {
       showDragHandle: true,
       builder: (context) {
         final l = L10n.of(context);
-        final skills = AiSkillRegistry.allSkills();
-        final activeId = Prefs().activeAiSkillId;
+        final skills = AiSkillRegistry.selectableActiveSkills();
+        final activeId =
+            AiSkillRegistry.activeChatSkillById(Prefs().activeAiSkillId)?.id;
 
         return SafeArea(
           child: ListView(
@@ -709,8 +699,6 @@ class _AISettingsState extends ConsumerState<AISettings> {
         return l.aiSkillVocabExtractorName;
       case 'reading_companion':
         return l.aiSkillReadingCompanionName;
-      case 'seminar_mode':
-        return l.aiSkillSeminarModeName;
       default:
         return null;
     }
@@ -718,8 +706,9 @@ class _AISettingsState extends ConsumerState<AISettings> {
 
   String? _activeSkillDisplayName(BuildContext context) {
     final activeId = Prefs().activeAiSkillId;
-    return _localizedSkillName(context, activeId) ??
-        AiSkillRegistry.byId(activeId)?.name;
+    final activeSkill = AiSkillRegistry.activeChatSkillById(activeId);
+    if (activeSkill == null) return null;
+    return _localizedSkillName(context, activeSkill.id) ?? activeSkill.name;
   }
 
   String? _localizedSkillDesc(BuildContext context, String? id) {
@@ -736,8 +725,6 @@ class _AISettingsState extends ConsumerState<AISettings> {
         return l.aiSkillVocabExtractorDesc;
       case 'reading_companion':
         return l.aiSkillReadingCompanionDesc;
-      case 'seminar_mode':
-        return l.aiSkillSeminarModeDesc;
       default:
         return null;
     }

@@ -409,6 +409,8 @@ class _RoleToolPicker extends StatelessWidget {
     'semantic_search_current_book',
     'semantic_search_library',
     'notes_search',
+    'memory_search',
+    'concept_graph_search',
     'resolve_cfi',
   ];
 
@@ -444,7 +446,7 @@ class _RoleToolPicker extends StatelessWidget {
             key: ValueKey('seminar-role-${role.asString}-tool-$toolId'),
             dense: true,
             contentPadding: EdgeInsets.zero,
-            title: Text(toolId),
+            title: Text(_seminarToolLabel(context, toolId)),
             value: selectedToolIds.contains(toolId),
             onChanged: (value) => onChanged(toolId, value == true),
           ),
@@ -543,6 +545,48 @@ String _roleProfileLabel(BuildContext context, AiSeminarRole role) {
     AiSeminarRole.supportive => zh ? '支持者' : 'Supportive',
     AiSeminarRole.synthesizer => zh ? '综合者' : 'Synthesizer',
     AiSeminarRole.verifier => zh ? '核验者' : 'Verifier',
+  };
+}
+
+String _seminarToolLabel(BuildContext context, String toolId) {
+  return switch (toolId.trim()) {
+    'semantic_search_current_book' => _configText(
+        context,
+        en: 'Current-book semantic search',
+        zh: '书内语义检索',
+      ),
+    'semantic_search_library' => _configText(
+        context,
+        en: 'Library semantic search',
+        zh: '书库语义检索',
+      ),
+    'notes_search' => _configText(
+        context,
+        en: 'Notes search',
+        zh: '笔记搜索',
+      ),
+    'memory_search' => _configText(
+        context,
+        en: 'Memory search',
+        zh: '记忆搜索',
+      ),
+    'concept_graph_search' => _configText(
+        context,
+        en: 'Concept graph search',
+        zh: '图谱检索',
+      ),
+    'resolve_cfi' => _configText(
+        context,
+        en: 'Source resolver',
+        zh: '原文定位',
+      ),
+    _ => toolId.trim().isNotEmpty
+        ? toolId.trim()
+        : _configText(
+            context,
+            en: 'Read-only tool',
+            zh: '只读工具',
+          ),
   };
 }
 

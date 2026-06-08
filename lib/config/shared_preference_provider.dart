@@ -3971,15 +3971,27 @@ Requirements:
 
   static const int aiSkillCustomPromptMaxChars = 2000;
   static const String _aiSkillPromptProfilesV1Key = 'aiSkillPromptProfilesV1';
+  static const String _nativeSeminarSkillId = 'seminar_mode';
 
   /// Currently active AI skill ID, or null if no skill is active.
-  String? get activeAiSkillId => prefs.getString('activeAiSkillId');
+  String? get activeAiSkillId {
+    final id = prefs.getString('activeAiSkillId')?.trim();
+    if (id == null || id.isEmpty) return null;
+    if (id == _nativeSeminarSkillId) {
+      prefs.remove('activeAiSkillId');
+      return null;
+    }
+    return id;
+  }
 
   set activeAiSkillId(String? id) {
-    if (id == null || id.isEmpty) {
+    final normalizedId = id?.trim();
+    if (normalizedId == null ||
+        normalizedId.isEmpty ||
+        normalizedId == _nativeSeminarSkillId) {
       prefs.remove('activeAiSkillId');
     } else {
-      prefs.setString('activeAiSkillId', id);
+      prefs.setString('activeAiSkillId', normalizedId);
     }
     notifyListeners();
   }

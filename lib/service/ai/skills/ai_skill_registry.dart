@@ -5,6 +5,16 @@ import 'package:papertok_reader/service/ai/skills/custom_skill_store.dart';
 class AiSkillRegistry {
   const AiSkillRegistry._();
 
+  static const nativeSeminarSkillId = 'seminar_mode';
+
+  static const AiSkill nativeSeminarSkill = AiSkill(
+    id: nativeSeminarSkillId,
+    name: 'Native AI Seminar',
+    description: 'Internal marker for the AI Chat native Seminar runtime',
+    iconCodePoint: 0xe7ef, // Icons.groups
+    systemPromptAppend: '',
+  );
+
   static const List<AiSkill> builtInSkills = [
     AiSkill(
       id: 'paper_analyzer',
@@ -150,64 +160,29 @@ Style:
         'Help me understand the main idea here',
       ],
     ),
-    AiSkill(
-      id: 'seminar_mode',
-      name: 'Seminar Mode',
-      description:
-          'Multi-perspective analysis: critical, supportive, and synthesis views',
-      iconCodePoint: 0xe7ef, // Icons.groups
-      systemPromptAppend: '''
-
-## Active Skill: Seminar Mode (研讨会模式)
-You are now in **seminar mode**. Treat the discussion as a PaperTok AI Seminar with exactly these roles:
-
-- `critical`: find logic gaps, counterexamples, weak evidence, and concept confusion.
-- `supportive`: explain the text, build intuition, and give helpful examples.
-- `synthesizer`: summarize consensus, disagreement, open questions, and candidate review items.
-- `verifier`: optional; use only when the user asks for cross-book/high-risk verification or current-book evidence is insufficient.
-
-Default scope:
-- In reading context, prefer the current book and current chapter.
-- Use library search only when the user asks for cross-book context or current-book evidence is insufficient.
-- Do not use web unless the user explicitly asks.
-- Do not write notes, memory, cards, or highlights unless the user explicitly confirms.
-
-### Format for each response:
-
-**Critical**
-Challenge the idea. Identify weaknesses, missing evidence, logical gaps, and potential counterexamples.
-
-**Supportive**
-Defend the idea. Highlight strengths, supporting evidence, practical value, and useful examples.
-
-**Synthesis**
-Integrate both perspectives. State the balanced conclusion, disagreements, and what evidence would resolve them.
-
-**Review Candidates**
-List any candidate KnowledgeCard or review question as a draft suggestion only.
-
-Rules:
-- Each perspective should be substantive (not superficial).
-- Use evidence from the text via tools whenever possible, and keep links/citations visible when tools provide them.
-- The synthesis should add value beyond just averaging the two views.
-- End with a "Key Takeaway" — one sentence the user should remember.
-''',
-      starterMessages: [
-        'Analyze this chapter from multiple perspectives',
-        'Give me a seminar-style discussion of the main thesis',
-        'What would critics and supporters say about this?',
-      ],
-    ),
   ];
 
   /// Returns a skill by ID, or null if not found.
   static AiSkill? byId(String? id) {
     if (id == null || id.isEmpty) return null;
+    if (id == nativeSeminarSkillId) return nativeSeminarSkill;
     for (final skill in allSkills()) {
       if (skill.id == id) return skill;
     }
     return null;
   }
+
+  static AiSkill? activeChatSkillById(String? id) {
+    final skill = byId(id);
+    if (skill == null || !isSelectableActiveSkill(skill)) return null;
+    return skill;
+  }
+
+  static bool isSelectableActiveSkill(AiSkill skill) =>
+      skill.id != nativeSeminarSkillId;
+
+  static List<AiSkill> selectableActiveSkills() =>
+      allSkills().where(isSelectableActiveSkill).toList(growable: false);
 
   /// Returns all available skills (built-in + user-defined).
   static List<AiSkill> allSkills() => [
