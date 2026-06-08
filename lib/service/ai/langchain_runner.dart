@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/enums/ai_tool_risk_level.dart';
 import 'package:papertok_reader/models/ai_agent_governance.dart';
+import 'package:papertok_reader/service/ai/agent_tool_call_event.dart';
 import 'package:papertok_reader/service/ai/ai_usage_tracker.dart';
 import 'package:papertok_reader/service/ai/tool_approval_delegate.dart';
 import 'package:papertok_reader/service/ai/tool_orchestrator.dart';
@@ -278,6 +279,7 @@ class CancelableLangchainRunner {
     int maxIterations = 120,
     AiUsageTracker? usageTracker,
     AiToolPermissionMatrix? toolPermissionMatrix,
+    AgentToolCallObserver? toolCallObserver,
   }) {
     _cancelRequested = false;
     _activeModel = model;
@@ -598,6 +600,7 @@ class CancelableLangchainRunner {
           if (!shouldStop && approvedActions.isNotEmpty) {
             final orchestrator = ToolOrchestrator(
               permissionMatrix: toolPermissionMatrix,
+              onToolCallEvent: toolCallObserver,
             );
 
             await for (final result in orchestrator.execute(
@@ -840,7 +843,8 @@ class _ToolStep {
 
     final buffer = StringBuffer(
       '<tool-step name=\'${_escapeAttr(action.tool)}\' '
-      "status='${status.name}'",
+      "status='${status.name}' "
+      "call_id='${_escapeAttr(action.id)}'",
     );
     final inputEncoded = encode(jsonEncode(action.toolInput));
     if (inputEncoded != null) {

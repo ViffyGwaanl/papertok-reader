@@ -158,7 +158,7 @@ class LangchainAiRegistry {
     if (useAgent) {
       final enabledIds = Prefs().enabledAiToolIds;
       final activeSkillId = Prefs().activeAiSkillId;
-      final selectedSkill = AiSkillRegistry.byId(activeSkillId);
+      final selectedSkill = AiSkillRegistry.activeChatSkillById(activeSkillId);
       final activeAgentScene = agentSceneFor(
         toolScene: scene,
         activeSkill: selectedSkill,

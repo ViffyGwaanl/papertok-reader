@@ -4,8 +4,10 @@ import 'package:langchain_core/language_models.dart';
 import 'package:langchain_core/prompts.dart';
 import 'package:langchain_core/tools.dart';
 import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/service/ai/agent_tool_call_event.dart';
 import 'package:papertok_reader/service/ai/ai_usage_tracker.dart';
 import 'package:papertok_reader/service/ai/langchain_runner.dart';
+import 'package:papertok_reader/service/ai/tool_approval_delegate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -53,6 +55,78 @@ void main() {
     expect(tracker.outputTokens, 3);
     expect(tracker.apiCalls, 1);
   });
+
+  test('agent stream emits tool call events while executing tools', () async {
+    final events = <AgentToolCallEvent>[];
+    final runner = CancelableLangchainRunner(
+      approvalDelegate: (_) async => const ToolApprovalResult(
+        approved: true,
+        remember: false,
+      ),
+    );
+    final model = _ScriptedChatModel([
+      [
+        const ChatResult(
+          id: 'tool-call-chunk',
+          output: AIChatMessage(
+            content: '',
+            toolCalls: [
+              AIChatMessageToolCall(
+                id: 'call-calc-1',
+                name: 'calculator',
+                argumentsRaw: '{"expression":"6*7"}',
+                arguments: {'expression': '6*7'},
+              ),
+            ],
+          ),
+          finishReason: FinishReason.stop,
+          metadata: {},
+          usage: LanguageModelUsage(promptTokens: 10, responseTokens: 1),
+          streaming: false,
+        ),
+      ],
+      [
+        const ChatResult(
+          id: 'final-chunk',
+          output: AIChatMessage(content: 'The result is 42.'),
+          finishReason: FinishReason.stop,
+          metadata: {},
+          usage: LanguageModelUsage(promptTokens: 12, responseTokens: 5),
+          streaming: false,
+        ),
+      ],
+    ]);
+    final calculator = Tool.fromFunction<Map<String, dynamic>, String>(
+      name: 'calculator',
+      description: 'calculator',
+      inputJsonSchema: const {'type': 'object'},
+      func: (input) => '42',
+    );
+
+    final outputs = await runner
+        .streamAgent(
+          model: model,
+          tools: [calculator],
+          history: const [],
+          inputMessage:
+              ChatMessage.humanText('Calculate 6*7') as HumanChatMessage,
+          maxIterations: 3,
+          toolCallObserver: events.add,
+        )
+        .toList();
+
+    expect(outputs.last, contains('<reply'));
+    expect(outputs.join(), contains("call_id='call-calc-1'"));
+    expect(events.map((event) => event.status), [
+      AgentToolCallEventStatus.running,
+      AgentToolCallEventStatus.completed,
+    ]);
+    expect(events.first.callId, 'call-calc-1');
+    expect(events.first.toolId, 'calculator');
+    expect(events.first.input, {'expression': '6*7'});
+    expect(events.last.output, '42');
+    expect(events.last.error, isNull);
+  });
 }
 
 class _FakeChatOptions extends ChatModelOptions {
@@ -86,6 +160,36 @@ class _FakeChatModel extends BaseChatModel<_FakeChatOptions> {
   @override
   Stream<ChatResult> stream(PromptValue input, {_FakeChatOptions? options}) {
     return Stream<ChatResult>.fromIterable(chunks);
+  }
+
+  @override
+  Future<List<int>> tokenize(PromptValue promptValue,
+      {_FakeChatOptions? options}) {
+    return Future.value(const <int>[]);
+  }
+}
+
+class _ScriptedChatModel extends BaseChatModel<_FakeChatOptions> {
+  _ScriptedChatModel(this.streams)
+      : super(defaultOptions: const _FakeChatOptions(model: 'scripted-model'));
+
+  final List<List<ChatResult>> streams;
+  int _streamIndex = 0;
+
+  @override
+  String get modelType => 'scripted-chat-model';
+
+  @override
+  Future<ChatResult> invoke(PromptValue input, {_FakeChatOptions? options}) {
+    final stream = streams[_streamIndex.clamp(0, streams.length - 1)];
+    return Future.value(stream.last);
+  }
+
+  @override
+  Stream<ChatResult> stream(PromptValue input, {_FakeChatOptions? options}) {
+    final index = _streamIndex.clamp(0, streams.length - 1);
+    _streamIndex += 1;
+    return Stream<ChatResult>.fromIterable(streams[index]);
   }
 
   @override
