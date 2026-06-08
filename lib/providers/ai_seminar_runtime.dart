@@ -2,15 +2,30 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 
+import 'package:langchain_core/chat_models.dart';
+import 'package:papertok_reader/enums/ai_tool_scene.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:papertok_reader/config/shared_preference_provider.dart';
+import 'package:papertok_reader/models/ai_agent_governance.dart';
 import 'package:papertok_reader/models/ai_seminar.dart';
 import 'package:papertok_reader/models/review_item.dart';
+import 'package:papertok_reader/providers/concept_graph_explorer.dart';
+import 'package:papertok_reader/service/ai/langchain_ai_config.dart';
+import 'package:papertok_reader/service/ai/langchain_registry.dart';
+import 'package:papertok_reader/service/ai/langchain_runner.dart';
+import 'package:papertok_reader/service/ai/agent_run_graph_store.dart';
 import 'package:papertok_reader/service/ai/ai_seminar_evidence_broker.dart';
 import 'package:papertok_reader/service/ai/ai_seminar_orchestration_service.dart';
 import 'package:papertok_reader/service/ai/ai_seminar_provider_context.dart';
 import 'package:papertok_reader/service/ai/ai_seminar_runtime_service.dart';
+import 'package:papertok_reader/service/ai/ai_seminar_scoped_evidence_retrievers.dart';
+import 'package:papertok_reader/service/ai/index.dart';
+import 'package:papertok_reader/service/ai/sub_agent_runner.dart';
+import 'package:papertok_reader/service/ai/tools/ai_tool_registry.dart';
+import 'package:papertok_reader/service/ai/tools/repository/notes_repository.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
+import 'package:papertok_reader/service/memory/markdown_memory_store.dart';
+import 'package:papertok_reader/service/memory/memory_search_service.dart';
 import 'package:papertok_reader/service/rag/semantic_search_current_book.dart';
 import 'package:papertok_reader/service/rag/semantic_search_library.dart';
 import 'package:papertok_reader/service/review/knowledge_review_adapter.dart';
@@ -23,6 +38,45 @@ final aiSeminarRuntimeServiceProvider = Provider<AiSeminarRuntimeService>(
           SemanticSearchCurrentBook.toolFallbackVectorRowBudget,
     );
     final librarySearch = SemanticSearchLibrary();
+    final conceptGraphStore = ref.watch(conceptGraphStoreProvider);
+    final scopedRetrievers = AiSeminarScopedEvidenceRetrievers(
+      notesSearch: const NotesRepository().searchNotes,
+      memorySearch: (
+        query, {
+        int limit = 20,
+        bool includeLongTerm = true,
+        bool includeDaily = true,
+      }) {
+        final prefs = Prefs();
+        final service = MemorySearchService(
+          store: MarkdownMemoryStore(),
+          semanticEnabled: prefs.memorySemanticSearchEnabledEffective,
+          embeddingProviderId: prefs.aiLibraryIndexProviderIdEffective,
+          embeddingModel: prefs.aiLibraryIndexEmbeddingModelEffective,
+          embeddingsTimeoutSeconds:
+              prefs.aiLibraryIndexEmbeddingsTimeoutSeconds,
+          hybridEnabled: prefs.memorySearchHybridEnabled,
+          vectorWeight: prefs.memorySearchHybridVectorWeight,
+          textWeight: prefs.memorySearchHybridTextWeight,
+          candidateMultiplier: prefs.memorySearchHybridCandidateMultiplier,
+          mmrEnabled: prefs.memorySearchHybridMmrEnabled,
+          mmrLambda: prefs.memorySearchHybridMmrLambda,
+          temporalDecayEnabled: prefs.memorySearchTemporalDecayEnabled,
+          temporalDecayHalfLifeDays:
+              prefs.memorySearchTemporalDecayHalfLifeDays,
+          embeddingCacheEnabled: prefs.memoryEmbeddingCacheEnabled,
+          embeddingCacheMaxChunks: prefs.memoryEmbeddingCacheMaxChunks,
+        );
+        return service.search(
+          query,
+          limit: limit,
+          includeLongTerm: includeLongTerm,
+          includeDaily: includeDaily,
+        );
+      },
+      listConceptNodes: conceptGraphStore.listNodes,
+      listConceptEdges: conceptGraphStore.listEdges,
+    );
     final broker = AiSeminarEvidenceBroker(
       currentBookSearch: (session) {
         final bookId = session.bookId;
@@ -43,14 +97,111 @@ final aiSeminarRuntimeServiceProvider = Provider<AiSeminarRuntimeService>(
         );
       },
       librarySearch: (session) => librarySearch.search(query: session.question),
+      notesSearch: scopedRetrievers.notes,
+      memorySearch: scopedRetrievers.memory,
+      conceptGraphSearch: scopedRetrievers.conceptGraph,
     );
-    const executor = AiSeminarModelRoleExecutor();
+    final executor = AiSeminarModelRoleExecutor(
+      agentGenerateStream: (invocation, messages, {conversationId}) {
+        return streamAiSeminarRoleAgent(
+          ref,
+          invocation,
+          messages,
+          conversationId: conversationId,
+        );
+      },
+    );
     return AiSeminarRuntimeService(
       fetchEvidence: broker.fetch,
       streamRole: executor.streamRole,
+      agentRunGraphStore: AgentRunGraphStore(),
     );
   },
 );
+
+Stream<String> streamAiSeminarRoleAgent(
+  Ref ref,
+  AiSeminarRoleInvocation invocation,
+  List<ChatMessage> messages, {
+  String? conversationId,
+}) {
+  final roleProfile = invocation.session.roleProfileFor(invocation.role);
+  final allowedToolIds = roleProfile?.allowedToolIds ?? const <String>[];
+  final toolScene = invocation.session.bookId == null
+      ? AiToolScene.library
+      : AiToolScene.reading;
+  final permissionMatrix = LangchainAiRegistry.seminarPermissionMatrixFor(
+    toolScene: toolScene,
+  );
+  final effectiveToolIds =
+      AiToolRegistry.sanitizeIds(allowedToolIds).where((toolId) {
+    final rule = permissionMatrix.ruleFor(toolId);
+    return rule != null &&
+        rule.readOnly &&
+        !rule.requiresApproval &&
+        !rule.allowsExternalNetwork &&
+        permissionMatrix.isAllowed(
+          scene: AiAgentScene.seminar,
+          toolId: toolId,
+        );
+  }).toList(growable: false);
+  if (effectiveToolIds.isEmpty) {
+    return aiGenerateStream(
+      messages,
+      useAgent: false,
+      conversationId: conversationId,
+    );
+  }
+
+  final serviceId = Prefs().selectedAiService;
+  final config = Prefs().getAiConfig(serviceId);
+  final providerMeta = Prefs().getAiProviderMeta(serviceId);
+  final registryId =
+      LangchainAiConfig.registryIdentifierForProvider(providerMeta);
+  final langConfig = LangchainAiConfig.fromPrefs(registryId, config);
+  final pipeline = LangchainAiRegistry(ref).resolve(langConfig);
+  final toolContext = AiToolContext(
+    ref: ref,
+    currentBookId: invocation.session.bookId?.toString(),
+    conversationId: conversationId ?? invocation.session.id,
+    agentSceneOverride: AiAgentScene.seminar,
+    toolPermissionMatrix: permissionMatrix,
+  );
+  final tools = AiToolRegistry.buildToolsForScene(
+    toolContext,
+    effectiveToolIds,
+    toolScene,
+    permissionMatrix: permissionMatrix,
+    agentScene: AiAgentScene.seminar,
+  )..sort((a, b) => a.name.compareTo(b.name));
+  if (tools.isEmpty) {
+    return aiGenerateStream(
+      messages,
+      useAgent: false,
+      conversationId: conversationId,
+    );
+  }
+
+  final runner = CancelableLangchainRunner();
+  final systemMessage = messages.isNotEmpty ? messages.first : null;
+  final inputMessage = messages.isNotEmpty && messages.last is HumanChatMessage
+      ? messages.last as HumanChatMessage
+      : ChatMessage.humanText(invocation.prompt) as HumanChatMessage;
+  final history = messages.length > 2
+      ? messages.sublist(1, messages.length - 1)
+      : const <ChatMessage>[];
+  return runner.streamAgent(
+    model: pipeline.model,
+    tools: tools,
+    history: history,
+    inputMessage: inputMessage,
+    conversationId: conversationId ?? invocation.session.id,
+    systemMessage: systemMessage,
+    maxIterations: 8,
+    toolPermissionMatrix: permissionMatrix,
+    toolCallObserver: invocation.toolCallObserver,
+  );
+}
 
 final aiSeminarReviewItemStoreProvider = Provider<ReviewItemStore>((ref) {
   return ReviewItemStore();
@@ -289,6 +440,8 @@ class AiSeminarRuntimeState {
     this.partialRoleText,
     this.turns = const <AiSeminarRoleTurn>[],
     this.whiteboardEntries = const <AiSeminarWhiteboardEntry>[],
+    this.roleAgentThinkingEvents = const <AgentRunEvent>[],
+    this.roleAgentToolCallEvents = const <AgentRunEvent>[],
     this.directorState,
     this.synthesis,
     this.lastRun,
@@ -298,6 +451,7 @@ class AiSeminarRuntimeState {
     this.providerDiagnostics,
     this.backgroundJob,
     this.backgroundJobs = const <AiSeminarBackgroundJobSnapshot>[],
+    this.activeAgentControlRunId,
     this.restoredFromLocalCache = false,
   });
 
@@ -317,6 +471,8 @@ class AiSeminarRuntimeState {
   final String? partialRoleText;
   final List<AiSeminarRoleTurn> turns;
   final List<AiSeminarWhiteboardEntry> whiteboardEntries;
+  final List<AgentRunEvent> roleAgentThinkingEvents;
+  final List<AgentRunEvent> roleAgentToolCallEvents;
   final AiSeminarDirectorState? directorState;
   final AiSeminarSynthesis? synthesis;
   final AiSeminarRun? lastRun;
@@ -326,6 +482,7 @@ class AiSeminarRuntimeState {
   final AiSeminarProviderDiagnostics? providerDiagnostics;
   final AiSeminarBackgroundJobSnapshot? backgroundJob;
   final List<AiSeminarBackgroundJobSnapshot> backgroundJobs;
+  final String? activeAgentControlRunId;
   final bool restoredFromLocalCache;
 
   bool get canCancel => status == AiSeminarRunStatus.running;
@@ -356,6 +513,8 @@ class AiSeminarRuntimeState {
     Object? partialRoleText = _unset,
     List<AiSeminarRoleTurn>? turns,
     List<AiSeminarWhiteboardEntry>? whiteboardEntries,
+    List<AgentRunEvent>? roleAgentThinkingEvents,
+    List<AgentRunEvent>? roleAgentToolCallEvents,
     Object? directorState = _unset,
     Object? synthesis = _unset,
     Object? lastRun = _unset,
@@ -366,6 +525,7 @@ class AiSeminarRuntimeState {
     AiSeminarProviderDiagnostics? providerDiagnostics,
     Object? backgroundJob = _unset,
     List<AiSeminarBackgroundJobSnapshot>? backgroundJobs,
+    Object? activeAgentControlRunId = _unset,
     bool? restoredFromLocalCache,
   }) {
     return AiSeminarRuntimeState(
@@ -380,6 +540,10 @@ class AiSeminarRuntimeState {
           : partialRoleText as String?,
       turns: turns ?? this.turns,
       whiteboardEntries: whiteboardEntries ?? this.whiteboardEntries,
+      roleAgentThinkingEvents:
+          roleAgentThinkingEvents ?? this.roleAgentThinkingEvents,
+      roleAgentToolCallEvents:
+          roleAgentToolCallEvents ?? this.roleAgentToolCallEvents,
       directorState: identical(directorState, _unset)
           ? this.directorState
           : directorState as AiSeminarDirectorState?,
@@ -396,6 +560,9 @@ class AiSeminarRuntimeState {
           ? this.backgroundJob
           : backgroundJob as AiSeminarBackgroundJobSnapshot?,
       backgroundJobs: backgroundJobs ?? this.backgroundJobs,
+      activeAgentControlRunId: identical(activeAgentControlRunId, _unset)
+          ? this.activeAgentControlRunId
+          : activeAgentControlRunId as String?,
       restoredFromLocalCache:
           restoredFromLocalCache ?? this.restoredFromLocalCache,
     );
@@ -411,6 +578,14 @@ class AiSeminarRuntimeState {
         'whiteboardEntries': whiteboardEntries
             .map((entry) => entry.toJson())
             .toList(growable: false),
+        if (roleAgentThinkingEvents.isNotEmpty)
+          'roleAgentThinkingEvents': roleAgentThinkingEvents
+              .map((event) => event.toJson())
+              .toList(growable: false),
+        if (roleAgentToolCallEvents.isNotEmpty)
+          'roleAgentToolCallEvents': roleAgentToolCallEvents
+              .map((event) => event.toJson())
+              .toList(growable: false),
         if (directorState != null) 'directorState': directorState!.toJson(),
         if (synthesis != null) 'synthesis': synthesis!.toJson(),
         if (lastRun != null) 'lastRun': lastRun!.toJson(),
@@ -423,6 +598,8 @@ class AiSeminarRuntimeState {
         if (backgroundJobs.isNotEmpty)
           'backgroundJobs':
               backgroundJobs.map((job) => job.toJson()).toList(growable: false),
+        if (activeAgentControlRunId != null)
+          'activeAgentControlRunId': activeAgentControlRunId,
       };
 
   factory AiSeminarRuntimeState.fromJson(Map<String, dynamic> json) {
@@ -468,6 +645,22 @@ class AiSeminarRuntimeState {
                   ))
               .toList(growable: false) ??
           const <AiSeminarWhiteboardEntry>[],
+      roleAgentThinkingEvents: (json['roleAgentThinkingEvents'] as List?)
+              ?.whereType<Map>()
+              .map((event) => AgentRunEvent.fromJson(
+                    Map<String, dynamic>.from(event),
+                  ))
+              .where((event) => event.type == AgentRunEventType.thinking)
+              .toList(growable: false) ??
+          const <AgentRunEvent>[],
+      roleAgentToolCallEvents: (json['roleAgentToolCallEvents'] as List?)
+              ?.whereType<Map>()
+              .map((event) => AgentRunEvent.fromJson(
+                    Map<String, dynamic>.from(event),
+                  ))
+              .where((event) => event.type == AgentRunEventType.toolCall)
+              .toList(growable: false) ??
+          const <AgentRunEvent>[],
       directorState: json['directorState'] is Map
           ? AiSeminarDirectorState.fromJson(
               Map<String, dynamic>.from(json['directorState'] as Map),
@@ -495,6 +688,7 @@ class AiSeminarRuntimeState {
       backgroundJobs: AiSeminarRuntimeNotifier._normalizeBackgroundJobs(
         backgroundJobs,
       ),
+      activeAgentControlRunId: json['activeAgentControlRunId']?.toString(),
     );
   }
 }
@@ -624,6 +818,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       partialRoleText: null,
       synthesis: null,
       lastRun: null,
+      activeAgentControlRunId: null,
       evidenceBundle: checkpoint?.evidenceBundle,
       turns: checkpoint?.completedTurns ?? const <AiSeminarRoleTurn>[],
       whiteboardEntries: checkpointWhiteboardEntries,
@@ -649,6 +844,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     )) {
       if (!mounted || generation != _generation) return;
       _applyEvent(event);
+      await _recordDirectorWaitingInputEventIfNeeded();
       if (event.type != AiSeminarRuntimeEventType.roleDelta) {
         await _persistState();
       }
@@ -665,6 +861,36 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
         (generation == _generation || continuedAutomaticDirectorLoop)) {
       await _startNextQueuedJobIfAvailable();
     }
+  }
+
+  Future<void> _recordDirectorWaitingInputEventIfNeeded() async {
+    final session = state.session;
+    final directorState = state.directorState;
+    if (session == null || directorState?.needsUserInput != true) return;
+    await _service.recordDirectorWaitingInput(
+      session: session,
+      prompt: _directorWaitingInputPrompt(state),
+    );
+  }
+
+  String? _directorWaitingInputPrompt(AiSeminarRuntimeState runtimeState) {
+    final entries = <AiSeminarWhiteboardEntry>[
+      ...runtimeState.whiteboardEntries,
+      for (final turn in runtimeState.turns) ...turn.whiteboardEntries,
+    ];
+    for (final entry in entries) {
+      if (entry.kind == AiSeminarWhiteboardKind.openQuestion &&
+          entry.text.trim().isNotEmpty) {
+        return entry.text.trim();
+      }
+    }
+    for (final entry in entries) {
+      if (entry.kind == AiSeminarWhiteboardKind.disagreement &&
+          entry.text.trim().isNotEmpty) {
+        return entry.text.trim();
+      }
+    }
+    return null;
   }
 
   Future<void> _resumeRestoredRunningSession() async {
@@ -824,9 +1050,13 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
   void cancel() {
     final session = state.session;
     if (session == null || !state.canCancel) return;
-    _activeToken?.cancel();
-    _activeToken = null;
-    _generation += 1;
+    final activeToken = _activeToken;
+    final waitForActiveStreamCancellation = activeToken != null;
+    activeToken?.cancel();
+    if (!waitForActiveStreamCancellation) {
+      _activeToken = null;
+      _generation += 1;
+    }
     final evidenceBundle = state.evidenceBundle ??
         AiSeminarEvidenceBundle(query: session.question, evidence: const []);
     final completedAt = DateTime.now().millisecondsSinceEpoch;
@@ -864,14 +1094,21 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       status: AiSeminarRunStatus.cancelled,
       activeRole: null,
       partialRoleText: null,
+      roleAgentToolCallEvents: _shutdownActiveRoleAgentToolCallEvents(
+        state.roleAgentToolCallEvents,
+        completedAt: completedAt,
+      ),
       lastRun: run,
+      activeAgentControlRunId: null,
       error: run.message,
       completedAt: run.completedAt,
       backgroundJob: backgroundJob,
       backgroundJobs: _upsertBackgroundJob(state.backgroundJobs, backgroundJob),
     );
     _persistState();
-    unawaited(_startNextQueuedJobIfAvailable());
+    if (!waitForActiveStreamCancellation) {
+      unawaited(_startNextQueuedJobIfAvailable());
+    }
   }
 
   void cancelBackgroundJob(String jobId) {
@@ -1008,6 +1245,160 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       evidenceBundle: evidenceBundle,
       intervention: intervention,
       targetRole: targetRole,
+    );
+  }
+
+  Future<void> runPendingAgentControl({
+    required String childRunId,
+  }) async {
+    final session = state.session;
+    final evidenceBundle = state.evidenceBundle;
+    final normalizedChildRunId = childRunId.trim();
+    if (session == null || evidenceBundle == null) {
+      const message =
+          'AI Seminar agent control requires an active session with evidence.';
+      state = state.copyWith(error: message);
+      throw StateError(message);
+    }
+    if (normalizedChildRunId.isEmpty) return;
+    final lease =
+        await _seminarRuntimeRunCoordinator.acquire(_runtimeRunOwnerId);
+    try {
+      final generation = ++_generation;
+      final token = AiSeminarCancellationToken();
+      _activeToken?.cancel();
+      _activeToken = token;
+      final existingRunningJob =
+          state.backgroundJob?.isActive == true ? state.backgroundJob : null;
+      final startedAt = existingRunningJob?.startedAt ??
+          _nextBackgroundJobStartedAt(DateTime.now().millisecondsSinceEpoch);
+      final backgroundJob = existingRunningJob ??
+          _newBackgroundJob(
+            session,
+            startedAt: startedAt,
+            message: 'AI Seminar pending agent control.',
+          );
+      final runningJob = backgroundJob.copyWith(
+        status: AiSeminarBackgroundJobStatus.running,
+        updatedAt: startedAt,
+        completedAt: null,
+        message: null,
+        session: session,
+      );
+      state = state.copyWith(
+        status: AiSeminarRunStatus.running,
+        activeRole: null,
+        partialRoleText: null,
+        synthesis: null,
+        lastRun: null,
+        activeAgentControlRunId: normalizedChildRunId,
+        restoredFromLocalCache: false,
+        startedAt: state.startedAt ?? startedAt,
+        completedAt: null,
+        backgroundJob: runningJob,
+        backgroundJobs: _upsertBackgroundJob(state.backgroundJobs, runningJob),
+        clearError: true,
+      );
+      await _persistState();
+
+      var receivedControlEvent = false;
+      await for (final event in _service.runPendingAgentControl(
+        session,
+        childRunId: normalizedChildRunId,
+        evidenceBundle: evidenceBundle,
+        priorTurns: state.turns,
+        cancelToken: token,
+        onIntervention: (intervention) {
+          _applyPendingAgentControlIntervention(
+            session: session,
+            evidenceBundle: evidenceBundle,
+            intervention: intervention,
+          );
+        },
+      )) {
+        if (!mounted || generation != _generation) return;
+        receivedControlEvent = true;
+        _applyEvent(event);
+        if (event.type != AiSeminarRuntimeEventType.roleDelta) {
+          await _persistState();
+        }
+        if (event.status?.isTerminal == true) {
+          _activeToken = null;
+        }
+      }
+      if (!mounted || generation != _generation) return;
+      if (state.status == AiSeminarRunStatus.running) {
+        if (receivedControlEvent) {
+          _completeUserDirectedRoleStep(session, evidenceBundle);
+        } else {
+          _failPendingAgentControlStep();
+        }
+        await _persistState();
+      }
+      if (mounted && generation == _generation) {
+        _activeToken = null;
+        await _startNextQueuedJobIfAvailable();
+      }
+    } finally {
+      lease.release();
+    }
+  }
+
+  void _applyPendingAgentControlIntervention({
+    required AiSeminarSessionContract session,
+    required AiSeminarEvidenceBundle evidenceBundle,
+    required AiSeminarUserIntervention intervention,
+  }) {
+    final baseDirector = state.directorState ??
+        _directorStateFor(
+          session: session,
+          evidenceBundle: evidenceBundle,
+          turns: state.turns,
+          whiteboardEntries: state.whiteboardEntries,
+        );
+    if (baseDirector == null) return;
+    state = state.copyWith(
+      directorState: AiSeminarDirectorState(
+        sessionId: baseDirector.sessionId,
+        turnCount: baseDirector.turnCount,
+        completedRoles: baseDirector.completedRoles,
+        completedRoleTurnIds: baseDirector.completedRoleTurnIds,
+        evidenceLedger: baseDirector.evidenceLedger,
+        whiteboardLedger: baseDirector.whiteboardLedger,
+        disagreementIds: baseDirector.disagreementIds,
+        evidenceRefreshCount: baseDirector.evidenceRefreshCount,
+        nextIntent: AiSeminarDirectorNextIntent.runRole,
+        lastUserIntervention: intervention,
+      ),
+      clearError: true,
+    );
+  }
+
+  void _failPendingAgentControlStep() {
+    final completedAt = DateTime.now().millisecondsSinceEpoch;
+    const message =
+        'No pending AI Seminar agent control is available to process.';
+    final backgroundJob = _markBackgroundJob(
+      state.backgroundJob,
+      AiSeminarBackgroundJobStatus.failed,
+      updatedAt: completedAt,
+      completedAt: completedAt,
+      message: message,
+    );
+    state = state.copyWith(
+      status: AiSeminarRunStatus.failed,
+      activeRole: null,
+      partialRoleText: null,
+      synthesis: null,
+      lastRun: null,
+      activeAgentControlRunId: null,
+      completedAt: completedAt,
+      error: message,
+      backgroundJob: backgroundJob,
+      backgroundJobs: _upsertBackgroundJob(
+        state.backgroundJobs,
+        backgroundJob,
+      ),
     );
   }
 
@@ -1299,6 +1690,74 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     }
   }
 
+  static List<AgentRunEvent> _upsertAgentRunEvent(
+    List<AgentRunEvent> events,
+    AgentRunEvent event,
+  ) {
+    final eventId = event.eventId.trim();
+    if (eventId.isEmpty) {
+      return [...events, event];
+    }
+    var replaced = false;
+    final updated = events.map((existing) {
+      if (existing.eventId.trim() != eventId) return existing;
+      replaced = true;
+      return event;
+    }).toList(growable: true);
+    if (!replaced) updated.add(event);
+    return List.unmodifiable(updated);
+  }
+
+  static List<AgentRunEvent> _shutdownActiveRoleAgentToolCallEvents(
+    List<AgentRunEvent> events, {
+    required int completedAt,
+  }) {
+    if (events.isEmpty) return events;
+    final cancelledAt = DateTime.fromMillisecondsSinceEpoch(completedAt);
+    var changed = false;
+    final updated = events.map((event) {
+      if (event.type != AgentRunEventType.toolCall ||
+          _isTerminalRoleAgentToolCallEventStatus(event.status)) {
+        return event;
+      }
+      changed = true;
+      final createdAt = cancelledAt.isAfter(event.createdAt)
+          ? cancelledAt
+          : event.createdAt.add(const Duration(microseconds: 1));
+      return AgentRunEvent(
+        eventId: event.eventId,
+        runId: event.runId,
+        parentRunId: event.parentRunId,
+        type: event.type,
+        createdAt: createdAt,
+        status: SubAgentRunStatus.shutdown,
+        roleId: event.roleId,
+        nickname: event.nickname,
+        toolId: event.toolId,
+        query: event.query,
+        resultCount: event.resultCount,
+        roleIds: event.roleIds,
+        allowedToolIds: event.allowedToolIds,
+        evidenceRefs: event.evidenceRefs,
+        delta: event.delta,
+        result: event.result,
+        error: event.error ?? 'AI Seminar tool call cancelled.',
+        acknowledgedAt: event.acknowledgedAt,
+      );
+    }).toList(growable: false);
+    return changed ? List.unmodifiable(updated) : events;
+  }
+
+  static bool _isTerminalRoleAgentToolCallEventStatus(
+    SubAgentRunStatus? status,
+  ) {
+    return status == SubAgentRunStatus.completed ||
+        status == SubAgentRunStatus.errored ||
+        status == SubAgentRunStatus.interrupted ||
+        status == SubAgentRunStatus.shutdown ||
+        status == SubAgentRunStatus.notFound;
+  }
+
   void _applyEvent(AiSeminarRuntimeEvent event) {
     switch (event.type) {
       case AiSeminarRuntimeEventType.sessionStarted:
@@ -1343,6 +1802,32 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
           partialRoleText: '',
           clearError: true,
         );
+        break;
+      case AiSeminarRuntimeEventType.roleThinking:
+        final agentRunEvent = event.agentRunEvent;
+        if (agentRunEvent != null) {
+          state = state.copyWith(
+            activeRole: event.activeRole ?? state.activeRole,
+            roleAgentThinkingEvents: _upsertAgentRunEvent(
+              state.roleAgentThinkingEvents,
+              agentRunEvent,
+            ),
+            clearError: true,
+          );
+        }
+        break;
+      case AiSeminarRuntimeEventType.roleToolCall:
+        final agentRunEvent = event.agentRunEvent;
+        if (agentRunEvent != null) {
+          state = state.copyWith(
+            activeRole: event.activeRole ?? state.activeRole,
+            roleAgentToolCallEvents: _upsertAgentRunEvent(
+              state.roleAgentToolCallEvents,
+              agentRunEvent,
+            ),
+            clearError: true,
+          );
+        }
         break;
       case AiSeminarRuntimeEventType.roleDelta:
         state = state.copyWith(
@@ -1392,6 +1877,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
           lastRun: event.run,
           activeRole: null,
           partialRoleText: null,
+          activeAgentControlRunId: null,
           completedAt: completedAt,
           backgroundJob: backgroundJob,
           backgroundJobs:
@@ -1431,6 +1917,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
           lastRun: event.run,
           activeRole: null,
           partialRoleText: null,
+          activeAgentControlRunId: null,
           error: event.message,
           completedAt: completedAt,
           backgroundJob: backgroundJob,
@@ -1484,6 +1971,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       lastRun: run,
       activeRole: null,
       partialRoleText: null,
+      activeAgentControlRunId: null,
       completedAt: completedAt,
       directorState: _directorStateFor(
         session: session,
@@ -1665,6 +2153,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       );
       final restored = decodedState.copyWith(
         providerDiagnostics: decodedState.providerDiagnostics ?? diagnostics,
+        activeAgentControlRunId: null,
         restoredFromLocalCache: true,
       );
       if (restored.status == AiSeminarRunStatus.running) {

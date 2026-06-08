@@ -463,7 +463,7 @@ void main() {
     expect(find.text('Concept graph'), findsOneWidget);
   });
 
-  testWidgets('selected-text Seminar action opens inline AI Chat seminar',
+  testWidgets('selected-text Seminar action opens native AI Chat seminar',
       (tester) async {
     TestWidgetsFlutterBinding.ensureInitialized();
     SharedPreferences.setMockInitialValues({});

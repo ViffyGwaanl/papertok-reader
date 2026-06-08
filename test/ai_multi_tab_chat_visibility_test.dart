@@ -11,7 +11,6 @@ import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/main.dart';
 import 'package:papertok_reader/models/ai_provider_meta.dart';
 import 'package:papertok_reader/models/source_ref.dart';
-import 'package:papertok_reader/page/settings_page/ai_seminar_runtime.dart';
 import 'package:papertok_reader/providers/ai_chat.dart';
 import 'package:papertok_reader/service/ai/index.dart';
 import 'package:papertok_reader/widgets/ai/ai_chat_stream.dart';
@@ -74,7 +73,7 @@ void main() {
     expect(secondContainer.read(aiChatUiVisibleProvider), isFalse);
   });
 
-  testWidgets('external openSeminar shows inline runtime panel',
+  testWidgets('external openSeminar creates a native chat card without panel',
       (tester) async {
     await _configureAiProvider();
     final chatKey = GlobalKey<AiMultiTabChatState>();
@@ -106,16 +105,12 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-
-    expect(find.byType(AiSeminarRuntimePanel), findsOneWidget);
     expect(
       find.text('Explain the source-grounded disagreement.'),
       findsAtLeastNWidgets(1),
     );
-    final panel = tester
-        .widget<AiSeminarRuntimePanel>(find.byType(AiSeminarRuntimePanel));
-    expect(panel.embedded, isTrue);
-    expect(panel.initialSessionId, startsWith('seminar-chat-'));
+    expect(find.text('Ready'), findsOneWidget);
+    expect(find.text('Start Seminar'), findsOneWidget);
 
     final chatContainer = ProviderScope.containerOf(
       tester.element(find.byType(AiChatStream).first),
@@ -123,7 +118,7 @@ void main() {
     final seminarCard = chatContainer
         .read(aiChatProvider.notifier)
         .seminarRunCardForMessageIndex(1);
-    expect(seminarCard?.sessionId, panel.initialSessionId);
+    expect(seminarCard?.sessionId, startsWith('seminar-chat-'));
     expect(seminarCard?.bookId, 9);
     expect(seminarCard?.sourceRefCount, 1);
   });

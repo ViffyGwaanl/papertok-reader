@@ -103,12 +103,11 @@ class AiMultiTabChatState extends State<AiMultiTabChat> {
     final tab = _tabs[_activeTab];
     final chatState = tab.chatKey.currentState;
     if (chatState != null) {
-      chatState.openInlineSeminar(
+      chatState.openNativeSeminarCard(
         question: question,
         sessionId: sessionId,
         bookId: bookId,
         sourceRef: sourceRef,
-        persistRunCard: true,
       );
       return;
     }
@@ -147,12 +146,11 @@ class AiMultiTabChatState extends State<AiMultiTabChat> {
         return;
       }
       _pendingSeminarOpen = null;
-      chatState.openInlineSeminar(
+      chatState.openNativeSeminarCard(
         question: pending.question,
         sessionId: pending.sessionId,
         bookId: pending.bookId,
         sourceRef: pending.sourceRef,
-        persistRunCard: true,
       );
     });
   }

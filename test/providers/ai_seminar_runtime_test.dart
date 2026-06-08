@@ -13,7 +13,9 @@ import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/providers/ai_seminar_runtime.dart';
+import 'package:papertok_reader/service/ai/agent_run_graph_store.dart';
 import 'package:papertok_reader/service/ai/ai_seminar_provider_context.dart';
+import 'package:papertok_reader/service/ai/sub_agent_runner.dart';
 import 'package:papertok_reader/service/knowledge/concept_graph_store.dart';
 import 'package:papertok_reader/service/knowledge/knowledge_card_store.dart';
 import 'package:papertok_reader/service/ai/ai_seminar_runtime_service.dart';
@@ -128,6 +130,17 @@ void main() {
       now: () => 1000,
     );
   }
+
+  test('default Seminar runtime service wires persistent agent graph store',
+      () {
+    final source =
+        File('lib/providers/ai_seminar_runtime.dart').readAsStringSync();
+
+    expect(
+      source,
+      contains('agentRunGraphStore: AgentRunGraphStore()'),
+    );
+  });
 
   test('scoped Seminar runtime providers isolate run state', () async {
     configureProvider();
@@ -370,6 +383,210 @@ void main() {
     expect(legacy.session, isNull);
   });
 
+  test('scoped Seminar runtime consumes pending send-input control event',
+      () async {
+    configureProvider();
+    final tempDir = await Directory.systemTemp.createTemp(
+      'seminar-provider-control-inbox-test-',
+    );
+    addTearDown(() async {
+      if (await tempDir.exists()) {
+        await tempDir.delete(recursive: true);
+      }
+    });
+    final graphStore = AgentRunGraphStore(rootDir: tempDir);
+    final prompts = <String>[];
+    const sessionId = 'seminar-runtime-control';
+    final session = AiSeminarSessionContract(
+      id: sessionId,
+      question: 'Continue from the reader input.',
+      roleProfiles: [
+        AiSeminarRoleProfile(
+          role: AiSeminarRole.supportive,
+          enabled: false,
+        ),
+        AiSeminarRoleProfile(
+          role: AiSeminarRole.synthesizer,
+          enabled: false,
+        ),
+      ],
+    );
+    final childRunId = '$sessionId:role-critical-0';
+    await graphStore.upsertFromSeminarSessionStart(
+      session: session,
+      startedAt: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+    await graphStore.upsertRun(AgentRunRecord.fromSeminarRoleStart(
+      session: session,
+      role: AiSeminarRole.critical,
+      runId: childRunId,
+      startedAt: DateTime.fromMillisecondsSinceEpoch(1100),
+    ).copyWith(status: SubAgentRunStatus.waitingInput));
+    await graphStore.upsertEvent(AgentRunEvent(
+      eventId: '$childRunId:user-input:1200',
+      runId: childRunId,
+      parentRunId: sessionId,
+      type: AgentRunEventType.userInput,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(1200),
+      roleId: AiSeminarRole.critical.asString,
+      nickname: seminarRoleNickname(AiSeminarRole.critical),
+      delta: 'Use the reader supplied distinction.',
+    ));
+    final runtimeService = AiSeminarRuntimeService(
+      fetchEvidence: (_) => fail('active runtime should reuse evidence'),
+      streamRole: (invocation, _) async* {
+        prompts.add(invocation.prompt);
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-control-critical',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: 'critical control response',
+            evidenceRefIds: const ['e1'],
+          ),
+        );
+      },
+      agentRunGraphStore: graphStore,
+      now: () => 1500,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(runtimeService),
+      ],
+    );
+    addTearDown(container.dispose);
+    final notifier =
+        container.read(aiSeminarRuntimeScopedProvider(sessionId).notifier);
+    notifier.restore(AiSeminarRuntimeState.initial().copyWith(
+      session: session,
+      status: AiSeminarRunStatus.running,
+      evidenceBundle: bundle(),
+      startedAt: 900,
+      backgroundJob: const AiSeminarBackgroundJobSnapshot(
+        id: 'job-control-inbox',
+        sessionId: sessionId,
+        status: AiSeminarBackgroundJobStatus.running,
+        startedAt: 900,
+        updatedAt: 901,
+      ),
+      backgroundJobs: const [
+        AiSeminarBackgroundJobSnapshot(
+          id: 'job-control-inbox',
+          sessionId: sessionId,
+          status: AiSeminarBackgroundJobStatus.running,
+          startedAt: 900,
+          updatedAt: 901,
+        ),
+      ],
+    ));
+    final activeControlRunIds = <String?>[];
+    final subscription = container.listen<AiSeminarRuntimeState>(
+      aiSeminarRuntimeScopedProvider(sessionId),
+      (_, next) => activeControlRunIds.add(next.activeAgentControlRunId),
+    );
+    addTearDown(subscription.close);
+
+    await notifier.runPendingAgentControl(childRunId: childRunId);
+
+    final state = container.read(aiSeminarRuntimeScopedProvider(sessionId));
+    expect(state.status, AiSeminarRunStatus.completed);
+    expect(activeControlRunIds, contains(childRunId));
+    expect(state.activeAgentControlRunId, isNull);
+    expect(state.turns.single.responseText, 'critical control response');
+    expect(prompts.single, contains('Use the reader supplied distinction.'));
+    final pendingControls = await graphStore.listPendingControlEvents(
+      parentRunId: sessionId,
+      childRunId: childRunId,
+    );
+    expect(pendingControls, isEmpty);
+  });
+
+  test('scoped Seminar runtime fails stale pending control without completing',
+      () async {
+    configureProvider();
+    final tempDir = await Directory.systemTemp.createTemp(
+      'seminar-provider-stale-control-test-',
+    );
+    addTearDown(() async {
+      if (await tempDir.exists()) {
+        await tempDir.delete(recursive: true);
+      }
+    });
+    final graphStore = AgentRunGraphStore(rootDir: tempDir);
+    const sessionId = 'seminar-runtime-stale-control';
+    final session = AiSeminarSessionContract(
+      id: sessionId,
+      question: 'Continue from the reader input.',
+      roleProfiles: [
+        AiSeminarRoleProfile(
+          role: AiSeminarRole.supportive,
+          enabled: false,
+        ),
+        AiSeminarRoleProfile(
+          role: AiSeminarRole.synthesizer,
+          enabled: false,
+        ),
+      ],
+    );
+    final childRunId = '$sessionId:role-critical-0';
+    await graphStore.upsertFromSeminarSessionStart(
+      session: session,
+      startedAt: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+    await graphStore.upsertRun(AgentRunRecord.fromSeminarRoleStart(
+      session: session,
+      role: AiSeminarRole.critical,
+      runId: childRunId,
+      startedAt: DateTime.fromMillisecondsSinceEpoch(1100),
+    ).copyWith(status: SubAgentRunStatus.waitingInput));
+    final runtimeService = AiSeminarRuntimeService(
+      fetchEvidence: (_) => fail('active runtime should reuse evidence'),
+      streamRole: (_, __) => fail('stale control should not run a role'),
+      agentRunGraphStore: graphStore,
+      now: () => 1500,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(runtimeService),
+      ],
+    );
+    addTearDown(container.dispose);
+    final notifier =
+        container.read(aiSeminarRuntimeScopedProvider(sessionId).notifier);
+    notifier.restore(AiSeminarRuntimeState.initial().copyWith(
+      session: session,
+      status: AiSeminarRunStatus.running,
+      evidenceBundle: bundle(),
+      startedAt: 900,
+      backgroundJob: const AiSeminarBackgroundJobSnapshot(
+        id: 'job-stale-control',
+        sessionId: sessionId,
+        status: AiSeminarBackgroundJobStatus.running,
+        startedAt: 900,
+        updatedAt: 901,
+      ),
+      backgroundJobs: const [
+        AiSeminarBackgroundJobSnapshot(
+          id: 'job-stale-control',
+          sessionId: sessionId,
+          status: AiSeminarBackgroundJobStatus.running,
+          startedAt: 900,
+          updatedAt: 901,
+        ),
+      ],
+    ));
+
+    await notifier.runPendingAgentControl(childRunId: childRunId);
+
+    final state = container.read(aiSeminarRuntimeScopedProvider(sessionId));
+    expect(state.status, AiSeminarRunStatus.failed);
+    expect(state.lastRun, isNull);
+    expect(state.synthesis, isNull);
+    expect(state.turns, isEmpty);
+    expect(state.error, contains('No pending AI Seminar agent control'));
+    expect(state.backgroundJob!.status, AiSeminarBackgroundJobStatus.failed);
+  });
+
   test('start captures evidence role turns whiteboard and synthesis', () async {
     configureProvider();
     final container = ProviderContainer(
@@ -475,6 +692,68 @@ void main() {
         state.directorState!.nextIntent, AiSeminarDirectorNextIntent.askUser);
     expect(state.directorState!.needsUserInput, true);
     expect(state.directorState!.whiteboardLedger, contains('open-question-1'));
+  });
+
+  test('director askUser state writes waiting input event to agent graph',
+      () async {
+    configureProvider();
+    final tempDir = await Directory.systemTemp.createTemp(
+      'seminar-provider-waiting-input-test-',
+    );
+    addTearDown(() async {
+      if (await tempDir.exists()) {
+        await tempDir.delete(recursive: true);
+      }
+    });
+    final graphStore = AgentRunGraphStore(rootDir: tempDir);
+    final runtimeService = AiSeminarRuntimeService(
+      fetchEvidence: (_) async => bundle(),
+      streamRole: (invocation, _) async* {
+        yield AiSeminarRoleStreamChunk(
+          completedTurn: AiSeminarRoleTurn(
+            id: 'turn-${invocation.role.asString}',
+            role: invocation.role,
+            prompt: invocation.prompt,
+            responseText: '${invocation.role.asString} response',
+            evidenceRefIds: const ['e1'],
+            whiteboardEntries: [
+              if (invocation.role == AiSeminarRole.synthesizer)
+                const AiSeminarWhiteboardEntry(
+                  id: 'open-question-1',
+                  kind: AiSeminarWhiteboardKind.openQuestion,
+                  text: 'Which interpretation should the reader test next?',
+                  role: AiSeminarRole.synthesizer,
+                  evidenceRefIds: ['e1'],
+                ),
+            ],
+          ),
+        );
+      },
+      agentRunGraphStore: graphStore,
+      now: () => 1000,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        aiSeminarRuntimeServiceProvider.overrideWithValue(runtimeService),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(aiSeminarRuntimeProvider.notifier).start(
+          AiSeminarSessionContract(id: 's-open-question', question: 'Explain.'),
+        );
+
+    final events = await graphStore.listEvents('s-open-question');
+    final waitingEvent = events.singleWhere(
+      (event) => event.status == SubAgentRunStatus.waitingInput,
+    );
+    expect(waitingEvent.roleId, 'director');
+    expect(waitingEvent.nickname, 'Director');
+    expect(
+      waitingEvent.delta,
+      'Which interpretation should the reader test next?',
+    );
+    expect(waitingEvent.roleIds, ['critical', 'supportive']);
   });
 
   test('auto refresh asks reader when disagreement exhausts round budget',
@@ -1885,7 +2164,20 @@ void main() {
       status: AiSeminarRunStatus.running,
       evidenceBundle: bundle(),
       activeRole: AiSeminarRole.critical,
+      activeAgentControlRunId: 's3:role-critical-0',
       partialRoleText: 'critical partial',
+      roleAgentThinkingEvents: [
+        AgentRunEvent(
+          eventId: 's3:role-critical-0:thinking:stream:0',
+          runId: 's3:role-critical-0',
+          parentRunId: 's3',
+          type: AgentRunEventType.thinking,
+          createdAt: DateTime.fromMillisecondsSinceEpoch(1234),
+          roleId: 'critical',
+          nickname: 'Critical',
+          delta: 'Checking note and semantic evidence.',
+        ),
+      ],
       providerDiagnostics: const AiSeminarProviderDiagnostics(
         providerId: 'local-gateway',
         providerName: 'Local Gateway',
@@ -1968,7 +2260,12 @@ void main() {
     expect(restored.status, AiSeminarRunStatus.running);
     expect(restored.evidenceBundle!.evidence.single.id, 'e1');
     expect(restored.activeRole, AiSeminarRole.critical);
+    expect(restored.activeAgentControlRunId, 's3:role-critical-0');
     expect(restored.partialRoleText, 'critical partial');
+    expect(restored.roleAgentThinkingEvents.single.eventId,
+        's3:role-critical-0:thinking:stream:0');
+    expect(restored.roleAgentThinkingEvents.single.delta,
+        'Checking note and semantic evidence.');
     expect(restored.providerDiagnostics!.providerName, 'Local Gateway');
     expect(restored.providerDiagnostics!.modelId, 'gpt-5.5');
     expect(restored.providerDiagnostics!.costUnknownReason,
@@ -2106,6 +2403,7 @@ void main() {
       ],
       evidenceBundle: bundle(),
       activeRole: AiSeminarRole.supportive,
+      activeAgentControlRunId: 's-running-resume:role-critical-0',
       partialRoleText: 'partial text should be ignored',
       turns: const [
         AiSeminarRoleTurn(
@@ -2159,6 +2457,10 @@ void main() {
     container.read(aiSeminarRuntimeProvider);
     await Future<void>.delayed(const Duration(milliseconds: 20));
     expect(invokedRoles, isEmpty);
+    final restoredBeforeResume = container.read(aiSeminarRuntimeProvider);
+    expect(restoredBeforeResume.status, AiSeminarRunStatus.running);
+    expect(restoredBeforeResume.restoredFromLocalCache, isTrue);
+    expect(restoredBeforeResume.activeAgentControlRunId, isNull);
     final resumeFuture = container
         .read(aiSeminarRuntimeProvider.notifier)
         .resumeRestoredRunning();
@@ -2184,6 +2486,7 @@ void main() {
       AiSeminarBackgroundJobStatus.completed,
     );
     expect(restored.activeRole, isNull);
+    expect(restored.activeAgentControlRunId, isNull);
     expect(restored.partialRoleText, isNull);
     expect(restored.turns.map((turn) => turn.role), [
       AiSeminarRole.critical,
