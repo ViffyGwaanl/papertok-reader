@@ -126,6 +126,22 @@ class AiToolPermissionMatrix {
       scenes: {AiAgentScene.reading, AiAgentScene.review, AiAgentScene.seminar},
     ),
     AiToolPermissionRule(
+      toolId: 'memory_search',
+      scenes: {
+        AiAgentScene.reading,
+        AiAgentScene.library,
+        AiAgentScene.seminar
+      },
+    ),
+    AiToolPermissionRule(
+      toolId: 'concept_graph_search',
+      scenes: {
+        AiAgentScene.reading,
+        AiAgentScene.library,
+        AiAgentScene.seminar
+      },
+    ),
+    AiToolPermissionRule(
       toolId: 'create_note',
       scenes: {AiAgentScene.reading},
       requiresApproval: true,
@@ -137,13 +153,6 @@ class AiToolPermissionMatrix {
       scenes: {AiAgentScene.reading},
       requiresApproval: true,
       readOnly: false,
-      concurrencySafe: false,
-    ),
-    AiToolPermissionRule(
-      toolId: 'spawn_sub_agent',
-      scenes: {AiAgentScene.reading, AiAgentScene.seminar},
-      requiresApproval: false,
-      readOnly: true,
       concurrencySafe: false,
     ),
     AiToolPermissionRule(
@@ -163,10 +172,12 @@ class AiToolPermissionMatrix {
       scenes: {AiAgentScene.seminar},
     ),
     AiToolPermissionRule(
-      toolId: 'spawn_sub_agent',
+      toolId: 'memory_search',
       scenes: {AiAgentScene.seminar},
-      readOnly: true,
-      concurrencySafe: false,
+    ),
+    AiToolPermissionRule(
+      toolId: 'concept_graph_search',
+      scenes: {AiAgentScene.seminar},
     ),
   ]);
 }
@@ -294,6 +305,10 @@ class CustomSkillContract {
         errors.add('tool id is required');
         continue;
       }
+      if (normalizedToolId == 'spawn_sub_agent') {
+        errors.add('custom skills cannot request recursive sub-agent access');
+        continue;
+      }
       final rule = matrix.ruleFor(normalizedToolId);
       if (rule == null) {
         errors.add('unknown tool: $normalizedToolId');
@@ -305,9 +320,6 @@ class CustomSkillContract {
       if (!rule.readOnly) {
         errors
             .add('custom skills cannot request write tool: $normalizedToolId');
-      }
-      if (normalizedToolId == 'spawn_sub_agent') {
-        errors.add('custom skills cannot request recursive sub-agent access');
       }
     }
     return errors;

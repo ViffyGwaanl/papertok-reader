@@ -20,6 +20,7 @@ import 'package:papertok_reader/service/ai/tools/calendar_list_calendars_tool.da
 import 'package:papertok_reader/service/ai/tools/calendar_list_events_tool.dart';
 import 'package:papertok_reader/service/ai/tools/calendar_update_event_tool.dart';
 import 'package:papertok_reader/service/ai/tools/chapter_content_by_href_tool.dart';
+import 'package:papertok_reader/service/ai/tools/concept_graph_search_tool.dart';
 import 'package:papertok_reader/service/ai/tools/current_book_toc_tool.dart';
 import 'package:papertok_reader/service/ai/tools/current_chapter_content_tool.dart';
 import 'package:papertok_reader/service/ai/tools/resolve_cfi_tool.dart';
@@ -241,6 +242,7 @@ class AiToolRegistry {
     notesSearchToolDefinition,
     readingHistoryToolDefinition,
     semanticSearchLibraryToolDefinition,
+    conceptGraphSearchToolDefinition,
     tagsListToolDefinition,
     booksTagsListToolDefinition,
     applyBookTagsToolDefinition,
@@ -277,6 +279,7 @@ class AiToolRegistry {
     'notes_search': {AiToolScene.library, AiToolScene.reading},
     'reading_history': {AiToolScene.library},
     'semantic_search_library': {AiToolScene.library},
+    'concept_graph_search': {AiToolScene.library, AiToolScene.reading},
     'tags_list': {AiToolScene.library},
     'books_tags_list': {AiToolScene.library},
     'apply_book_tags': {AiToolScene.library},

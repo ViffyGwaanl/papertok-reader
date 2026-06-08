@@ -10,16 +10,30 @@ typedef AiSeminarLibrarySearch = Future<AiSemanticSearchLibraryResult> Function(
   AiSeminarSessionContract session,
 );
 
+typedef AiSeminarScopedEvidenceSearch = Future<List<AiSeminarEvidence>>
+    Function(
+  AiSeminarSessionContract session,
+);
+
 class AiSeminarEvidenceBroker {
   const AiSeminarEvidenceBroker({
     required AiSeminarCurrentBookSearch currentBookSearch,
     required AiSeminarLibrarySearch librarySearch,
+    AiSeminarScopedEvidenceSearch? notesSearch,
+    AiSeminarScopedEvidenceSearch? memorySearch,
+    AiSeminarScopedEvidenceSearch? conceptGraphSearch,
     this.minCurrentBookEvidence = 1,
   })  : _currentBookSearch = currentBookSearch,
-        _librarySearch = librarySearch;
+        _librarySearch = librarySearch,
+        _notesSearch = notesSearch,
+        _memorySearch = memorySearch,
+        _conceptGraphSearch = conceptGraphSearch;
 
   final AiSeminarCurrentBookSearch _currentBookSearch;
   final AiSeminarLibrarySearch _librarySearch;
+  final AiSeminarScopedEvidenceSearch? _notesSearch;
+  final AiSeminarScopedEvidenceSearch? _memorySearch;
+  final AiSeminarScopedEvidenceSearch? _conceptGraphSearch;
   final int minCurrentBookEvidence;
 
   Future<AiSeminarEvidenceBundle> fetch(
@@ -45,6 +59,25 @@ class AiSeminarEvidenceBroker {
       evidence.addAll(_fromLibrary(library, offset: evidence.length));
     }
 
+    await _appendScopedEvidence(
+      evidence,
+      session,
+      AiSeminarEvidenceScope.notes,
+      _notesSearch,
+    );
+    await _appendScopedEvidence(
+      evidence,
+      session,
+      AiSeminarEvidenceScope.memory,
+      _memorySearch,
+    );
+    await _appendScopedEvidence(
+      evidence,
+      session,
+      AiSeminarEvidenceScope.conceptGraph,
+      _conceptGraphSearch,
+    );
+
     return AiSeminarEvidenceBundle(
       query: session.question,
       evidence: List.unmodifiable(evidence),
@@ -55,6 +88,20 @@ class AiSeminarEvidenceBroker {
     return session.bookId != null &&
         (session.scopes.contains(AiSeminarEvidenceScope.currentBook) ||
             session.scopes.contains(AiSeminarEvidenceScope.currentChapter));
+  }
+
+  static Future<void> _appendScopedEvidence(
+    List<AiSeminarEvidence> evidence,
+    AiSeminarSessionContract session,
+    AiSeminarEvidenceScope scope,
+    AiSeminarScopedEvidenceSearch? search,
+  ) async {
+    if (search == null || !session.scopes.contains(scope)) return;
+    final results = await search(session);
+    for (final item in results) {
+      if (item.scope != scope || !item.isTraceable) continue;
+      evidence.add(item);
+    }
   }
 
   static List<AiSeminarEvidence> _fromSessionSourceRefs(

@@ -20,6 +20,18 @@ void main() {
         sourceKind: SourceRefKind.libraryRag,
       );
 
+  SourceRef scopedRef({
+    required SourceRefKind kind,
+    required String text,
+    String href = 'Text/ch.xhtml',
+  }) =>
+      SourceRef(
+        bookId: 7,
+        href: href,
+        sourceTextSnippet: text,
+        sourceKind: kind,
+      );
+
   test('uses current book evidence and does not call library by default',
       () async {
     var libraryCalls = 0;
@@ -251,6 +263,142 @@ void main() {
 
     expect(libraryCalls, 1);
     expect(bundle.evidence.single.scope, AiSeminarEvidenceScope.library);
+  });
+
+  test('uses notes memory and concept graph retrievers for enabled scopes',
+      () async {
+    final calls = <String>[];
+    final broker = AiSeminarEvidenceBroker(
+      minCurrentBookEvidence: 0,
+      currentBookSearch: (_) async => const AiSemanticSearchResult(
+        ok: true,
+        bookId: 7,
+        query: 'argument',
+        evidence: [],
+      ),
+      librarySearch: (_) async => const AiSemanticSearchLibraryResult(
+        ok: true,
+        query: 'argument',
+        evidence: [],
+      ),
+      notesSearch: (_) async {
+        calls.add('notes');
+        return [
+          AiSeminarEvidence(
+            id: 'notes-1',
+            scope: AiSeminarEvidenceScope.notes,
+            text: 'Saved note passage.',
+            sourceRef: scopedRef(
+              kind: SourceRefKind.note,
+              text: 'Saved note passage.',
+            ),
+          ),
+        ];
+      },
+      memorySearch: (_) async {
+        calls.add('memory');
+        return [
+          AiSeminarEvidence(
+            id: 'memory-1',
+            scope: AiSeminarEvidenceScope.memory,
+            text: 'Applied memory passage.',
+            sourceRef: scopedRef(
+              kind: SourceRefKind.memory,
+              text: 'Applied memory passage.',
+            ),
+          ),
+        ];
+      },
+      conceptGraphSearch: (_) async {
+        calls.add('conceptGraph');
+        return [
+          AiSeminarEvidence(
+            id: 'concept-1',
+            scope: AiSeminarEvidenceScope.conceptGraph,
+            text: 'Concept node summary.',
+            sourceRef: scopedRef(
+              kind: SourceRefKind.currentBookRag,
+              text: 'Concept node summary.',
+            ),
+          ),
+        ];
+      },
+    );
+
+    final bundle = await broker.fetch(
+      AiSeminarSessionContract(
+        id: 's-scoped',
+        question: 'argument',
+        bookId: 7,
+        scopes: const [
+          AiSeminarEvidenceScope.currentBook,
+          AiSeminarEvidenceScope.notes,
+          AiSeminarEvidenceScope.memory,
+          AiSeminarEvidenceScope.conceptGraph,
+        ],
+      ),
+    );
+
+    expect(calls, ['notes', 'memory', 'conceptGraph']);
+    expect(
+      bundle.evidence.map((e) => e.scope),
+      [
+        AiSeminarEvidenceScope.notes,
+        AiSeminarEvidenceScope.memory,
+        AiSeminarEvidenceScope.conceptGraph,
+      ],
+    );
+    expect(
+      bundle.evidence.map((e) => e.sourceRef.sourceKind),
+      [
+        SourceRefKind.note,
+        SourceRefKind.memory,
+        SourceRefKind.currentBookRag,
+      ],
+    );
+    expect(bundle.allEvidenceTraceable, true);
+  });
+
+  test('does not call scoped retrievers when their scopes are disabled',
+      () async {
+    var scopedCalls = 0;
+    final broker = AiSeminarEvidenceBroker(
+      minCurrentBookEvidence: 0,
+      currentBookSearch: (_) async => const AiSemanticSearchResult(
+        ok: true,
+        bookId: 7,
+        query: 'argument',
+        evidence: [],
+      ),
+      librarySearch: (_) async => const AiSemanticSearchLibraryResult(
+        ok: true,
+        query: 'argument',
+        evidence: [],
+      ),
+      notesSearch: (_) async {
+        scopedCalls += 1;
+        return const <AiSeminarEvidence>[];
+      },
+      memorySearch: (_) async {
+        scopedCalls += 1;
+        return const <AiSeminarEvidence>[];
+      },
+      conceptGraphSearch: (_) async {
+        scopedCalls += 1;
+        return const <AiSeminarEvidence>[];
+      },
+    );
+
+    await broker.fetch(
+      AiSeminarSessionContract(
+        id: 's-no-scoped',
+        question: 'argument',
+        bookId: 7,
+        scopes: const [AiSeminarEvidenceScope.currentBook],
+      ),
+    );
+
+    expect(scopedCalls, 0);
   });
 
   test('drops hash-only search results from the formal evidence bundle',

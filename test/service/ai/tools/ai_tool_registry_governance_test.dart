@@ -29,8 +29,9 @@ void main() {
     final ids = definitions.map((definition) => definition.id).toSet();
     expect(ids, contains('current_reading_metadata'));
     expect(ids, contains('semantic_search_current_book'));
+    expect(ids, contains('concept_graph_search'));
     expect(ids, isNot(contains('semantic_search_library')));
-    expect(ids, contains('spawn_sub_agent'));
+    expect(ids, isNot(contains('spawn_sub_agent')));
     expect(ids, isNot(contains('create_note')));
     expect(ids, isNot(contains('create_highlight')));
     expect(ids, isNot(contains('web_search')));
@@ -46,7 +47,9 @@ void main() {
 
     final ids = definitions.map((definition) => definition.id).toSet();
     expect(ids, contains('semantic_search_library'));
+    expect(ids, contains('concept_graph_search'));
     expect(ids, isNot(contains('semantic_search_current_book')));
+    expect(ids, isNot(contains('spawn_sub_agent')));
     expect(ids, isNot(contains('web_search')));
   });
 
@@ -54,6 +57,7 @@ void main() {
     final ids = AiToolRegistry.sanitizeIdsForAgentScene(
       [
         'semantic_search_current_book',
+        'concept_graph_search',
         'create_note',
         'web_search',
         'unknown_tool',
@@ -61,7 +65,7 @@ void main() {
       AiAgentScene.seminar,
     );
 
-    expect(ids, ['semantic_search_current_book']);
+    expect(ids, ['semantic_search_current_book', 'concept_graph_search']);
   });
 
   test('governance can further restrict concurrency safety', () {

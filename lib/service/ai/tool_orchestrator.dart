@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:papertok_reader/models/ai_agent_governance.dart';
+import 'package:papertok_reader/service/ai/agent_tool_call_event.dart';
 import 'package:papertok_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:papertok_reader/utils/log/common.dart';
 import 'package:langchain/langchain.dart';
@@ -32,10 +33,12 @@ class ToolOrchestrator {
   const ToolOrchestrator({
     this.maxConcurrency = 5,
     this.permissionMatrix,
+    this.onToolCallEvent,
   });
 
   final int maxConcurrency;
   final AiToolPermissionMatrix? permissionMatrix;
+  final AgentToolCallObserver? onToolCallEvent;
 
   /// Execute [actions] using tools from [toolMap], respecting concurrency.
   ///
@@ -121,12 +124,26 @@ class ToolOrchestrator {
     }
 
     final sw = Stopwatch()..start();
+    await _emitToolCallEvent(AgentToolCallEvent(
+      callId: action.id,
+      toolId: action.tool,
+      input: Map<String, dynamic>.unmodifiable(action.toolInput),
+      status: AgentToolCallEventStatus.running,
+    ));
     try {
       final result = await executeSingle(action, tool);
       sw.stop();
       AnxLog.info(
         'ToolOrchestrator: ${action.tool} completed in ${sw.elapsedMilliseconds}ms',
       );
+      await _emitToolCallEvent(AgentToolCallEvent(
+        callId: action.id,
+        toolId: action.tool,
+        input: Map<String, dynamic>.unmodifiable(action.toolInput),
+        status: AgentToolCallEventStatus.completed,
+        output: result,
+        durationMs: sw.elapsedMilliseconds,
+      ));
       return OrchestratedToolResult(
         action: action,
         observation: result,
@@ -136,6 +153,14 @@ class ToolOrchestrator {
     } catch (error) {
       sw.stop();
       AnxLog.severe('ToolOrchestrator: ${action.tool} failed: $error');
+      await _emitToolCallEvent(AgentToolCallEvent(
+        callId: action.id,
+        toolId: action.tool,
+        input: Map<String, dynamic>.unmodifiable(action.toolInput),
+        status: AgentToolCallEventStatus.errored,
+        error: error.toString(),
+        durationMs: sw.elapsedMilliseconds,
+      ));
       return OrchestratedToolResult(
         action: action,
         observation: 'Error: $error',
@@ -143,6 +168,12 @@ class ToolOrchestrator {
         durationMs: sw.elapsedMilliseconds,
       );
     }
+  }
+
+  Future<void> _emitToolCallEvent(AgentToolCallEvent event) async {
+    final observer = onToolCallEvent;
+    if (observer == null) return;
+    await observer(event);
   }
 }
 

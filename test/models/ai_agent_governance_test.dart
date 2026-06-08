@@ -49,11 +49,10 @@ void main() {
     const policy = SubAgentGovernancePolicy();
     const matrix = AiToolPermissionMatrix.defaultMatrix;
     final readRule = matrix.ruleFor('semantic_search_current_book')!;
-    final spawnRule = matrix.ruleFor('spawn_sub_agent')!;
 
+    expect(matrix.ruleFor('spawn_sub_agent'), isNull);
     expect(policy.canUseToolInsideSubAgent('spawn_sub_agent'), false);
     expect(policy.canRunInParallel(readRule), true);
-    expect(policy.canRunInParallel(spawnRule), false);
   });
 
   test('custom skills cannot request unknown tools or recursive subagents', () {

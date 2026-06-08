@@ -1,4 +1,5 @@
 import 'package:papertok_reader/models/ai_seminar.dart';
+import 'package:papertok_reader/service/ai/agent_tool_call_event.dart';
 
 typedef AiSeminarEvidenceFetcher = Future<AiSeminarEvidenceBundle> Function(
   AiSeminarSessionContract session,
@@ -17,6 +18,7 @@ class AiSeminarRoleInvocation {
     required this.evidenceBundle,
     required this.priorTurns,
     required this.prompt,
+    this.toolCallObserver,
   });
 
   final AiSeminarSessionContract session;
@@ -24,6 +26,7 @@ class AiSeminarRoleInvocation {
   final AiSeminarEvidenceBundle evidenceBundle;
   final List<AiSeminarRoleTurn> priorTurns;
   final String prompt;
+  final AgentToolCallObserver? toolCallObserver;
 }
 
 class AiSeminarOrchestrationService {
@@ -55,20 +58,26 @@ class AiSeminarOrchestrationService {
       );
     }
 
-    final traceableEvidenceIds = _traceableEvidenceIds(evidenceBundle);
     final turns = <AiSeminarRoleTurn>[];
     for (final role in executionOrder(session.roles)) {
       try {
+        final roleEvidenceBundle = evidenceBundleForRole(
+          session: session,
+          role: role,
+          evidenceBundle: evidenceBundle,
+        );
+        final roleTraceableEvidenceIds =
+            _traceableEvidenceIds(roleEvidenceBundle);
         final turn = await _executeRole(
           AiSeminarRoleInvocation(
             session: session,
             role: role,
-            evidenceBundle: evidenceBundle,
+            evidenceBundle: roleEvidenceBundle,
             priorTurns: List.unmodifiable(turns),
             prompt: promptForRole(
               session: session,
               role: role,
-              evidenceBundle: evidenceBundle,
+              evidenceBundle: roleEvidenceBundle,
               priorTurns: turns,
             ),
           ),
@@ -96,7 +105,7 @@ class AiSeminarOrchestrationService {
             message: turn.error,
           );
         }
-        if (!turn.hasTraceableEvidence(traceableEvidenceIds)) {
+        if (!turn.hasTraceableEvidence(roleTraceableEvidenceIds)) {
           return AiSeminarRun(
             session: session,
             status: AiSeminarRunStatus.needsEvidence,
@@ -153,6 +162,23 @@ class AiSeminarOrchestrationService {
     out.remove(AiSeminarRole.synthesizer);
     out.add(AiSeminarRole.synthesizer);
     return List.unmodifiable(out);
+  }
+
+  static AiSeminarEvidenceBundle evidenceBundleForRole({
+    required AiSeminarSessionContract session,
+    required AiSeminarRole role,
+    required AiSeminarEvidenceBundle evidenceBundle,
+  }) {
+    final profile = session.roleProfileFor(role);
+    final scopes = profile?.evidenceScopes ?? const <AiSeminarEvidenceScope>[];
+    if (scopes.isEmpty) return evidenceBundle;
+    final evidence = evidenceBundle.evidence
+        .where((item) => _scopeAllowsEvidence(scopes, item.scope))
+        .toList(growable: false);
+    return AiSeminarEvidenceBundle(
+      query: evidenceBundle.query,
+      evidence: List.unmodifiable(evidence),
+    );
   }
 
   static String promptForRole({
@@ -254,5 +280,14 @@ class AiSeminarOrchestrationService {
         .map((item) => item.id.trim())
         .where((id) => id.isNotEmpty)
         .toSet();
+  }
+
+  static bool _scopeAllowsEvidence(
+    List<AiSeminarEvidenceScope> allowedScopes,
+    AiSeminarEvidenceScope evidenceScope,
+  ) {
+    if (allowedScopes.contains(evidenceScope)) return true;
+    return evidenceScope == AiSeminarEvidenceScope.currentBook &&
+        allowedScopes.contains(AiSeminarEvidenceScope.currentChapter);
   }
 }

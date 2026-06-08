@@ -23,6 +23,29 @@ void main() {
         ],
       );
 
+  AiSeminarEvidenceBundle mixedScopeBundle() => AiSeminarEvidenceBundle(
+        query: 'How should the claims be compared?',
+        evidence: [
+          AiSeminarEvidence(
+            id: 'current-evidence',
+            scope: AiSeminarEvidenceScope.currentBook,
+            text: 'Current book source passage.',
+            sourceRef: traceableRef(),
+          ),
+          AiSeminarEvidence(
+            id: 'library-evidence',
+            scope: AiSeminarEvidenceScope.library,
+            text: 'Library source passage.',
+            sourceRef: SourceRef(
+              bookId: 2,
+              href: 'Text/other.xhtml',
+              sourceTextSnippet: 'Library source passage.',
+              sourceKind: SourceRefKind.libraryRag,
+            ),
+          ),
+        ],
+      );
+
   test('runs default roles serially and returns a review-ready synthesis',
       () async {
     final order = <AiSeminarRole>[];
@@ -230,5 +253,69 @@ void main() {
     expect(run.readyForReview, false);
     expect(run.message, contains('untraceable evidence'));
     expect(invokedRoles, [AiSeminarRole.critical]);
+  });
+
+  test('filters supplied evidence by each role profile scope', () async {
+    final seenEvidenceIds = <AiSeminarRole, List<String>>{};
+    final seenPrompts = <AiSeminarRole, String>{};
+    final service = AiSeminarOrchestrationService(
+      fetchEvidence: (_) async => mixedScopeBundle(),
+      executeRole: (invocation) async {
+        final ids = invocation.evidenceBundle.evidence
+            .map((evidence) => evidence.id)
+            .toList(growable: false);
+        seenEvidenceIds[invocation.role] = ids;
+        seenPrompts[invocation.role] = invocation.prompt;
+        return AiSeminarRoleTurn(
+          id: 'turn-${invocation.role.asString}',
+          role: invocation.role,
+          prompt: invocation.prompt,
+          responseText: '${invocation.role.asString} response',
+          evidenceRefIds: ids,
+        );
+      },
+    );
+
+    final run = await service.run(
+      AiSeminarSessionContract(
+        id: 's-role-scoped-evidence',
+        question: 'How should the claims be compared?',
+        bookId: 1,
+        roleProfiles: [
+          AiSeminarRoleProfile(
+            role: AiSeminarRole.critical,
+            evidenceScopes: const [AiSeminarEvidenceScope.currentBook],
+          ),
+          AiSeminarRoleProfile(
+            role: AiSeminarRole.supportive,
+            evidenceScopes: const [AiSeminarEvidenceScope.library],
+          ),
+        ],
+      ),
+    );
+
+    expect(run.status, AiSeminarRunStatus.completed);
+    expect(seenEvidenceIds[AiSeminarRole.critical], ['current-evidence']);
+    expect(seenEvidenceIds[AiSeminarRole.supportive], ['library-evidence']);
+    expect(
+      seenEvidenceIds[AiSeminarRole.synthesizer],
+      ['current-evidence', 'library-evidence'],
+    );
+    expect(
+      seenPrompts[AiSeminarRole.critical],
+      contains('Evidence ids: current-evidence'),
+    );
+    expect(
+      seenPrompts[AiSeminarRole.critical],
+      isNot(contains('library-evidence')),
+    );
+    expect(
+      seenPrompts[AiSeminarRole.supportive],
+      contains('Evidence ids: library-evidence'),
+    );
+    expect(
+      seenPrompts[AiSeminarRole.supportive],
+      isNot(contains('current-evidence')),
+    );
   });
 }
