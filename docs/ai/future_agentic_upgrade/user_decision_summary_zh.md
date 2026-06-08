@@ -11,11 +11,11 @@
 - 已经做了代码地基，但用户不会直接感知的功能。
 - 还没有产品化的大块能力，每块要怎么做，做成后对用户有什么价值。
 
-本文件描述的是 `codex/future-agentic-upgrade` 分支。`2026-06-08` 已把当前分支 HEAD `a24a1a8a52408b30aed21a0004507cd18ac365b8` 发布为 TestFlight/GitHub 预发布 build `1.68.7+6512`，但这不代表 `main`、稳定版或所有用户已安装版本已经包含这些能力，也不代表 v7 全部完成。
+本文件描述的是 `codex/future-agentic-upgrade` 分支。`2026-06-08` 已把发布目标 commit `2e0ab4a5f408b7c01ad4fc45ee659736e8a54528` 发布为 TestFlight/GitHub 预发布 build `1.68.7+6513`，但这不代表 `main`、稳定版或所有用户已安装版本已经包含这些能力，也不代表 v7 全部完成。
 
 最新 P1 决策：AI Chat 原生 Seminar 先不做旧 LLM/provider stream 的“原地续传”。可用版优先保证用户能在 AI Chat 内稳定开始、查看证据与角色输出、保存结论、异常送审，并在中断或失败后保留证据和已完成角色，从缺失或失败角色重新生成；旧 stream 原地续传后续只作为 provider 支持时的增强项。`Seminar Mode / 研讨会模式` 也不再作为普通 `Active Skill` 或一段 prompt style 使用；Settings 的 Active Skill 选择器、AI Chat `Choose style / 选择风格` 和普通 Chat runtime 都会忽略旧 `activeAiSkillId=seminar_mode`，真正研讨只能从 AI Chat 原生 `AI 研讨会` 任务卡进入；全局角色默认配置仍从 Settings -> AI -> `Seminar settings` 进入。
 
-最新 P5 决策：build `1.68.7+6512` 只说明当前 commit 已有 TestFlight/GitHub 预发布入口。用户沟通时必须同时说明仍未完成的 v7 边界：P1 的完整 streaming tool-call / 自由工具调用 loop、P2 的 AI semantic graph builder、P3 的生产级移动端 ANN gate、P4 的完整 AI 审核/异常中心和 P5 的跨设备后台同步/迁移说明仍在继续。
+最新 P5 决策：build `1.68.7+6513` 只说明当前 commit 已有 TestFlight/GitHub 预发布入口。用户沟通时必须同时说明仍未完成的 v7 边界：P1 的完整 streaming tool-call / 自由工具调用 loop、P2 的 AI semantic graph builder、P3 的生产级移动端 ANN gate、P4 的完整 AI 审核/异常中心和 P5 的跨设备后台同步/迁移说明仍在继续。
 
 ## 2. 当前用户可以使用的功能
 
