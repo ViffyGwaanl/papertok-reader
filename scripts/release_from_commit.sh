@@ -137,12 +137,14 @@ exec > >(tee -a "$session_log") 2>&1
 cleanup_paths=()
 on_exit() {
   set +e
-  for p in "${cleanup_paths[@]}"; do
-    if [[ -d "$p" ]]; then
-      git worktree remove --force "$p" >/dev/null 2>&1
-      git worktree prune >/dev/null 2>&1
-    fi
-  done
+  if [[ ${#cleanup_paths[@]} -gt 0 ]]; then
+    for p in "${cleanup_paths[@]}"; do
+      if [[ -d "$p" ]]; then
+        git worktree remove --force "$p" >/dev/null 2>&1
+        git worktree prune >/dev/null 2>&1
+      fi
+    done
+  fi
   rmdir "$LOCK_DIR" 2>/dev/null || true
 }
 trap on_exit EXIT

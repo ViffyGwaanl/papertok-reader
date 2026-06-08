@@ -22,6 +22,7 @@ v4 方向重置：
 
 入口前置条件和命名：
 
+- 补充：AI Chat Seminar 的角色 agent stream 现在会在系统提示里明确列出本角色允许使用的只读工具，例如 `semantic_search_current_book`、`notes_search`，并明确不能调用列表外工具，工具只能用于证据收集或核验，最终仍必须返回 Seminar role JSON。这样用户在本次研讨设置里选择的只读工具不会只停留在权限过滤或 UI 状态块里，也会进入角色 agent 的实际执行提示。当前只是受控工具边界提示和 executor 稳定性补强，不代表完整自由多轮工具 loop、完整 tool wait/cancel 执行器、完整 streaming tool-call 统一组件或旧 provider stream 原地续传。
 - 补充：AI Chat Seminar 的历史/混合卡如果只有旧 `openQuestions` 自动恢复出的 `ask-user` 提示，不再因此回退到旧 `研讨时间线` 概览。用户会继续在默认 `全部` 视图看到原生 `研讨流`，其中包含证据、角色观点、主持人提问和研讨总结；真正带多条 reader/agent 控制历史的旧卡仍保留旧概览以保证控制记录不丢。当前只是 legacy openQuestions 迁移到原生研讨流的 gate 修复，不代表完整 streaming tool-call 统一组件、完整角色自由工具调用 loop 或完整 `sendInput/resumeAgent/retry` 协作协议已经完成。
 - 补充：AI Chat Seminar 的历史/当前研讨消息卡头不再显示 `研讨会设置` 调参按钮，也不会从当前 AI Chat 卡片直接跳到 Settings 的 `Seminar settings` 页面。全局默认角色、核验者和预算保护仍在 Settings -> AI -> `Seminar settings` 管理；本次研讨的问题、轮次、角色、证据范围和只读工具仍在 AI Chat `+ -> AI 研讨会` 入口或 ready 状态卡内调整。当前只是消息卡头全局设置跳转收口，不代表完整 streaming tool-call 统一组件、完整角色自由工具调用 loop 或完整 `sendInput/resumeAgent/retry` 协作协议已经完成。
 - 补充：AI Chat Seminar 的本机 checkpoint 恢复入口现在显示为 `断点详情 / Checkpoint details`，不再显示旧 `恢复详情 / Resume details`。用户看到 `可从中断处继续` 后，可以点 `继续研讨` 直接从缺失角色续跑，也可以点 `断点详情` 在同一张 AI Chat 卡内展开断点状态、已保存证据、下一步和 provider/model；这不是打开旧 runtime page，也不是旧 LLM stream 原地续传。当前只是 checkpoint 入口文案和测试等待边界收口，不代表 OS 后台执行、旧 stream 原地续传或完整恢复协议。

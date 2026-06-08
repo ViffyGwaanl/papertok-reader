@@ -4057,6 +4057,49 @@ void main() {
     expect(toolEvents.single.status, AgentToolCallEventStatus.running);
   });
 
+  test('model role executor tells agent stream the controlled tool boundary',
+      () async {
+    final executor = AiSeminarModelRoleExecutor(
+      agentGenerateStream: (invocation, messages, {conversationId}) async* {
+        final systemPrompt = messages.first.contentAsString;
+        expect(systemPrompt, contains('Available read-only tools'));
+        expect(systemPrompt, contains('semantic_search_current_book'));
+        expect(systemPrompt, contains('notes_search'));
+        expect(systemPrompt, contains('Do not call tools outside this list'));
+        expect(systemPrompt, contains('Return the final Seminar role JSON'));
+        yield '{"role":"critical","responseText":"agent response","evidenceRefIds":["e1"]}';
+      },
+    );
+
+    final chunks = await executor
+        .streamRole(
+          AiSeminarRoleInvocation(
+            session: AiSeminarSessionContract(
+              id: 's-agent-tool-boundary',
+              question: 'Use controlled tools?',
+              bookId: 7,
+              roleProfiles: [
+                AiSeminarRoleProfile(
+                  role: AiSeminarRole.critical,
+                  allowedToolIds: const [
+                    'semantic_search_current_book',
+                    'notes_search',
+                  ],
+                ),
+              ],
+            ),
+            role: AiSeminarRole.critical,
+            evidenceBundle: bundle(),
+            priorTurns: const [],
+            prompt: 'prompt',
+          ),
+          AiSeminarCancellationToken(),
+        )
+        .toList();
+
+    expect(chunks.last.completedTurn!.responseText, 'agent response');
+  });
+
   test('model role executor parses agent stream reply tags after tools',
       () async {
     final json =

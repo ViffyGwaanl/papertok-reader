@@ -2559,6 +2559,8 @@ class AiSeminarModelRoleExecutor {
     final evidenceLines = invocation.evidenceBundle.evidence.map((evidence) {
       return '- ${evidence.id}: ${evidence.text}';
     }).join('\n');
+    final controlledToolGuidance =
+        _controlledToolGuidanceForInvocation(invocation);
     return [
       ChatMessage.system('''
 You are a PaperTok AI Seminar role executor.
@@ -2580,14 +2582,33 @@ Schema:
 }
 Every claim, disagreement, candidateCard, or reviewSuggestion must cite supplied evidence ids.
 For candidateCard entries, include 1-3 concise conceptRefs that can seed a draft concept graph after user Review.
+$controlledToolGuidance
 '''),
       ChatMessage.humanText('''
 ${invocation.prompt}
 
 Supplied evidence:
 $evidenceLines
-'''),
+      '''),
     ];
+  }
+
+  static String _controlledToolGuidanceForInvocation(
+    AiSeminarRoleInvocation invocation,
+  ) {
+    final allowedTools = _effectiveSeminarRoleToolIds(
+      session: invocation.session,
+      role: invocation.role,
+    );
+    if (allowedTools.isEmpty) {
+      return 'No role tools are available in this Seminar turn. Use only the supplied evidence.';
+    }
+    return [
+      'Available read-only tools: ${allowedTools.join(', ')}.',
+      'Do not call tools outside this list.',
+      'Use tools only to gather or verify evidence for this Seminar role.',
+      'Return the final Seminar role JSON using the schema above after any tool use.',
+    ].join('\n');
   }
 
   static AiSeminarRoleTurn _parseTurn({
