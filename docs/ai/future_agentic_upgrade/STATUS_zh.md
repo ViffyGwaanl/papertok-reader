@@ -5,7 +5,7 @@
 
 | 任务 | 内容 | 状态 | 下一步 | 验收/Brief |
 | --- | --- | --- | --- | --- |
-| P1 | AI Chat 原生研讨会(MVP 闭环) | 待真机验收 | 用户按 10 步脚本真机走一遍,失败项回报 | `briefs/P1_ACCEPTANCE_zh.md` |
+| P1 | AI Chat 原生研讨会(MVP 闭环) | in progress | 修复切片 F1(闪动卡顿)→ F2(来源跳转)→ F3(start_seminar 工具),见 P1_BRIEF 切片队列 | `briefs/P1_ACCEPTANCE_zh.md`(v2) |
 | R1 | 拆分 ai_chat_stream.dart god file | backlog | P1 验收后立即开始,先做结构地图批次 | `briefs/R1_godfile_split_zh.md` |
 | R2 | 事件流单一数据源,删 snapshot 双写与 fallback | backlog | R1 后;第一批产出删除清单 ADR | `briefs/R2_event_ssot_zh.md` |
 | R3 | Seminar 并入 sub-agent 平台(原 P1.5/S7) | backlog | R2 后;自由工具 loop、统一 streaming 组件在此实现 | `briefs/R3_agent_platform_merge_zh.md` |
@@ -14,14 +14,15 @@
 | P4 | AI 辅助产物保存与 Review 异常中心 | backlog(暂停) | 内联保存已可用;AI 预审并入 P2 之后评估 | `priority_plans/P4_*.md` |
 | P5 | 同步/恢复/测试/发布 | in progress(按发布节奏) | 每次 release 跟随既有 SOP | `docs/SOP_RELEASE_AUTOMATION_zh.md` |
 
-## P1 已知缺口(已明确移出 P1,归 R3)
+## P1 已知缺口与砍掉项(2026-06-11 用户决策更新)
 
-- 角色自由多轮工具调用 loop。
-- 与普通 AI Chat 统一的 streaming tool-call 组件。
-- 旧 provider stream 原地续传:**明确不做**(决策于 2026-06,见 archive)。
+- 角色自由多轮工具调用 loop、统一 streaming tool-call 组件、研讨结果回流主对话上下文 → R3。
+- 取消后续跑(resume)/"继续研讨":**不做**,取消即终止。
+- 沉淀动作(知识卡/复习/图谱/送审)与杀进程恢复:不作为 P1 gate,R2 后再评估。
+- 旧 provider stream 原地续传:**不做**(决策于 2026-06,见 archive)。
 
 ## 真机验收记录
 
 | 日期 | 任务 | 结果 | 失败项 |
 | --- | --- | --- | --- |
-| (待填) | P1 | | |
+| 2026-06-11 | P1(v1 脚本) | 部分通过 | 运行期界面闪动+卡顿(→F1);打开来源不跳转(→F2);另产生产品修正:对话内工具式发起(→F3) |
