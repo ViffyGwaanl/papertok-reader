@@ -4,6 +4,7 @@ import 'package:papertok_reader/models/attachment_item.dart';
 import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/providers/ai_chat.dart';
 import 'package:papertok_reader/providers/ai_draft_input.dart';
+import 'package:papertok_reader/service/deeplink/paperreader_source_opener.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';
 import 'package:papertok_reader/widgets/ai/ai_chat_stream.dart';
 import 'package:flutter/material.dart';
@@ -30,6 +31,7 @@ class AiMultiTabChat extends StatefulWidget {
     this.emptyStateBuilder,
     this.onTapTabBar,
     this.initialSourceRef,
+    this.sourceOpener,
     this.uiVisible = true,
   });
 
@@ -44,6 +46,7 @@ class AiMultiTabChat extends StatefulWidget {
   final bool resizeToAvoidBottomInset;
   final Widget Function(BuildContext, void Function(String))? emptyStateBuilder;
   final SourceRef? initialSourceRef;
+  final PaperReaderSourceOpener? sourceOpener;
   final bool uiVisible;
 
   /// Called when the user taps the empty background of the tab bar strip.
@@ -230,6 +233,7 @@ class AiMultiTabChatState extends State<AiMultiTabChat> {
                       inputSafeAreaBottom: widget.inputSafeAreaBottom,
                       resizeToAvoidBottomInset: widget.resizeToAvoidBottomInset,
                       emptyStateBuilder: widget.emptyStateBuilder,
+                      sourceOpener: widget.sourceOpener,
                       uiVisible: widget.uiVisible && i == _activeTab,
                     ),
                   ),

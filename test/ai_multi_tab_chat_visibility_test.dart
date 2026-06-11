@@ -123,6 +123,50 @@ void main() {
     expect(seminarCard?.sourceRefCount, 1);
   });
 
+  testWidgets('AiMultiTabChat forwards source opener to active chat tab',
+      (tester) async {
+    await _configureAiProvider();
+
+    Future<void> sourceOpener(WidgetRef ref, Uri uri) async {}
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          navigatorKey: navigatorKey,
+          locale: const Locale('en'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: Scaffold(
+            body: AiMultiTabChat(
+              sourceOpener: sourceOpener,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 50));
+
+    final activeChat = tester.widget<AiChatStream>(
+      find.byType(AiChatStream).first,
+    );
+    expect(activeChat.sourceOpener, same(sourceOpener));
+
+    final multiTabState =
+        tester.state<AiMultiTabChatState>(find.byType(AiMultiTabChat));
+    multiTabState.debugAddTab();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    final chatStreams = tester
+        .widgetList<AiChatStream>(
+          find.byType(AiChatStream, skipOffstage: false),
+        )
+        .toList();
+    expect(chatStreams, hasLength(2));
+    expect(chatStreams[0].sourceOpener, same(sourceOpener));
+    expect(chatStreams[1].sourceOpener, same(sourceOpener));
+  });
+
   testWidgets('closing a streaming tab cancels its generation subscription',
       (tester) async {
     final tempDir = Directory.systemTemp.createTempSync('ai-chat-tab-close-');

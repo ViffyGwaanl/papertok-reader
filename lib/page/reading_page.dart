@@ -25,6 +25,8 @@ import 'package:papertok_reader/service/ai/kairos/kairos_service.dart';
 import 'package:papertok_reader/service/ai/prompt_generate.dart';
 import 'package:papertok_reader/providers/current_reading.dart';
 import 'package:papertok_reader/providers/kairos_provider.dart';
+import 'package:papertok_reader/service/deeplink/paperreader_current_source_opener.dart';
+import 'package:papertok_reader/service/deeplink/paperreader_source_opener.dart';
 import 'package:papertok_reader/utils/env_var.dart';
 import 'package:papertok_reader/utils/toast/common.dart';
 import 'package:papertok_reader/utils/ui/status_bar.dart';
@@ -519,6 +521,28 @@ class ReadingPageState extends ConsumerState<ReadingPage>
     ];
   }
 
+  Future<void> _openAiSourceInCurrentReader(WidgetRef ref, Uri uri) async {
+    final playerState = epubPlayerKey.currentState;
+    if (playerState != null) {
+      final opened = PaperReaderCurrentSourceOpener.tryOpen(
+        uri: uri,
+        currentBookId: _book.id,
+        goToCfi: playerState.goToCfi,
+        goToHref: playerState.goToHref,
+        beforeOpen: () {
+          if (_aiChatVisible && mounted) {
+            setState(() => _aiChatVisible = false);
+          }
+        },
+      );
+      if (opened) {
+        return;
+      }
+    }
+
+    await openPaperReaderSource(ref, uri);
+  }
+
   void _rebuildAiChat() {
     if (_aiChat == null) return;
     final maxWidth = _aiChatMaxWidth(context);
@@ -533,6 +557,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
             key: aiChatKey,
             initialMessage: null,
             initialSourceRef: _aiInitialSourceRef,
+            sourceOpener: _openAiSourceInCurrentReader,
             sendImmediate: false,
             quickPromptChips: _getAiQuickPromptChips(),
             trailing: _buildAiChatTrailing(context),
@@ -897,6 +922,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                 key: aiChatKey,
                 initialMessage: content,
                 initialSourceRef: sourceRef,
+                sourceOpener: _openAiSourceInCurrentReader,
                 sendImmediate: sendImmediate,
                 quickPromptChips: quickPrompts,
                 trailing: _buildAiChatTrailing(navigatorKey.currentContext!),
@@ -1216,6 +1242,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                               key: aiChatKey,
                               initialMessage: _aiInitialMessage,
                               initialSourceRef: _aiInitialSourceRef,
+                              sourceOpener: _openAiSourceInCurrentReader,
                               sendImmediate: _aiSendImmediate,
                               quickPromptChips: _getAiQuickPromptChips(),
                               uiVisible: _aiChatVisible,
