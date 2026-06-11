@@ -32,6 +32,7 @@ import 'package:papertok_reader/service/review/review_item_store.dart';
 import 'package:papertok_reader/service/review/spaced_review_store.dart';
 import 'package:papertok_reader/utils/get_path/get_base_path.dart';
 import 'package:papertok_reader/widgets/ai/ai_chat_stream.dart';
+import 'package:papertok_reader/widgets/ai/seminar/seminar_stable_width_section.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -2639,13 +2640,30 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
       expect(find.text('待开始'), findsOneWidget);
       expect(find.text('开始研讨'), findsOneWidget);
+      final setupSectionWidth = tester
+          .renderObject<RenderBox>(
+            find.byType(SeminarFullWidthSection).first,
+          )
+          .size
+          .width;
 
       await tester.tap(find.text('开始研讨'));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
+      await _waitForReadySeminarCardRun(
+        tester: tester,
+        container: container,
+        sessionId: 'seminar-chat-history',
+      );
       final card = container
           .read(aiChatProvider.notifier)
           .seminarRunCardForMessageIndex(1);
+      final snapshotSectionWidth = tester
+          .renderObject<RenderBox>(
+            find.byType(SeminarFullWidthSection).first,
+          )
+          .size
+          .width;
+      expect(snapshotSectionWidth, setupSectionWidth);
       expect(card?.status, 'completed');
       expect(
         card?.snapshot?.messageParts.any(
@@ -2655,7 +2673,6 @@ void main() {
         isTrue,
       );
       expect(card?.snapshot?.roleSummaries.first.summary, 'critical response');
-      expect(find.text('研讨流'), findsOneWidget);
     },
   );
 

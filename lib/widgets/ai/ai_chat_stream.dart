@@ -33,6 +33,7 @@ import 'package:papertok_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:papertok_reader/utils/ai_reasoning_parser.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_expandable_text.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_reader_composer_policy.dart';
+import 'package:papertok_reader/widgets/ai/seminar/seminar_stable_width_section.dart';
 import 'package:papertok_reader/widgets/ai/seminar/start_seminar_tool_bridge.dart';
 import 'package:papertok_reader/widgets/ai/tool_step_tile.dart';
 import 'package:papertok_reader/widgets/ai/tool_tiles/apply_book_tags_step_tile.dart';
@@ -6348,7 +6349,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               ],
               if (canStartFromCard) ...[
                 const SizedBox(height: 12),
-                _buildSeminarRunCardSetup(card),
+                SeminarFullWidthSection(child: _buildSeminarRunCardSetup(card)),
               ],
               if (shouldShowSnapshot) ...[
                 const SizedBox(height: 9),
@@ -6357,12 +6358,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       ? null
                       : ValueKey(
                           'seminar-chat-card-snapshot-${card.sessionId}'),
-                  child: _buildSeminarRunSnapshot(
-                    card.sessionId,
-                    snapshot,
-                    runtimeState,
-                    bookId: card.bookId,
-                    evidenceScopeIds: card.evidenceScopeIds,
+                  child: SeminarFullWidthSection(
+                    child: _buildSeminarRunSnapshot(
+                      card.sessionId,
+                      snapshot,
+                      runtimeState,
+                      bookId: card.bookId,
+                      evidenceScopeIds: card.evidenceScopeIds,
+                    ),
                   ),
                 ),
               ],
