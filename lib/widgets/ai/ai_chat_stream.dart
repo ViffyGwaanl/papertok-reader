@@ -329,7 +329,9 @@ class _SeminarRunSetupSheetState extends State<_SeminarRunSetupSheet> {
   void initState() {
     super.initState();
     _questionController = TextEditingController(text: widget.initialQuestion);
-    _maxRoundsController = TextEditingController(text: '2');
+    _maxRoundsController = TextEditingController(
+      text: Prefs().aiSeminarDefaultMaxRounds.toString(),
+    );
     _includeVerifier = Prefs().aiSeminarIncludeVerifier;
     _baseProfiles = {
       for (final role in AiSeminarRole.values)
@@ -489,7 +491,8 @@ class _SeminarRunSetupSheetState extends State<_SeminarRunSetupSheet> {
   }
 
   void _start() {
-    final maxRounds = int.tryParse(_maxRoundsController.text.trim()) ?? 2;
+    final maxRounds = int.tryParse(_maxRoundsController.text.trim()) ??
+        Prefs().aiSeminarDefaultMaxRounds;
     final profiles = <AiSeminarRoleProfile>[];
     for (final role in AiSeminarRole.values) {
       final baseProfile = _baseProfiles[role];
@@ -826,14 +829,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   final Map<String, MemoryCandidate> _directMemoryByMessageKey =
       <String, MemoryCandidate>{};
 
-  String? _seminarRuntimeScopeId(String? raw) {
-    final value = raw?.trim();
-    return value == null || value.isEmpty ? null : value;
-  }
+  String? _seminarRuntimeScopeId(String? raw) =>
+      raw == null || raw.trim().isEmpty ? null : raw.trim();
 
-  String _newSeminarChatSessionId() {
-    return 'seminar-chat-${DateTime.now().microsecondsSinceEpoch}';
-  }
+  String _newSeminarChatSessionId() =>
+      'seminar-chat-${DateTime.now().microsecondsSinceEpoch}';
 
   String? _seminarSynthesisKnowledgeCardId(String? sessionId) {
     final normalizedSessionId = sessionId?.trim();
@@ -7979,9 +7979,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     return draft == null || draft.isEmpty ? null : draft;
   }
 
-  List<AiSeminarUserInterventionAction> _seminarComposerAvailableActions() {
-    return seminarReaderComposerActions();
-  }
+  List<AiSeminarUserInterventionAction> _seminarComposerAvailableActions() =>
+      seminarReaderComposerActions();
 
   AiSeminarUserInterventionAction _seminarCardSelectedAction(
     String sessionId,

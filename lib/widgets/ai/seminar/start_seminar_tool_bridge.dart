@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:langchain_core/chat_models.dart';
+import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/models/ai_conversation_tree.dart';
 import 'package:papertok_reader/models/ai_seminar.dart';
 import 'package:papertok_reader/service/ai/tools/start_seminar_tool.dart';
@@ -49,7 +50,7 @@ class StartSeminarToolBridge {
         roleIds: roleIds,
         evidenceScopeIds: _evidenceScopeIdsFor(effectiveProfiles),
         sourceRefCount: 0,
-        maxRounds: 2,
+        maxRounds: Prefs().aiSeminarDefaultMaxRounds,
         roleProfiles: effectiveProfiles,
         createdAt: createdAt,
       ),

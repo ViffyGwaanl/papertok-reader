@@ -27,6 +27,7 @@ void main() {
   testWidgets(
     'successful start_seminar tool step creates and starts native card',
     (tester) async {
+      Prefs().aiSeminarDefaultMaxRounds = 4;
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -85,6 +86,7 @@ void main() {
 
       expect(card, isNotNull);
       expect(card!.question, 'Discuss the evidence boundary.');
+      expect(card.maxRounds, 4);
       expect(
           card.roleProfiles.every(
             (profile) => profile.evidenceScopes.contains(
@@ -93,6 +95,7 @@ void main() {
           ),
           isTrue);
       expect(runtimeState?.session?.id, card.sessionId);
+      expect(runtimeState?.session?.maxRounds, 4);
       expect(runtimeState?.status, isNot(AiSeminarRunStatus.draft));
       expect(find.byType(AiChatStream), findsOneWidget);
     },

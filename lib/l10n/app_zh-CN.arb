@@ -2228,6 +2228,8 @@
   "customSkillsExampleName": "慢读助手",
   "customSkillsExampleDescription": "用本地证据解释一段文字。",
   "customSkillsExamplePrompt": "慢一点解释。优先使用当前书籍证据，提出判断前先说明不确定性。",
+  "seminarDefaultMaxRounds": "默认最大轮次",
+  "seminarDefaultMaxRoundsHelper": "范围 1-5。AI Chat 里的调整设置只覆盖本次研讨。",
   "aiSeminarReaderActionAskRole": "让角色回应",
   "aiSeminarReaderActionRefreshEvidence": "重新找证据",
   "aiSeminarReaderActionSynthesize": "整理总结",

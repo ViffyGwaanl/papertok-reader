@@ -4067,13 +4067,10 @@ Requirements:
     }
   }
 
-  String _normalizeAiSkillCustomPrompt(String prompt) {
-    final normalized = prompt.trim();
-    if (normalized.length <= aiSkillCustomPromptMaxChars) {
-      return normalized;
-    }
-    return normalized.substring(0, aiSkillCustomPromptMaxChars);
-  }
+  String _normalizeAiSkillCustomPrompt(String prompt) =>
+      prompt.trim().length <= aiSkillCustomPromptMaxChars
+          ? prompt.trim()
+          : prompt.trim().substring(0, aiSkillCustomPromptMaxChars);
 
   bool get aiSeminarIncludeVerifier =>
       prefs.getBool('aiSeminarIncludeVerifier') ?? false;
@@ -4084,17 +4081,24 @@ Requirements:
     notifyListeners();
   }
 
+  int get aiSeminarDefaultMaxRounds =>
+      (prefs.getInt('aiSeminarDefaultMaxRounds') ?? 2).clamp(1, 5).toInt();
+
+  set aiSeminarDefaultMaxRounds(int value) {
+    prefs.setInt('aiSeminarDefaultMaxRounds', value.clamp(1, 5).toInt());
+    touchAiSettingsUpdatedAt();
+    notifyListeners();
+  }
+
   int? get aiSeminarDefaultRoleOutputTokenBudget {
     final value = prefs.getInt('aiSeminarDefaultRoleOutputTokenBudget');
     return value == null || value <= 0 ? null : value;
   }
 
   set aiSeminarDefaultRoleOutputTokenBudget(int? value) {
-    if (value == null || value <= 0) {
-      prefs.remove('aiSeminarDefaultRoleOutputTokenBudget');
-    } else {
-      prefs.setInt('aiSeminarDefaultRoleOutputTokenBudget', value);
-    }
+    value == null || value <= 0
+        ? prefs.remove('aiSeminarDefaultRoleOutputTokenBudget')
+        : prefs.setInt('aiSeminarDefaultRoleOutputTokenBudget', value);
     touchAiSettingsUpdatedAt();
     notifyListeners();
   }
@@ -4105,11 +4109,9 @@ Requirements:
   }
 
   set aiSeminarDefaultRunTokenBudget(int? value) {
-    if (value == null || value <= 0) {
-      prefs.remove('aiSeminarDefaultRunTokenBudget');
-    } else {
-      prefs.setInt('aiSeminarDefaultRunTokenBudget', value);
-    }
+    value == null || value <= 0
+        ? prefs.remove('aiSeminarDefaultRunTokenBudget')
+        : prefs.setInt('aiSeminarDefaultRunTokenBudget', value);
     touchAiSettingsUpdatedAt();
     notifyListeners();
   }
@@ -4120,11 +4122,9 @@ Requirements:
   }
 
   set aiSeminarDefaultRunCostCapUsd(double? value) {
-    if (value == null || value <= 0) {
-      prefs.remove('aiSeminarDefaultRunCostCapUsd');
-    } else {
-      prefs.setDouble('aiSeminarDefaultRunCostCapUsd', value);
-    }
+    value == null || value <= 0
+        ? prefs.remove('aiSeminarDefaultRunCostCapUsd')
+        : prefs.setDouble('aiSeminarDefaultRunCostCapUsd', value);
     touchAiSettingsUpdatedAt();
     notifyListeners();
   }

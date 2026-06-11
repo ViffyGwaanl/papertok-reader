@@ -832,6 +832,8 @@
   "memoryRuleSessionDigestDesc": "會話結束時最多捕獲 3 條記憶。",
   "memoryRuleProviderSwitchTitle": "切換提供商",
   "memoryRuleProviderSwitchDesc": "在對話中切換 AI 提供商時捕獲摘要。",
+  "seminarDefaultMaxRounds": "預設最大輪次",
+  "seminarDefaultMaxRoundsHelper": "一至五。AI Chat 中之調整設定唯覆本次研討。",
   "aiSeminarReaderActionAskRole": "令角色應答",
   "aiSeminarReaderActionRefreshEvidence": "重尋證據",
   "aiSeminarReaderActionSynthesize": "整理總結",

@@ -13,6 +13,7 @@ class AiSeminarConfigPage extends StatefulWidget {
 }
 
 class _AiSeminarConfigPageState extends State<AiSeminarConfigPage> {
+  late final TextEditingController _maxRoundsController;
   late final TextEditingController _roleOutputBudgetController;
   late final TextEditingController _runBudgetController;
   late final TextEditingController _runCostCapController;
@@ -28,6 +29,9 @@ class _AiSeminarConfigPageState extends State<AiSeminarConfigPage> {
   void initState() {
     super.initState();
     _includeVerifier = Prefs().aiSeminarIncludeVerifier;
+    _maxRoundsController = TextEditingController(
+      text: Prefs().aiSeminarDefaultMaxRounds.toString(),
+    );
     _roleOutputBudgetController = TextEditingController(
       text: Prefs().aiSeminarDefaultRoleOutputTokenBudget?.toString() ?? '',
     );
@@ -69,6 +73,7 @@ class _AiSeminarConfigPageState extends State<AiSeminarConfigPage> {
 
   @override
   void dispose() {
+    _maxRoundsController.dispose();
     _roleOutputBudgetController.dispose();
     _runBudgetController.dispose();
     _runCostCapController.dispose();
@@ -124,9 +129,14 @@ class _AiSeminarConfigPageState extends State<AiSeminarConfigPage> {
               ),
               const SizedBox(height: 8),
               _DefaultBudgetFields(
+                maxRoundsController: _maxRoundsController,
                 roleOutputBudgetController: _roleOutputBudgetController,
                 runBudgetController: _runBudgetController,
                 runCostCapController: _runCostCapController,
+                onMaxRoundsChanged: (value) {
+                  Prefs().aiSeminarDefaultMaxRounds =
+                      (_positiveIntOrNull(value) ?? 2).clamp(1, 5).toInt();
+                },
                 onRoleOutputChanged: (value) {
                   Prefs().aiSeminarDefaultRoleOutputTokenBudget =
                       _positiveIntOrNull(value);
@@ -457,17 +467,21 @@ class _RoleToolPicker extends StatelessWidget {
 
 class _DefaultBudgetFields extends StatelessWidget {
   const _DefaultBudgetFields({
+    required this.maxRoundsController,
     required this.roleOutputBudgetController,
     required this.runBudgetController,
     required this.runCostCapController,
+    required this.onMaxRoundsChanged,
     required this.onRoleOutputChanged,
     required this.onRunBudgetChanged,
     required this.onRunCostCapChanged,
   });
 
+  final TextEditingController maxRoundsController;
   final TextEditingController roleOutputBudgetController;
   final TextEditingController runBudgetController;
   final TextEditingController runCostCapController;
+  final ValueChanged<String> onMaxRoundsChanged;
   final ValueChanged<String> onRoleOutputChanged;
   final ValueChanged<String> onRunBudgetChanged;
   final ValueChanged<String> onRunCostCapChanged;
@@ -479,6 +493,17 @@ class _DefaultBudgetFields extends StatelessWidget {
       builder: (context, constraints) {
         final narrow = constraints.maxWidth < 560;
         final fields = <Widget>[
+          TextField(
+            key: const ValueKey('seminar-default-max-rounds'),
+            controller: maxRoundsController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: l10n.seminarDefaultMaxRounds,
+              helperText: l10n.seminarDefaultMaxRoundsHelper,
+              border: const OutlineInputBorder(),
+            ),
+            onChanged: onMaxRoundsChanged,
+          ),
           TextField(
             controller: roleOutputBudgetController,
             keyboardType: TextInputType.number,

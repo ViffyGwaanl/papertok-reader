@@ -5039,8 +5039,7 @@ class AiChat extends _$AiChat {
   }
 
   int _seminarMaxRounds(int? value) {
-    final parsed = value ?? 2;
-    return parsed.clamp(1, 5).toInt();
+    return (value ?? Prefs().aiSeminarDefaultMaxRounds).clamp(1, 5).toInt();
   }
 
   void persistCurrentConversation(WidgetRef ref) {
