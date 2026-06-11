@@ -31,6 +31,7 @@ import 'package:papertok_reader/service/memory/memory_workflow_service.dart';
 import 'package:papertok_reader/utils/toast/common.dart';
 import 'package:papertok_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:papertok_reader/utils/ai_reasoning_parser.dart';
+import 'package:papertok_reader/widgets/ai/seminar/seminar_expandable_text.dart';
 import 'package:papertok_reader/widgets/ai/seminar/start_seminar_tool_bridge.dart';
 import 'package:papertok_reader/widgets/ai/tool_step_tile.dart';
 import 'package:papertok_reader/widgets/ai/tool_tiles/apply_book_tags_step_tile.dart';
@@ -14210,6 +14211,19 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     }
   }
 
+  Widget _seminarExpandableText(
+    String text, {
+    int collapsedMaxLines = 3,
+    TextStyle? style,
+  }) =>
+      SeminarExpandableText(
+        text: text,
+        collapsedMaxLines: collapsedMaxLines,
+        expandLabel: _localizedSeminarCardText(zh: '展开全文', en: 'Expand'),
+        collapseLabel: _localizedSeminarCardText(zh: '收起', en: 'Collapse'),
+        style: style,
+      );
+
   Widget _seminarSnapshotTimelineTurn(
     AiSeminarRunCardRoleSummary role,
     int turnNumber, {
@@ -14256,10 +14270,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     ),
                     if (role.summary.trim().isNotEmpty) ...[
                       const SizedBox(height: 3),
-                      Text(
+                      _seminarExpandableText(
                         role.summary.trim(),
-                        maxLines: 4,
-                        overflow: TextOverflow.ellipsis,
+                        collapsedMaxLines: 4,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: ClaudePalette.secondary(context),
                               height: 1.32,
@@ -14311,10 +14324,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    _seminarExpandableText(
                       detail.text.trim(),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
+                      collapsedMaxLines: 3,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: ClaudePalette.fg(context),
                             height: 1.32,
@@ -14998,10 +15010,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         ),
                       ),
                       const SizedBox(height: 3),
-                      Text(
+                      _seminarExpandableText(
                         part.label!.trim(),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
+                        collapsedMaxLines: 3,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: ClaudePalette.fg(context),
                               height: 1.32,
@@ -15011,10 +15022,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     ],
                     if (part.text?.trim().isNotEmpty == true) ...[
                       const SizedBox(height: 7),
-                      Text(
+                      _seminarExpandableText(
                         part.text!.trim(),
-                        maxLines: 4,
-                        overflow: TextOverflow.ellipsis,
+                        collapsedMaxLines: 4,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: ClaudePalette.secondary(context),
                               height: 1.32,
@@ -15760,10 +15770,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       ),
                       const SizedBox(width: 6),
                       Expanded(
-                        child: Text(
+                        child: _seminarExpandableText(
                           item,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
+                          collapsedMaxLines: 3,
                           style:
                               Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: ClaudePalette.secondary(context),
