@@ -107,6 +107,9 @@ void main() {
 
   testWidgets('assistant Card action saves draft inline without Review',
       (tester) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
     const providerId = 'openai';
     final fakeProducer = _FakeAiChatKnowledgeCardProducer();
     final providers = [
@@ -136,8 +139,10 @@ void main() {
           locale: const Locale('zh', 'CN'),
           localizationsDelegates: L10n.localizationsDelegates,
           supportedLocales: L10n.supportedLocales,
-          home: AiChatStream(
-            chatKnowledgeCardProducer: fakeProducer,
+          home: Scaffold(
+            body: AiChatStream(
+              chatKnowledgeCardProducer: fakeProducer,
+            ),
           ),
         ),
       ),
@@ -165,7 +170,18 @@ void main() {
     expect(fakeProducer.calls, hasLength(1));
     expect(fakeProducer.calls.single.createReviewItem, false);
     expect(find.text('已保存为草稿知识卡'), findsOneWidget);
-    await tester.pump(const Duration(milliseconds: 2100));
+    expect(find.text('查看知识卡'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 500));
+
+    await tester.tap(find.text('查看知识卡'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('知识卡详情'), findsOneWidget);
+    expect(find.text('Fake'), findsOneWidget);
+    expect(
+      find.text('Attention weights context for the current passage.'),
+      findsWidgets,
+    );
   });
 
   testWidgets('assistant Card action is disabled while streaming',

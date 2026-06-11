@@ -14609,7 +14609,7 @@ void main() {
             locale: const Locale('zh', 'CN'),
             localizationsDelegates: L10n.localizationsDelegates,
             supportedLocales: L10n.supportedLocales,
-            home: const AiChatStream(),
+            home: const Scaffold(body: AiChatStream()),
           ),
         ),
       );
@@ -14678,6 +14678,15 @@ void main() {
         contains('知识卡已保存'),
       );
       expect(find.textContaining('已保存为知识卡'), findsOneWidget);
+      expect(find.text('查看知识卡'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await tester.tap(find.text('查看知识卡'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('知识卡详情'), findsOneWidget);
+      expect(find.text('AI Seminar synthesis'), findsOneWidget);
+      expect(find.text('synthesizer response'), findsWidgets);
     },
   );
 
@@ -14733,7 +14742,7 @@ void main() {
             locale: const Locale('zh', 'CN'),
             localizationsDelegates: L10n.localizationsDelegates,
             supportedLocales: L10n.supportedLocales,
-            home: const AiChatStream(),
+            home: const Scaffold(body: AiChatStream()),
           ),
         ),
       );
@@ -14789,6 +14798,15 @@ void main() {
       expect(await reviewStore.list(), isEmpty);
       expect(find.text('撤销保存'), findsOneWidget);
       expect(find.textContaining('已保存为知识卡'), findsOneWidget);
+      expect(find.text('查看知识卡'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await tester.tap(find.text('查看知识卡'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('知识卡详情'), findsOneWidget);
+      expect(find.text('读者改过的标题'), findsOneWidget);
+      expect(find.text('读者改过的解释'), findsOneWidget);
     },
   );
 

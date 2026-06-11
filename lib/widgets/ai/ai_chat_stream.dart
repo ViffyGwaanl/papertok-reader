@@ -41,6 +41,7 @@ import 'package:papertok_reader/widgets/ai/tool_tiles/mindmap_step_tile.dart';
 import 'package:papertok_reader/widgets/ai/tool_tiles/organize_bookshelf_step_tile.dart';
 import 'package:papertok_reader/widgets/ai/tool_tiles/tool_tile_base.dart';
 import 'package:papertok_reader/widgets/delete_confirm.dart';
+import 'package:papertok_reader/widgets/knowledge/knowledge_card_detail_page.dart';
 import 'package:papertok_reader/widgets/markdown/styled_markdown.dart';
 import 'package:papertok_reader/widgets/ai/attachment_picker_dialog.dart';
 import 'package:papertok_reader/widgets/common/pt_bottom_sheet.dart';
@@ -5018,7 +5019,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               : result.card.reviewState == KnowledgeCardReviewState.pending
                   ? l10n.knowledgeCardAlreadyInReviewInbox
                   : l10n.knowledgeCardAlreadySaved;
-      AnxToast.show(message);
+      showKnowledgeCardSavedSnackBar(context,
+          message: message, card: result.card);
     } catch (_) {
       if (!mounted) return;
       AnxToast.show(l10n.knowledgeCardAddFailed);
@@ -8728,15 +8730,13 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       if (shouldSyncSnapshot) {
         setState(() => _seminarCardSavedKnowledgeCardIds.add(cardId));
       }
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            _localizedSeminarCardText(
-              zh: '已保存为知识卡。',
-              en: 'Saved as a KnowledgeCard.',
-            ),
-          ),
+      showKnowledgeCardSavedSnackBar(
+        context,
+        message: _localizedSeminarCardText(
+          zh: '已保存为知识卡。',
+          en: 'Saved as a KnowledgeCard.',
         ),
+        card: result.card,
       );
       if (shouldSyncSnapshot) {
         await _syncSeminarRunCardSnapshotNow(
