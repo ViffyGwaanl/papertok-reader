@@ -10,6 +10,7 @@ import 'package:papertok_reader/models/ai_agent_governance.dart';
 import 'package:papertok_reader/models/ai_seminar.dart';
 import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/providers/concept_graph_explorer.dart';
+import 'package:papertok_reader/providers/ai_seminar_role_partial_throttle.dart';
 import 'package:papertok_reader/service/ai/langchain_ai_config.dart';
 import 'package:papertok_reader/service/ai/langchain_registry.dart';
 import 'package:papertok_reader/service/ai/langchain_runner.dart';
@@ -723,10 +724,8 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       DateTime.now().millisecondsSinceEpoch,
     );
     final providerDiagnostics = _providerContext.resolve();
-    final resolvedSession = _sessionWithCurrentProviderBudget(
-      session,
-      providerDiagnostics,
-    );
+    final resolvedSession =
+        _sessionWithCurrentProviderBudget(session, providerDiagnostics);
     if (state.backgroundJob?.isActive == true &&
         state.status == AiSeminarRunStatus.running) {
       final queuedJob = _newBackgroundJob(
@@ -1830,6 +1829,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
         }
         break;
       case AiSeminarRuntimeEventType.roleDelta:
+        if (!AiSeminarRolePartialThrottle.shouldApply(event)) break;
         state = state.copyWith(
           activeRole: event.activeRole,
           partialRoleText: event.partialText,

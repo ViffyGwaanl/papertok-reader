@@ -5947,59 +5947,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     );
   }
 
-  List<_ChatItem> _buildChatItems(List<ChatMessage> messages) {
-    final items = <_ChatItem>[];
-    var i = 0;
-    while (i < messages.length) {
-      final message = messages[i];
-      if (message is HumanChatMessage) {
-        items.add(_UserChatItem(index: i, message: message));
-
-        final variants = <AIChatMessage>[];
-        var j = i + 1;
-        while (j < messages.length && messages[j] is AIChatMessage) {
-          variants.add(messages[j] as AIChatMessage);
-          j++;
-        }
-        if (variants.isNotEmpty) {
-          items.add(
-            _AssistantGroupChatItem(
-              groupKey: i,
-              userIndex: i,
-              variants: variants,
-            ),
-          );
-        }
-        i = j;
-        continue;
-      }
-
-      if (message is AIChatMessage) {
-        // Orphan assistant messages (should be rare). Group them to keep the UI
-        // consistent.
-        final variants = <AIChatMessage>[];
-        var j = i;
-        while (j < messages.length && messages[j] is AIChatMessage) {
-          variants.add(messages[j] as AIChatMessage);
-          j++;
-        }
-        items.add(
-          _AssistantGroupChatItem(
-            groupKey: -(i + 1),
-            userIndex: null,
-            variants: variants,
-          ),
-        );
-        i = j;
-        continue;
-      }
-
-      i++;
-    }
-
-    return items;
-  }
-
   int? _findLastHumanIndex(List<ChatMessage> messages) {
     for (var i = messages.length - 1; i >= 0; i--) {
       if (messages[i] is HumanChatMessage) {
@@ -6121,6 +6068,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     }
 
     return Padding(
+      key: ValueKey('ai-chat-message-${message.runtimeType}-$index'),
       padding: EdgeInsets.fromLTRB(
         isUser ? 8.0 : 12.0,
         4.0,
@@ -6301,243 +6249,248 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       });
     }
 
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: ClaudePalette.divider(context)),
-          color: ClaudePalette.card(context),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.groups_2_outlined,
-                  size: 18,
-                  color: ClaudePalette.accent(context),
+    return RepaintBoundary(
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: ClaudePalette.divider(context)),
+            color: ClaudePalette.card(context),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.groups_2_outlined,
+                    size: 18,
+                    color: ClaudePalette.accent(context),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      l10n.aiChatSeminarFeatureTitle,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: ClaudePalette.fg(context),
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: _seminarMetaChips(card),
+              ),
+              if (question.isNotEmpty) ...[
+                const SizedBox(height: 7),
+                Text(
+                  question,
+                  key: card.sessionId == null
+                      ? null
+                      : ValueKey(
+                          'seminar-chat-card-question-${card.sessionId}'),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: ClaudePalette.fg(context),
+                        height: 1.35,
+                      ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    l10n.aiChatSeminarFeatureTitle,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: ClaudePalette.fg(context),
-                        ),
+              ],
+              if (canStartFromCard) ...[
+                const SizedBox(height: 12),
+                _buildSeminarRunCardSetup(card),
+              ],
+              if (shouldShowSnapshot) ...[
+                const SizedBox(height: 9),
+                KeyedSubtree(
+                  key: card.sessionId == null
+                      ? null
+                      : ValueKey(
+                          'seminar-chat-card-snapshot-${card.sessionId}'),
+                  child: _buildSeminarRunSnapshot(
+                    card.sessionId,
+                    snapshot,
+                    runtimeState,
+                    bookId: card.bookId,
+                    evidenceScopeIds: card.evidenceScopeIds,
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: _seminarMetaChips(card),
-            ),
-            if (question.isNotEmpty) ...[
-              const SizedBox(height: 7),
-              Text(
-                question,
-                key: card.sessionId == null
-                    ? null
-                    : ValueKey('seminar-chat-card-question-${card.sessionId}'),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: ClaudePalette.fg(context),
-                      height: 1.35,
-                    ),
-              ),
-            ],
-            if (canStartFromCard) ...[
-              const SizedBox(height: 12),
-              _buildSeminarRunCardSetup(card),
-            ],
-            if (shouldShowSnapshot) ...[
-              const SizedBox(height: 9),
-              KeyedSubtree(
-                key: card.sessionId == null
-                    ? null
-                    : ValueKey('seminar-chat-card-snapshot-${card.sessionId}'),
-                child: _buildSeminarRunSnapshot(
-                  card.sessionId,
-                  snapshot,
+              if (canStartFromCard) ...[
+                const SizedBox(height: 12),
+                _buildSeminarRunCardStartAction(card),
+              ],
+              if (_shouldShowSeminarCardResumeBanner(card, runtimeState)) ...[
+                const SizedBox(height: 12),
+                _buildSeminarRunCardResumeBanner(
+                  card,
                   runtimeState,
-                  bookId: card.bookId,
-                  evidenceScopeIds: card.evidenceScopeIds,
+                  showDetails: showRecoveryDetails,
+                  onOpen: toggleRecoveryDetails,
+                  onContinue: () => _continueSeminarRunCardFromCheckpoint(
+                    card.sessionId,
+                  ),
                 ),
-              ),
-            ],
-            if (canStartFromCard) ...[
-              const SizedBox(height: 12),
-              _buildSeminarRunCardStartAction(card),
-            ],
-            if (_shouldShowSeminarCardResumeBanner(card, runtimeState)) ...[
-              const SizedBox(height: 12),
-              _buildSeminarRunCardResumeBanner(
+              ],
+              if (canCancelFromCard) ...[
+                const SizedBox(height: 12),
+                _buildSeminarRunCardCancelAction(card),
+              ],
+              if (_shouldShowSeminarCardDisagreementActions(
                 card,
                 runtimeState,
-                showDetails: showRecoveryDetails,
-                onOpen: toggleRecoveryDetails,
-                onContinue: () => _continueSeminarRunCardFromCheckpoint(
-                  card.sessionId,
+              )) ...[
+                const SizedBox(height: 12),
+                _buildSeminarRunCardDisagreementActions(card, runtimeState),
+              ],
+              if (_shouldShowSeminarCardComposer(card, runtimeState)) ...[
+                const SizedBox(height: 12),
+                _buildSeminarRunCardComposer(card, runtimeState),
+              ],
+              if (hasIgnoredActions) ...[
+                const SizedBox(height: 12),
+                _buildSeminarRunCardIgnoredActionsNotice(card.sessionId),
+              ] else if (hasAnyAssetAction) ...[
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (canSaveKnowledgeCard)
+                      hasSavedKnowledgeCard
+                          ? OutlinedButton.icon(
+                              icon: const Icon(Icons.undo_outlined, size: 18),
+                              label: Text(
+                                _localizedSeminarCardText(
+                                  zh: '撤销保存',
+                                  en: 'Undo save',
+                                ),
+                              ),
+                              onPressed: () =>
+                                  _undoActiveSeminarRunCardKnowledgeCard(
+                                card.sessionId,
+                              ),
+                            )
+                          : FilledButton.icon(
+                              icon: const Icon(Icons.style_outlined, size: 18),
+                              label: Text(
+                                _localizedSeminarCardText(
+                                  zh: '保存知识卡',
+                                  en: 'Save card',
+                                ),
+                              ),
+                              onPressed: () =>
+                                  _saveActiveSeminarRunCardKnowledgeCard(
+                                card.sessionId,
+                              ),
+                            ),
+                    if (canSaveKnowledgeCard && !hasSavedKnowledgeCard)
+                      FilledButton.tonalIcon(
+                        icon: const Icon(Icons.edit_note_outlined, size: 18),
+                        label: Text(
+                          _localizedSeminarCardText(
+                            zh: '编辑后保存',
+                            en: 'Edit and save',
+                          ),
+                        ),
+                        onPressed: () => _editActiveSeminarRunCardKnowledgeCard(
+                          card.sessionId,
+                        ),
+                      ),
+                    if (canAddSpacedReview)
+                      hasAddedSpacedReview
+                          ? OutlinedButton.icon(
+                              icon: const Icon(Icons.undo_outlined, size: 18),
+                              label: Text(
+                                _localizedSeminarCardText(
+                                  zh: '撤销复习',
+                                  en: 'Undo review',
+                                ),
+                              ),
+                              onPressed: () =>
+                                  _undoActiveSeminarRunCardSpacedReview(
+                                card.sessionId,
+                              ),
+                            )
+                          : FilledButton.tonalIcon(
+                              icon: const Icon(Icons.school_outlined, size: 18),
+                              label: Text(
+                                _localizedSeminarCardText(
+                                  zh: '加入复习',
+                                  en: 'Add review',
+                                ),
+                              ),
+                              onPressed: () =>
+                                  _addActiveSeminarRunCardSpacedReview(
+                                card.sessionId,
+                              ),
+                            ),
+                    if (canAddConceptGraph)
+                      hasAddedConceptGraph
+                          ? OutlinedButton.icon(
+                              icon: const Icon(Icons.undo_outlined, size: 18),
+                              label: Text(
+                                _localizedSeminarCardText(
+                                  zh: '撤销图谱',
+                                  en: 'Undo graph',
+                                ),
+                              ),
+                              onPressed: () =>
+                                  _undoActiveSeminarRunCardConceptGraph(
+                                card.sessionId,
+                              ),
+                            )
+                          : FilledButton.tonalIcon(
+                              icon: const Icon(
+                                Icons.account_tree_outlined,
+                                size: 18,
+                              ),
+                              label: Text(
+                                _localizedSeminarCardText(
+                                  zh: '加入我的图谱',
+                                  en: 'Add to graph',
+                                ),
+                              ),
+                              onPressed: () =>
+                                  _addActiveSeminarRunCardConceptGraph(
+                                card.sessionId,
+                              ),
+                            ),
+                    if (canSendToReview)
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.fact_check_outlined, size: 18),
+                        label: Text(l10n.seminarSendToReview),
+                        onPressed: () => _sendActiveSeminarRunCardToReview(
+                          card.sessionId,
+                        ),
+                      ),
+                    if (canIgnoreAssetActions)
+                      TextButton.icon(
+                        icon:
+                            const Icon(Icons.visibility_off_outlined, size: 18),
+                        label: Text(
+                          _localizedSeminarCardText(
+                            zh: '忽略',
+                            en: 'Ignore',
+                          ),
+                        ),
+                        onPressed: () =>
+                            _ignoreSeminarRunCardAssetActions(card.sessionId),
+                      ),
+                  ],
                 ),
-              ),
+              ],
             ],
-            if (canCancelFromCard) ...[
-              const SizedBox(height: 12),
-              _buildSeminarRunCardCancelAction(card),
-            ],
-            if (_shouldShowSeminarCardDisagreementActions(
-              card,
-              runtimeState,
-            )) ...[
-              const SizedBox(height: 12),
-              _buildSeminarRunCardDisagreementActions(card, runtimeState),
-            ],
-            if (_shouldShowSeminarCardComposer(card, runtimeState)) ...[
-              const SizedBox(height: 12),
-              _buildSeminarRunCardComposer(card, runtimeState),
-            ],
-            if (hasIgnoredActions) ...[
-              const SizedBox(height: 12),
-              _buildSeminarRunCardIgnoredActionsNotice(card.sessionId),
-            ] else if (hasAnyAssetAction) ...[
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  if (canSaveKnowledgeCard)
-                    hasSavedKnowledgeCard
-                        ? OutlinedButton.icon(
-                            icon: const Icon(Icons.undo_outlined, size: 18),
-                            label: Text(
-                              _localizedSeminarCardText(
-                                zh: '撤销保存',
-                                en: 'Undo save',
-                              ),
-                            ),
-                            onPressed: () =>
-                                _undoActiveSeminarRunCardKnowledgeCard(
-                              card.sessionId,
-                            ),
-                          )
-                        : FilledButton.icon(
-                            icon: const Icon(Icons.style_outlined, size: 18),
-                            label: Text(
-                              _localizedSeminarCardText(
-                                zh: '保存知识卡',
-                                en: 'Save card',
-                              ),
-                            ),
-                            onPressed: () =>
-                                _saveActiveSeminarRunCardKnowledgeCard(
-                              card.sessionId,
-                            ),
-                          ),
-                  if (canSaveKnowledgeCard && !hasSavedKnowledgeCard)
-                    FilledButton.tonalIcon(
-                      icon: const Icon(Icons.edit_note_outlined, size: 18),
-                      label: Text(
-                        _localizedSeminarCardText(
-                          zh: '编辑后保存',
-                          en: 'Edit and save',
-                        ),
-                      ),
-                      onPressed: () => _editActiveSeminarRunCardKnowledgeCard(
-                        card.sessionId,
-                      ),
-                    ),
-                  if (canAddSpacedReview)
-                    hasAddedSpacedReview
-                        ? OutlinedButton.icon(
-                            icon: const Icon(Icons.undo_outlined, size: 18),
-                            label: Text(
-                              _localizedSeminarCardText(
-                                zh: '撤销复习',
-                                en: 'Undo review',
-                              ),
-                            ),
-                            onPressed: () =>
-                                _undoActiveSeminarRunCardSpacedReview(
-                              card.sessionId,
-                            ),
-                          )
-                        : FilledButton.tonalIcon(
-                            icon: const Icon(Icons.school_outlined, size: 18),
-                            label: Text(
-                              _localizedSeminarCardText(
-                                zh: '加入复习',
-                                en: 'Add review',
-                              ),
-                            ),
-                            onPressed: () =>
-                                _addActiveSeminarRunCardSpacedReview(
-                              card.sessionId,
-                            ),
-                          ),
-                  if (canAddConceptGraph)
-                    hasAddedConceptGraph
-                        ? OutlinedButton.icon(
-                            icon: const Icon(Icons.undo_outlined, size: 18),
-                            label: Text(
-                              _localizedSeminarCardText(
-                                zh: '撤销图谱',
-                                en: 'Undo graph',
-                              ),
-                            ),
-                            onPressed: () =>
-                                _undoActiveSeminarRunCardConceptGraph(
-                              card.sessionId,
-                            ),
-                          )
-                        : FilledButton.tonalIcon(
-                            icon: const Icon(
-                              Icons.account_tree_outlined,
-                              size: 18,
-                            ),
-                            label: Text(
-                              _localizedSeminarCardText(
-                                zh: '加入我的图谱',
-                                en: 'Add to graph',
-                              ),
-                            ),
-                            onPressed: () =>
-                                _addActiveSeminarRunCardConceptGraph(
-                              card.sessionId,
-                            ),
-                          ),
-                  if (canSendToReview)
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.fact_check_outlined, size: 18),
-                      label: Text(l10n.seminarSendToReview),
-                      onPressed: () => _sendActiveSeminarRunCardToReview(
-                        card.sessionId,
-                      ),
-                    ),
-                  if (canIgnoreAssetActions)
-                    TextButton.icon(
-                      icon: const Icon(Icons.visibility_off_outlined, size: 18),
-                      label: Text(
-                        _localizedSeminarCardText(
-                          zh: '忽略',
-                          en: 'Ignore',
-                        ),
-                      ),
-                      onPressed: () =>
-                          _ignoreSeminarRunCardAssetActions(card.sessionId),
-                    ),
-                ],
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );
