@@ -15,23 +15,32 @@
 - 保存知识卡/异常送审等沉淀动作、杀进程历史恢复:**不作为 P1 gate**,坏了不修,留给 R2 后再评估。
 - 自由多轮工具 loop、统一 streaming tool-call 组件、研讨结果回流主对话上下文 → R3。
 
-## 当前切片队列(按序执行,一片一停)
+## 切片队列·第二轮(2026-06-11 二轮真机后;按 F5 → F6 → F4 → F7 → F8 执行,一片一停)
 
-### F1 运行期闪动+卡顿(最高优先级)
-现象:运行中整个对话界面持续上下跳动、明显卡顿。
-排查方向:partial/snapshot 每次更新是否触发整个 `AiChatStream` setState 重建;是否每次重建都强制 scroll-to-bottom(跳动直接原因);message part 列表是否每帧换 identity 导致 ListView 项重建;运行卡是否被 AnimatedSize/AnimatedSlide 包裹放大布局抖动。
-修复要求:partial 文本更新节流(≤10次/秒);自动滚动只在"用户本就在底部且追加了新消息"时发生,in-place 更新不滚动;part/消息项用稳定 key;运行卡加 RepaintBoundary;局部重建(只重建运行中的卡)。
-验收:验收脚本第 4 步。深层治本在 R1,本片只须把体验修到"不闪、可滚、不明显卡"。
+第一轮结果:F2 来源跳转、F3 start_seminar 已通过;F1 大幅改善,残余开始瞬间抖动(转 F4)。
 
-### F2 打开来源不跳转
-现象:点证据"打开来源",对话框滑动闪一下,不跳转书内原文。
-排查方向:`ai_chat_stream.dart` 中 `readerSourceRef.canJumpBack || hasBookAnchor` 分支(约 5003 行)向下追:跳转请求是否真的传到阅读页/`epub_player`;AI 面板是 AnimatedSlide overlay,跳转时是否只收起了面板或只滚动了聊天列表;SourceRef 的 cfi/anchor 是否为空导致静默失败。
-验收:验收脚本第 9 步;不可用证据必须显示原因。
+### F5 白板/分歧/角色观点内容截断且不可展开
+现象:三类块能显示但内容不全,点击无反应(当前实现就是只读截断摘要,没挂展开手势,不是用户操作问题)。
+锚点:whiteboard entries 渲染 ~3824/4404;`disagreement`/`role_turn` tiles。
+要求:默认摘要,点击内联展开全文(不开新页),可收起;长文本可滚动、可选择复制。
 
-### F3 `start_seminar` 工具(对话内发起,MVP)
-仿照既有 `spawn_sub_agent` 工具的注册方式,新增只读工具 `start_seminar(question, 可选 scope 覆盖)`:LLM 在普通对话中可调用;行为 = 走 `openNativeSeminarCard(...)` 同一路径,用 Settings 默认角色配置写卡并自动开始,工具立即返回"研讨已发起"。
-边界:权限矩阵禁止 Seminar 角色/子 agent 调用它(防递归);文案进 ARB;测试 = 工具 service 级测试 + 一个 widget smoke。结果回流主对话上下文是 R3 的事,本片不做。
-验收:验收脚本第 1 步。
+### F6 读者参与动作解耦(composer 交互重做)
+锚点:action ids `ask-role`/`refresh-evidence`/`synthesize` @3257–3262,执行按钮文案 @8206,handlers @13971/14153 起。
+现状问题:三个动作都强制填"我的研讨回复"才能执行。
+新交互:四个动作——让角色回应(给角色的话**可选填**)、重新找证据(**一键**,无需文本)、整理总结(**一键**,无需文本)、**发送我的回复**(新增,必须填文本,作为读者观点进入研讨记录)。执行按钮文案随所选动作变化;移除全局强制文本校验;文案进 ARB。
+
+### F4 开始研讨瞬间整屏左右抖动(F1 残余)
+现象:点"开始研讨"瞬间整界面左右抖一下,之后稳定。
+排查:setup 态卡 → running 态卡切换是否同帧发生宽度/约束突变(按钮行、padding 变化);是否插入新 part 触发整列表重布局。
+要求:状态切换无可感知水平位移(固定宽度约束或淡入过渡)。
+
+### F7 全局默认轮次设置缺失
+锚点:`lib/page/settings_page/ai_seminar_config.dart`(grep maxRounds 无结果,确实没暴露)。
+要求:Settings → Seminar settings 增加全局默认最大轮次(及其它合理默认);与每场"调整设置"是默认值/单次覆盖关系,文案说清。
+
+### F8 保存知识卡后给"查看"入口
+锚点:保存提示 `knowledgeCardSavedInline` @app_zh.arb:110;`artifact_actions` part ~3924。
+要求:保存知识卡/编辑后保存成功后,提示或块内出现"查看知识卡"动作,点击跳到该知识卡详情;加入复习/加入图谱可同样处理(低优先,知识卡必做)。
 
 ## 工作方式
 
