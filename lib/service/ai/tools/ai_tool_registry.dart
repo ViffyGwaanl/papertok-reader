@@ -47,6 +47,7 @@ import 'package:papertok_reader/service/ai/tools/reminders_update_tool.dart';
 import 'package:papertok_reader/service/ai/tools/shortcuts_run_tool.dart';
 import 'package:papertok_reader/service/ai/tools/reading_history_tool.dart';
 import 'package:papertok_reader/service/ai/tools/spawn_sub_agent_tool.dart';
+import 'package:papertok_reader/service/ai/tools/start_seminar_tool.dart';
 import 'package:papertok_reader/service/ai/tools/tags_list_tool.dart';
 import 'package:papertok_reader/service/ai/tools/web_search_tool.dart';
 import 'package:papertok_reader/service/ai/tools/repository/book_content_search_repository.dart';
@@ -202,6 +203,7 @@ class AiToolRegistry {
     fetchUrlToolDefinition,
     createWebSearchToolDefinition(),
     createSpawnSubAgentToolDefinition(),
+    startSeminarToolDefinition,
 
     // ── System tools (calendar, reminders, shortcuts) ──
     calendarListCalendarsToolDefinition,
@@ -302,6 +304,7 @@ class AiToolRegistry {
     'reminders_rename_list': {AiToolScene.system, AiToolScene.library},
     'reminders_delete_list': {AiToolScene.system, AiToolScene.library},
     'shortcuts_run': {AiToolScene.system, AiToolScene.library},
+    'start_seminar': {AiToolScene.reading, AiToolScene.library},
   };
 
   /// Tools that are NOT concurrency-safe (write/destructive tools).
@@ -325,6 +328,7 @@ class AiToolRegistry {
     'reminders_delete_list',
     'shortcuts_run',
     'spawn_sub_agent',
+    'start_seminar',
     'semantic_search_current_book',
   };
 

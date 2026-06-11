@@ -142,6 +142,11 @@ class AiToolPermissionMatrix {
       },
     ),
     AiToolPermissionRule(
+      toolId: 'start_seminar',
+      scenes: {AiAgentScene.reading, AiAgentScene.library},
+      concurrencySafe: false,
+    ),
+    AiToolPermissionRule(
       toolId: 'create_note',
       scenes: {AiAgentScene.reading},
       requiresApproval: true,

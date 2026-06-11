@@ -41,6 +41,7 @@ class ParsedToolStep {
   const ParsedToolStep({
     required this.name,
     required this.status,
+    this.callId,
     this.input,
     this.output,
     this.error,
@@ -48,6 +49,7 @@ class ParsedToolStep {
 
   final String name;
   final String status;
+  final String? callId;
   final String? input;
   final String? output;
   final String? error;
@@ -136,6 +138,9 @@ void _parseTimeline(String source, List<ParsedReasoningEntry> timeline) {
           ParsedToolStep(
             name: _unescapeAttr(attrs['name'] ?? ''),
             status: (attrs['status'] ?? 'pending').toLowerCase(),
+            callId: _unescapeAttr(attrs['call_id'] ?? '').trim().isEmpty
+                ? null
+                : _unescapeAttr(attrs['call_id'] ?? '').trim(),
             input: _decodeAttrValue(attrs, 'input'),
             output: _decodeAttrValue(attrs, 'output'),
             error: _decodeAttrValue(attrs, 'error'),

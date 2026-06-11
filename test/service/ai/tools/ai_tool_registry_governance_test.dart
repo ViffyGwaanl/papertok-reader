@@ -13,6 +13,7 @@ void main() {
 
     final ids = definitions.map((definition) => definition.id).toSet();
     expect(ids, contains('semantic_search_current_book'));
+    expect(ids, contains('start_seminar'));
     expect(ids, contains('create_note'));
     expect(ids, contains('web_search'));
     expect(ids, isNot(contains('bookshelf_lookup')));
@@ -32,6 +33,7 @@ void main() {
     expect(ids, contains('concept_graph_search'));
     expect(ids, isNot(contains('semantic_search_library')));
     expect(ids, isNot(contains('spawn_sub_agent')));
+    expect(ids, isNot(contains('start_seminar')));
     expect(ids, isNot(contains('create_note')));
     expect(ids, isNot(contains('create_highlight')));
     expect(ids, isNot(contains('web_search')));
@@ -50,6 +52,7 @@ void main() {
     expect(ids, contains('concept_graph_search'));
     expect(ids, isNot(contains('semantic_search_current_book')));
     expect(ids, isNot(contains('spawn_sub_agent')));
+    expect(ids, isNot(contains('start_seminar')));
     expect(ids, isNot(contains('web_search')));
   });
 

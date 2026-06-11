@@ -5,7 +5,7 @@
 
 | 任务 | 内容 | 状态 | 下一步 | 验收/Brief |
 | --- | --- | --- | --- | --- |
-| P1 | AI Chat 原生研讨会(MVP 闭环) | in progress | F1/F2 已修复待真机复测;继续修复 F3(start_seminar 工具),见 P1_BRIEF 切片队列 | `briefs/P1_ACCEPTANCE_zh.md`(v2) |
+| P1 | AI Chat 原生研讨会(MVP 闭环) | 待真机验收 | F1/F2/F3 已修复;等待按 P1_ACCEPTANCE 真机复测 | `briefs/P1_ACCEPTANCE_zh.md`(v2) |
 | R1 | 拆分 ai_chat_stream.dart god file | backlog | P1 验收后立即开始,先做结构地图批次 | `briefs/R1_godfile_split_zh.md` |
 | R2 | 事件流单一数据源,删 snapshot 双写与 fallback | backlog | R1 后;第一批产出删除清单 ADR | `briefs/R2_event_ssot_zh.md` |
 | R3 | Seminar 并入 sub-agent 平台(原 P1.5/S7) | backlog | R2 后;自由工具 loop、统一 streaming 组件在此实现 | `briefs/R3_agent_platform_merge_zh.md` |

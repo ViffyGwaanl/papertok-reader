@@ -31,6 +31,7 @@ import 'package:papertok_reader/service/memory/memory_workflow_service.dart';
 import 'package:papertok_reader/utils/toast/common.dart';
 import 'package:papertok_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:papertok_reader/utils/ai_reasoning_parser.dart';
+import 'package:papertok_reader/widgets/ai/seminar/start_seminar_tool_bridge.dart';
 import 'package:papertok_reader/widgets/ai/tool_step_tile.dart';
 import 'package:papertok_reader/widgets/ai/tool_tiles/apply_book_tags_step_tile.dart';
 import 'package:papertok_reader/widgets/ai/tool_tiles/mindmap_step_tile.dart';
@@ -817,6 +818,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   final Set<String> _seminarCardConceptNodeIds = <String>{};
   final Set<String> _seminarCardIgnoredActionSessionIds = <String>{};
   final Set<String> _seminarCardSentToReviewSessionIds = <String>{};
+  final StartSeminarToolBridge _startSeminarToolBridge =
+      StartSeminarToolBridge();
   final Map<String, MemoryCandidate> _directMemoryByMessageKey =
       <String, MemoryCandidate>{};
 
@@ -2991,6 +2994,40 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     setState(() {
       _lastSeminarCardSignatures.remove(resolvedSessionId);
     });
+  }
+
+  void _scheduleStartSeminarToolBridges(List<ChatMessage> messages) {
+    final requests = _startSeminarToolBridge.takeNewRequests(messages);
+    if (requests.isEmpty) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      for (final request in requests) {
+        unawaited(_launchStartSeminarToolRequest(request));
+      }
+    });
+  }
+
+  Future<void> _launchStartSeminarToolRequest(
+    StartSeminarToolRequest request,
+  ) async {
+    if (!mounted) return;
+    final reading = ref.read(currentReadingProvider);
+    final launch = _startSeminarToolBridge.buildLaunch(
+      request: request,
+      bookId: reading.book?.id,
+      defaultRoleProfiles: Prefs().aiSeminarRoleProfiles,
+      includeVerifier: Prefs().aiSeminarIncludeVerifier,
+      createdAt: DateTime.now().millisecondsSinceEpoch,
+    );
+    final appendFuture = ref.read(aiChatProvider.notifier).appendSeminarRunCard(
+          question: request.input.question,
+          bookId: reading.book?.id,
+          seminarSessionId: request.sessionId,
+          includeVerifier: launch.includeVerifier,
+          roleProfiles: launch.roleProfilesForAppend,
+        );
+    unawaited(appendFuture.catchError((_) {}));
+    await _startSeminarRunCardFromChat(launch.card);
   }
 
   void _syncSeminarRunCardSnapshot(
@@ -5927,6 +5964,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   }
 
   Widget _buildMessageList(List<ChatMessage> messages) {
+    _scheduleStartSeminarToolBridges(messages);
     final lastHumanIndex = _findLastHumanIndex(messages);
     final isStreaming = ref.watch(aiChatStreamingProvider);
 
