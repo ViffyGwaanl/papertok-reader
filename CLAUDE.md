@@ -81,3 +81,12 @@ flutter build ipa --release        # iOS (then xcodebuild export + altool upload
 - AI docs hub: `docs/ai/README.md`
 - Engineering docs: `docs/engineering/`
 - Release SOP: `docs/SOP_RELEASE_AUTOMATION_zh.md`
+
+## v7 工作契约(所有 agent 必读,2026-06-11 起生效)
+
+- 唯一入口:`docs/ai/future_agentic_upgrade/README_zh.md`;规则全文:同目录 `AGENT_PROTOCOL_zh.md`;状态只看/只改 `STATUS_zh.md`。
+- 开工必读 ≤10K token(上述三件 + 当前 brief),其余按需 grep;禁止通读 `archive/` 和巨型源文件。
+- 切片 = 验收脚本一步或一个失败项修复;状态只有 backlog / in progress / 待真机验收 / done,done 只能由用户标。
+- 文档改动上限:STATUS 一行 + commit message;禁止"最新进展"叙事;验收只写用户可观察行为。
+- 新 Seminar UI 代码进 `lib/widgets/ai/seminar/`,禁止进 `ai_chat_stream.dart`;禁止新增兼容 fallback 层。
+- 每个切片收尾必跑 `bash tool/check_repo_budgets.sh`(文档预算 + 行数 ratchet,白名单只许变短)。
