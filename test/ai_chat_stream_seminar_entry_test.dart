@@ -15516,7 +15516,7 @@ void main() {
       expect(composerPart?.defaultRoleId, 'critical');
       expect(
         composerPart?.actionIds,
-        ['ask-role', 'refresh-evidence', 'synthesize'],
+        ['ask-role', 'refresh-evidence', 'synthesize', 'clarify'],
       );
       expect(composerPart?.roleIds, ['critical', 'supportive']);
 
@@ -15637,27 +15637,11 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      await container
-          .read(aiSeminarRuntimeScopedProvider('seminar-chat-history').notifier)
-          .start(
-            AiSeminarSessionContract(
-              id: 'seminar-chat-history',
-              question: '这个概念怎么理解？',
-              bookId: 7,
-              roles: AiSeminarRole.defaultRoles,
-              createdAt: 1000,
-            ),
-          );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 250));
-
-      await tester.enterText(
-        find.byKey(
-          const ValueKey('seminar-chat-card-reply-seminar-chat-history'),
-        ),
-        '需要重新检索原文证据。',
+      await _startAndWaitForReadySeminarCardRun(
+        tester: tester,
+        container: container,
       );
-      await tester.pump();
+
       await tester.tap(
         find.byKey(
           const ValueKey(
@@ -15673,7 +15657,7 @@ void main() {
           .seminarRunCardForMessageIndex(1);
       final draftComposerPart = draftCard?.snapshot?.messageParts
           .singleWhere((part) => part.type == 'reader_composer');
-      expect(draftComposerPart?.draftText, '需要重新检索原文证据。');
+      expect(draftComposerPart?.draftText, isNull);
       expect(draftComposerPart?.defaultActionId, 'ask-role');
       expect(draftComposerPart?.selectedActionId, 'refresh-evidence');
       expect(draftComposerPart?.selectedRoleId, 'critical');
@@ -15684,7 +15668,11 @@ void main() {
         ),
       );
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      await _waitForReadySeminarCardRun(
+        tester: tester,
+        container: container,
+        sessionId: 'seminar-chat-history',
+      );
 
       final state = container.read(
         aiSeminarRuntimeScopedProvider('seminar-chat-history'),
@@ -15694,7 +15682,7 @@ void main() {
         AiSeminarUserInterventionAction.refreshEvidence,
       );
       expect(state.directorState!.lastUserIntervention!.targetRole, isNull);
-      expect(state.directorState!.lastUserIntervention!.text, '需要重新检索原文证据。');
+      expect(state.directorState!.lastUserIntervention!.text, '');
       expect(state.directorState!.evidenceRefreshCount, 1);
     },
   );
@@ -15757,27 +15745,11 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      await container
-          .read(aiSeminarRuntimeScopedProvider('seminar-chat-history').notifier)
-          .start(
-            AiSeminarSessionContract(
-              id: 'seminar-chat-history',
-              question: '这个概念怎么理解？',
-              bookId: 7,
-              roles: AiSeminarRole.defaultRoles,
-              createdAt: 1000,
-            ),
-          );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 250));
-
-      await tester.enterText(
-        find.byKey(
-          const ValueKey('seminar-chat-card-reply-seminar-chat-history'),
-        ),
-        '请根据现有证据整理总结。',
+      await _startAndWaitForReadySeminarCardRun(
+        tester: tester,
+        container: container,
       );
-      await tester.pump();
+
       await tester.tap(
         find.byKey(
           const ValueKey(
@@ -15809,8 +15781,9 @@ void main() {
       final card = container
           .read(aiChatProvider.notifier)
           .seminarRunCardForMessageIndex(1);
-      final directorPart = card?.snapshot?.messageParts
-          .singleWhere((part) => part.type == 'director_state');
+      final directorPart = card?.snapshot?.messageParts.singleWhere(
+        (part) => part.type == 'director_state' && part.label == 'end',
+      );
       expect(directorPart?.id, 'director-seminar-chat-history');
       expect(directorPart?.label, 'end');
       expect(directorPart?.text, 'synthesizer response');
@@ -15875,27 +15848,11 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      await container
-          .read(aiSeminarRuntimeScopedProvider('seminar-chat-history').notifier)
-          .start(
-            AiSeminarSessionContract(
-              id: 'seminar-chat-history',
-              question: '这个概念怎么理解？',
-              bookId: 7,
-              roles: AiSeminarRole.defaultRoles,
-              createdAt: 1000,
-            ),
-          );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 250));
-
-      await tester.enterText(
-        find.byKey(
-          const ValueKey('seminar-chat-card-reply-seminar-chat-history'),
-        ),
-        '请根据现有证据整理总结。',
+      await _startAndWaitForReadySeminarCardRun(
+        tester: tester,
+        container: container,
       );
-      await tester.pump();
+
       await tester.tap(
         find.byKey(
           const ValueKey(
@@ -15923,7 +15880,7 @@ void main() {
         cueCard?.snapshot?.messageParts
             .map((part) => '${part.type}:${part.label}:${part.text}')
             .toList(growable: false),
-        contains('director_state:synthesize:请根据现有证据整理总结。'),
+        contains('director_state:synthesize:null'),
       );
       expect(find.text('主持人准备整理总结'), findsOneWidget);
       final cueParts = cueCard?.snapshot?.messageParts
@@ -15935,7 +15892,7 @@ void main() {
       expect(cueParts, hasLength(1));
       final cuePart = cueParts?.single;
       expect(cuePart?.id, 'director-seminar-chat-history');
-      expect(cuePart?.text, '请根据现有证据整理总结。');
+      expect(cuePart?.text, isNull);
 
       await tester.pump(const Duration(milliseconds: 300));
 

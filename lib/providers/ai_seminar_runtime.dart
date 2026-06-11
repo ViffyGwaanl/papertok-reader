@@ -1158,7 +1158,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       throw StateError(message);
     }
     final trimmed = text.trim();
-    if (trimmed.isEmpty) {
+    if (trimmed.isEmpty && requestedAction.asString == 'clarify') {
       const message = 'AI Seminar user turn cannot be empty.';
       state = state.copyWith(error: message);
       throw StateError(message);

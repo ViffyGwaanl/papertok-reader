@@ -214,6 +214,7 @@ class AiSeminarOrchestrationService {
     required List<AiSeminarRoleTurn> priorTurns,
     required AiSeminarUserIntervention intervention,
   }) {
+    final interventionText = intervention.text.trim();
     return [
       promptForRole(
         session: session,
@@ -221,7 +222,10 @@ class AiSeminarOrchestrationService {
         evidenceBundle: evidenceBundle,
         priorTurns: priorTurns,
       ),
-      'Reader intervention: ${intervention.text}',
+      if (interventionText.isNotEmpty)
+        'Reader intervention: $interventionText'
+      else
+        'Reader selected this role to continue without extra text.',
       'Respond directly to the reader intervention before updating the shared discussion.',
     ].join('\n');
   }

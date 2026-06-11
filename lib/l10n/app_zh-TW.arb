@@ -831,5 +831,11 @@
   "memoryRuleSessionDigestTitle": "會話摘要",
   "memoryRuleSessionDigestDesc": "會話結束時最多捕獲 3 條記憶。",
   "memoryRuleProviderSwitchTitle": "切換提供商",
-  "memoryRuleProviderSwitchDesc": "在對話中切換 AI 提供商時捕獲摘要。"
+  "memoryRuleProviderSwitchDesc": "在對話中切換 AI 提供商時捕獲摘要。",
+  "aiSeminarReaderActionAskRole": "讓角色回應",
+  "aiSeminarReaderActionRefreshEvidence": "重新找證據",
+  "aiSeminarReaderActionSynthesize": "整理總結",
+  "aiSeminarReaderActionSendReply": "發送我的回覆",
+  "aiSeminarReaderMessageOptionalLabel": "給角色的話（可選）",
+  "aiSeminarReaderReplyRequiredLabel": "我的回覆（必填）"
 }

@@ -2227,5 +2227,11 @@
   "seminarEvidenceScopeConceptGraph": "概念图谱",
   "customSkillsExampleName": "慢读助手",
   "customSkillsExampleDescription": "用本地证据解释一段文字。",
-  "customSkillsExamplePrompt": "慢一点解释。优先使用当前书籍证据，提出判断前先说明不确定性。"
+  "customSkillsExamplePrompt": "慢一点解释。优先使用当前书籍证据，提出判断前先说明不确定性。",
+  "aiSeminarReaderActionAskRole": "让角色回应",
+  "aiSeminarReaderActionRefreshEvidence": "重新找证据",
+  "aiSeminarReaderActionSynthesize": "整理总结",
+  "aiSeminarReaderActionSendReply": "发送我的回复",
+  "aiSeminarReaderMessageOptionalLabel": "给角色的话（可选）",
+  "aiSeminarReaderReplyRequiredLabel": "我的回复（必填）"
 }

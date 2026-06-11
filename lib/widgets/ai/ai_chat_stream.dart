@@ -32,6 +32,7 @@ import 'package:papertok_reader/utils/toast/common.dart';
 import 'package:papertok_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:papertok_reader/utils/ai_reasoning_parser.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_expandable_text.dart';
+import 'package:papertok_reader/widgets/ai/seminar/seminar_reader_composer_policy.dart';
 import 'package:papertok_reader/widgets/ai/seminar/start_seminar_tool_bridge.dart';
 import 'package:papertok_reader/widgets/ai/tool_step_tile.dart';
 import 'package:papertok_reader/widgets/ai/tool_tiles/apply_book_tags_step_tile.dart';
@@ -3258,6 +3259,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             'ask-role',
             'refresh-evidence',
             'synthesize',
+            'clarify',
           ],
           defaultRoleId: _seminarComposerDefaultRoleIdFromState(state),
           defaultActionId: 'ask-role',
@@ -7975,21 +7977,18 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   }
 
   List<AiSeminarUserInterventionAction> _seminarComposerAvailableActions() {
-    return const [
-      AiSeminarUserInterventionAction.askRole,
-      AiSeminarUserInterventionAction.refreshEvidence,
-      AiSeminarUserInterventionAction.synthesize,
-    ];
+    return seminarReaderComposerActions();
   }
 
   AiSeminarUserInterventionAction _seminarCardSelectedAction(
     String sessionId,
   ) {
     final available = _seminarComposerAvailableActions();
-    final selected = AiSeminarUserInterventionAction.fromString(
-      _seminarCardSelectedActionIds[sessionId],
-    );
-    if (available.contains(selected)) return selected;
+    final rawSelected = _seminarCardSelectedActionIds[sessionId]?.trim();
+    if (rawSelected != null && rawSelected.isNotEmpty) {
+      final selected = AiSeminarUserInterventionAction.fromString(rawSelected);
+      if (available.contains(selected)) return selected;
+    }
     final fallback = AiSeminarUserInterventionAction.askRole;
     _seminarCardSelectedActionIds[sessionId] = fallback.asString;
     return fallback;
@@ -8019,7 +8018,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final selectedRole = _seminarCardSelectedRole(sessionId, roles);
     final selectedAction = _seminarCardSelectedAction(sessionId);
     final isSubmitting = _seminarCardSubmittingSessionIds.contains(sessionId);
-    final canSubmit = controller.text.trim().isNotEmpty && !isSubmitting;
+    final canSubmit = seminarReaderComposerCanSubmit(
+      selectedAction,
+      controller.text,
+      isSubmitting,
+    );
     final borderColor = ClaudePalette.divider(context);
     final isAwaitingReader = runtimeState.directorState?.needsUserInput == true;
     final askUserQuestion =
@@ -8068,16 +8071,16 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             child: Text(_seminarRoleFallbackLabel(role.asString)),
           ),
       ],
-      onChanged: isSubmitting ||
-              selectedAction != AiSeminarUserInterventionAction.askRole
-          ? null
-          : (role) {
-              if (role == null) return;
-              setState(() {
-                _seminarCardSelectedRoles[sessionId] = role;
-              });
-              _syncSeminarRunCardSnapshot(sessionId, runtimeState);
-            },
+      onChanged:
+          isSubmitting || !seminarReaderComposerActionUsesRole(selectedAction)
+              ? null
+              : (role) {
+                  if (role == null) return;
+                  setState(() {
+                    _seminarCardSelectedRoles[sessionId] = role;
+                  });
+                  _syncSeminarRunCardSnapshot(sessionId, runtimeState);
+                },
     );
 
     return DecoratedBox(
@@ -8147,24 +8150,26 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     ),
               ),
             ],
-            const SizedBox(height: 8),
-            TextField(
-              key: ValueKey('seminar-chat-card-reply-$sessionId'),
-              controller: controller,
-              minLines: 2,
-              maxLines: 4,
-              decoration: InputDecoration(
-                labelText: _localizedSeminarCardText(
-                  zh: '你的研讨回复',
-                  en: 'Your Seminar reply',
+            if (seminarReaderComposerActionShowsTextField(selectedAction)) ...[
+              const SizedBox(height: 8),
+              TextField(
+                key: ValueKey('seminar-chat-card-reply-$sessionId'),
+                controller: controller,
+                minLines: 2,
+                maxLines: 4,
+                decoration: InputDecoration(
+                  labelText: selectedAction ==
+                          AiSeminarUserInterventionAction.clarify
+                      ? L10n.of(context).aiSeminarReaderReplyRequiredLabel
+                      : L10n.of(context).aiSeminarReaderMessageOptionalLabel,
+                  border: const OutlineInputBorder(),
                 ),
-                border: const OutlineInputBorder(),
+                onChanged: (_) {
+                  setState(() {});
+                  _syncSeminarRunCardSnapshot(sessionId, runtimeState);
+                },
               ),
-              onChanged: (_) {
-                setState(() {});
-                _syncSeminarRunCardSnapshot(sessionId, runtimeState);
-              },
-            ),
+            ],
             const SizedBox(height: 8),
             LayoutBuilder(
               builder: (context, constraints) {
@@ -8203,10 +8208,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         )
                       : const Icon(Icons.record_voice_over_outlined),
                   label: Text(
-                    _localizedSeminarCardText(
-                      zh: '执行选中动作',
-                      en: 'Run selected action',
-                    ),
+                    _seminarReaderTurnActionLabel(selectedAction.asString),
                   ),
                   onPressed: canSubmit
                       ? () => _submitSeminarCardSelectedIntervention(
@@ -8231,7 +8233,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     await _submitSeminarCardIntervention(
       sessionId: sessionId,
       action: action,
-      targetRole: action == AiSeminarUserInterventionAction.askRole
+      targetRole: seminarReaderComposerActionUsesRole(action)
           ? _seminarCardSelectedRole(sessionId, roles)
           : null,
     );
@@ -8445,7 +8447,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     AiSeminarRole? targetRole,
   }) async {
     final controller = _seminarCardReplyControllers[sessionId];
-    final text = controller?.text.trim() ?? '';
+    final text = seminarReaderComposerSubmittedText(
+      action,
+      controller?.text ?? '',
+    );
     await _submitSeminarCardInterventionText(
       sessionId: sessionId,
       text: text,
@@ -8463,8 +8468,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     VoidCallback? onSuccess,
   }) async {
     final trimmed = text.trim();
-    if (trimmed.isEmpty ||
-        _seminarCardSubmittingSessionIds.contains(sessionId)) {
+    if (!seminarReaderComposerCanSubmit(
+      action,
+      trimmed,
+      _seminarCardSubmittingSessionIds.contains(sessionId),
+    )) {
       return;
     }
     _seminarCardSelectedActionIds[sessionId] = action.asString;
@@ -14150,22 +14158,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   }
 
   String _seminarReaderTurnActionLabel(String? action) {
+    final l10n = L10n.of(context);
     switch (action?.trim()) {
       case 'ask-role':
-        return _localizedSeminarCardText(
-          zh: '让角色回应',
-          en: 'Ask role',
-        );
+        return l10n.aiSeminarReaderActionAskRole;
       case 'refresh-evidence':
-        return _localizedSeminarCardText(
-          zh: '重新找证据',
-          en: 'Refresh evidence',
-        );
+        return l10n.aiSeminarReaderActionRefreshEvidence;
       case 'synthesize':
-        return _localizedSeminarCardText(
-          zh: '整理总结',
-          en: 'Synthesize',
-        );
+        return l10n.aiSeminarReaderActionSynthesize;
       case 'wait-agent':
         return _localizedSeminarCardText(
           zh: '等待角色',
@@ -14202,10 +14202,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           en: 'Regenerate role',
         );
       case 'clarify':
-        return _localizedSeminarCardText(
-          zh: '澄清',
-          en: 'Clarify',
-        );
+        return l10n.aiSeminarReaderActionSendReply;
       default:
         return '';
     }
