@@ -5,7 +5,7 @@
 
 | 任务 | 内容 | 状态 | 下一步 | 验收/Brief |
 | --- | --- | --- | --- | --- |
-| P1 | AI Chat 原生研讨会(MVP 闭环) | 待真机验收 | F5/F6/F4/F7/F8 已修复;等待 P1 v3 真机复测 | `briefs/P1_ACCEPTANCE_zh.md`(v3) |
+| P1 | AI Chat 原生研讨会(MVP 闭环) | in progress | 三轮切片 F9(生成期上下跳)→ F10(动作行为+轮次上限)→ F11(展开一致性)→ F12(文本整洁)→ F13(运行追踪人话),见 P1_BRIEF | `briefs/P1_ACCEPTANCE_zh.md`(v4) |
 | R1 | 拆分 ai_chat_stream.dart god file | backlog | P1 验收后立即开始,先做结构地图批次 | `briefs/R1_godfile_split_zh.md` |
 | R2 | 事件流单一数据源,删 snapshot 双写与 fallback | backlog | R1 后;第一批产出删除清单 ADR | `briefs/R2_event_ssot_zh.md` |
 | R3 | Seminar 并入 sub-agent 平台(原 P1.5/S7) | backlog | R2 后;自由工具 loop、统一 streaming 组件在此实现 | `briefs/R3_agent_platform_merge_zh.md` |
@@ -27,3 +27,4 @@
 | --- | --- | --- | --- |
 | 2026-06-11 | P1(v1 脚本) | 部分通过 | 运行期界面闪动+卡顿(→F1);打开来源不跳转(→F2);另产生产品修正:对话内工具式发起(→F3) |
 | 2026-06-11 | P1 二轮(v2 脚本) | 部分通过 | F2/F3 通过;F1 残余开始瞬间抖动(→F4);白板/分歧/观点点不开(→F5);读者动作强制填文本(→F6);全局轮次缺失(→F7);保存后无查看(→F8) |
+| 2026-06-12 | P1 三轮(v3 脚本) | 部分通过 | F4 开始瞬间已稳、F7/F8 可用;生成全程仍上下跳(→F9);整理总结无反应、重新找证据变重跑(→F10);分歧扫描/分歧继续讨论/角色观点仍点不开(→F11);裸 current-N、字面 \n、运行追踪 uuid(→F12/F13) |
