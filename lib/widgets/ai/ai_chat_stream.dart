@@ -75,6 +75,7 @@ import 'package:path/path.dart' as p;
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:papertok_reader/models/ai_quick_prompt_chip.dart';
+
 class _ConfigurableSkillPickerRow extends StatelessWidget {
   const _ConfigurableSkillPickerRow({
     required this.selected,
@@ -980,6 +981,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       // Ignore (e.g. controller disposed during rebuild).
     }
   }
+
   void _attachScrollController(ScrollController? external) {
     // Detach old controller.
     try {
@@ -8367,10 +8369,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               ],
             ),
             const SizedBox(height: 6),
-            Text(
+            _seminarExpandableText(
               disagreement,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: ClaudePalette.secondary(context),
                     height: 1.32,
@@ -12523,10 +12523,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       ),
                 ),
                 if (summary.isNotEmpty)
-                  Text(
+                  _seminarExpandableText(
                     summary,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: ClaudePalette.secondary(context),
                           height: 1.32,
@@ -12635,10 +12633,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     ),
                     if (partialText.isNotEmpty) ...[
                       const SizedBox(height: 3),
-                      Text(
+                      _seminarExpandableText(
                         partialText,
-                        maxLines: 4,
-                        overflow: TextOverflow.ellipsis,
+                        collapsedMaxLines: 4,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: ClaudePalette.secondary(context),
                               height: 1.32,
@@ -12711,10 +12708,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     ),
                     if (partialText.trim().isNotEmpty) ...[
                       const SizedBox(height: 3),
-                      Text(
+                      _seminarExpandableText(
                         partialText.trim(),
-                        maxLines: 4,
-                        overflow: TextOverflow.ellipsis,
+                        collapsedMaxLines: 4,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: ClaudePalette.secondary(context),
                               height: 1.32,
@@ -14472,10 +14468,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     ],
                     if (part.text?.trim().isNotEmpty == true) ...[
                       const SizedBox(height: 7),
-                      Text(
+                      _seminarExpandableText(
                         part.text!.trim(),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: ClaudePalette.fg(context),
                               height: 1.32,

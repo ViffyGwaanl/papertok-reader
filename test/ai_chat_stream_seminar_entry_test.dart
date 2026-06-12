@@ -1361,6 +1361,9 @@ void main() {
       expect(find.text('角色观点'), findsOneWidget);
       expect(find.text('批判者'), findsOneWidget);
       expect(find.text('Native stream role turn.'), findsOneWidget);
+      await tester.tap(find.text('Native stream role turn.').last);
+      await tester.pump();
+      expect(find.text('收起'), findsOneWidget);
 
       await tester.tap(
         find.byKey(
@@ -10493,6 +10496,7 @@ void main() {
       await tester.pump();
 
       expect(find.text('分歧扫描'), findsOneWidget);
+      expect(find.text('展开全文'), findsOneWidget);
       expect(find.text('Scope remains disputed.'), findsOneWidget);
       expect(find.text('关联角色'), findsOneWidget);
       expect(find.text('批判者、支持者'), findsOneWidget);
@@ -16004,6 +16008,9 @@ void main() {
 
       expect(find.text('分歧继续讨论'), findsOneWidget);
       expect(find.text('Scope remains disputed.'), findsAtLeastNWidgets(1));
+      await tester.tap(find.text('Scope remains disputed.').last);
+      await tester.pump();
+      expect(find.text('收起'), findsOneWidget);
       await tester.tap(
         find.byKey(
           const ValueKey(
