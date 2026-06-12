@@ -3,12 +3,12 @@ lib/models/ai_seminar.dart 1666
 lib/page/book_player/epub_player.dart 2117
 lib/page/settings_page/ai_library_index_page.dart 3241
 lib/page/settings_page/concept_graph_explorer.dart 4236
-lib/providers/ai_chat.dart 5173
+lib/providers/ai_chat.dart 5170
 lib/providers/ai_seminar_runtime.dart 2718
 lib/service/ai/ai_seminar_runtime_service.dart 2911
 lib/service/rag/ai_native_vector_index.dart 1613
 lib/service/sync/knowledge_asset_export_service.dart 1626
-lib/widgets/ai/ai_chat_stream.dart 17082
+lib/widgets/ai/ai_chat_stream.dart 16620
 test/ai_chat_stream_seminar_entry_test.dart 19835
 test/providers/ai_chat_new_conversation_test.dart 7713
 test/providers/ai_seminar_runtime_test.dart 3815
