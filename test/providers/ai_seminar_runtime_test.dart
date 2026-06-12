@@ -881,14 +881,17 @@ void main() {
     expect(state.status, AiSeminarRunStatus.completed);
     expect(state.evidenceBundle!.evidence.map((item) => item.id), ['e2']);
     expect(state.turns.map((turn) => turn.id), [
-      'turn-critical-e2',
-      'turn-supportive-e2',
-      'turn-synthesizer-e2',
+      'turn-critical-e1',
+      'turn-supportive-e1',
+      'turn-synthesizer-e1',
     ]);
     expect(state.directorState!.evidenceRefreshCount, 1);
-    expect(state.directorState!.disagreementIds, isEmpty);
-    expect(state.directorState!.nextIntent, AiSeminarDirectorNextIntent.end);
-    expect(state.synthesis!.summary, 'synthesizer response using e2');
+    expect(state.directorState!.disagreementIds, ['disagreement-1']);
+    expect(
+      state.directorState!.nextIntent,
+      AiSeminarDirectorNextIntent.askUser,
+    );
+    expect(state.synthesis!.summary, 'synthesizer response using e1');
   });
 
   test('records user intervention without turning it into evidence', () async {
@@ -1149,10 +1152,11 @@ void main() {
     );
   });
 
-  test('executes reader requested evidence refresh before rerunning roles',
+  test('executes reader requested evidence refresh without rerunning roles',
       () async {
     configureProvider();
     var fetchCount = 0;
+    var roleCount = 0;
     final runtimeService = AiSeminarRuntimeService(
       fetchEvidence: (_) async {
         fetchCount += 1;
@@ -1171,6 +1175,7 @@ void main() {
         );
       },
       streamRole: (invocation, _) async* {
+        roleCount += 1;
         final evidenceId = invocation.evidenceBundle.evidence.single.id;
         yield AiSeminarRoleStreamChunk(
           completedTurn: AiSeminarRoleTurn(
@@ -1196,6 +1201,7 @@ void main() {
     await notifier.start(
       AiSeminarSessionContract(id: 's-refresh-evidence', question: 'Explain.'),
     );
+    expect(roleCount, 3);
     await notifier.recordUserIntervention(
       text: '请重新找更直接的证据。',
       requestedAction: AiSeminarUserInterventionAction.refreshEvidence,
@@ -1205,14 +1211,15 @@ void main() {
     final state = container.read(aiSeminarRuntimeProvider);
 
     expect(fetchCount, 2);
+    expect(roleCount, 3);
     expect(state.status, AiSeminarRunStatus.completed);
     expect(state.evidenceBundle!.evidence.map((item) => item.id), ['e2']);
     expect(state.turns.map((turn) => turn.id), [
-      'turn-critical-e2',
-      'turn-supportive-e2',
-      'turn-synthesizer-e2',
+      'turn-critical-e1',
+      'turn-supportive-e1',
+      'turn-synthesizer-e1',
     ]);
-    expect(state.synthesis!.summary, 'synthesizer response using e2');
+    expect(state.synthesis!.summary, 'synthesizer response using e1');
     expect(state.directorState!.evidenceRefreshCount, 1);
     expect(
       state.directorState!.lastUserIntervention!.requestedAction,
@@ -1769,8 +1776,8 @@ void main() {
       () async {
     configureProvider();
     var firstFetchCount = 0;
-    final refreshedRoleStarted = Completer<void>();
-    final releaseRefreshedRole = Completer<void>();
+    final refreshedFetchStarted = Completer<void>();
+    final releaseRefreshedFetch = Completer<void>();
     final queuedCompleted = Completer<void>();
     final customService = AiSeminarRuntimeService(
       fetchEvidence: (session) async {
@@ -1789,6 +1796,11 @@ void main() {
         }
         firstFetchCount += 1;
         final evidenceId = firstFetchCount == 1 ? 'e1' : 'e2';
+        if (session.id == 's-auto-refresh-with-queue' &&
+            evidenceId == 'e2') {
+          if (!refreshedFetchStarted.isCompleted) refreshedFetchStarted.complete();
+          await releaseRefreshedFetch.future;
+        }
         return AiSeminarEvidenceBundle(
           query: session.question,
           evidence: [
@@ -1806,14 +1818,6 @@ void main() {
       streamRole: (invocation, _) async* {
         final sessionId = invocation.session.id;
         final evidenceId = invocation.evidenceBundle.evidence.single.id;
-        if (sessionId == 's-auto-refresh-with-queue' &&
-            evidenceId == 'e2' &&
-            invocation.role == AiSeminarRole.critical) {
-          if (!refreshedRoleStarted.isCompleted) {
-            refreshedRoleStarted.complete();
-          }
-          await releaseRefreshedRole.future;
-        }
         yield AiSeminarRoleStreamChunk(
           completedTurn: AiSeminarRoleTurn(
             id: 'turn-$sessionId-${invocation.role.asString}-$evidenceId',
@@ -1859,7 +1863,7 @@ void main() {
         maxRounds: 2,
       ),
     );
-    await refreshedRoleStarted.future;
+    await refreshedFetchStarted.future;
 
     await notifier.start(
       AiSeminarSessionContract(
@@ -1876,7 +1880,7 @@ void main() {
       AiSeminarBackgroundJobStatus.queued,
     );
 
-    releaseRefreshedRole.complete();
+    releaseRefreshedFetch.complete();
     await firstRun;
     await queuedCompleted.future;
     final state = container.read(aiSeminarRuntimeProvider);
@@ -2966,8 +2970,7 @@ void main() {
   test('queued seminar does not inherit refreshed director state', () async {
     configureProvider();
     var refreshFetchCount = 0;
-    var heldRefreshRole = false;
-    final refreshRoleStarted = Completer<void>();
+    final refreshFetchStarted = Completer<void>();
     final allowRefreshToFinish = Completer<void>();
     final invokedBySession = <String, List<AiSeminarRole>>{};
     AiSeminarEvidenceBundle evidenceFor(String id, String text) {
@@ -2990,6 +2993,10 @@ void main() {
           return evidenceFor('e3', 'The queued source passage.');
         }
         refreshFetchCount += 1;
+        if (session.id == 's-refresh-with-queue' && refreshFetchCount == 2) {
+          if (!refreshFetchStarted.isCompleted) refreshFetchStarted.complete();
+          await allowRefreshToFinish.future;
+        }
         return refreshFetchCount == 1
             ? evidenceFor('e1', 'The first source passage.')
             : evidenceFor('e2', 'The refreshed source passage.');
@@ -2998,13 +3005,6 @@ void main() {
         final sessionId = invocation.session.id;
         final evidenceId = invocation.evidenceBundle.evidence.single.id;
         invokedBySession.putIfAbsent(sessionId, () => []).add(invocation.role);
-        if (sessionId == 's-refresh-with-queue' &&
-            evidenceId == 'e2' &&
-            !heldRefreshRole) {
-          heldRefreshRole = true;
-          refreshRoleStarted.complete();
-          await allowRefreshToFinish.future;
-        }
         yield AiSeminarRoleStreamChunk(
           completedTurn: AiSeminarRoleTurn(
             id: 'turn-$sessionId-${invocation.role.asString}-$evidenceId',
@@ -3038,7 +3038,7 @@ void main() {
       now: 1234,
     );
     final refreshFuture = notifier.executeDirectorNextStep();
-    await refreshRoleStarted.future.timeout(const Duration(seconds: 2));
+    await refreshFetchStarted.future.timeout(const Duration(seconds: 2));
     await notifier.start(
       AiSeminarSessionContract(
         id: 's-queued-after-refresh',

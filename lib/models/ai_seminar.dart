@@ -565,7 +565,7 @@ class AiSeminarSessionContract {
       sourceRefs: normalizedSourceRefs,
       allowWeb: allowWeb,
       writeRequiresApproval: writeRequiresApproval,
-      maxRounds: maxRounds.clamp(1, 5),
+      maxRounds: maxRounds.clamp(1, 10),
       budgetPolicy:
           normalizedBudget?.hasLimits == true ? normalizedBudget : null,
       billingContext: normalizedBillingContext,

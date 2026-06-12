@@ -32,9 +32,9 @@ void main() {
         find.byKey(const ValueKey('seminar-default-max-rounds'));
     expect(maxRoundsField, findsOneWidget);
 
-    await tester.enterText(maxRoundsField, '4');
+    await tester.enterText(maxRoundsField, '10');
     await tester.pump();
 
-    expect(Prefs().aiSeminarDefaultMaxRounds, 4);
+    expect(Prefs().aiSeminarDefaultMaxRounds, 10);
   });
 }

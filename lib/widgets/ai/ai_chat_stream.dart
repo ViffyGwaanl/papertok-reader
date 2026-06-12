@@ -519,7 +519,7 @@ class _SeminarRunSetupSheetState extends State<_SeminarRunSetupSheet> {
       _questionController.text,
       _SeminarRunConfig(
         includeVerifier: _includeVerifier,
-        maxRounds: maxRounds.clamp(1, 5).toInt(),
+        maxRounds: maxRounds.clamp(1, 10).toInt(),
         roleProfiles: List.unmodifiable(profiles),
       ),
     );
@@ -6775,7 +6775,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       en: 'Increase rounds',
                     ),
                     icon: const Icon(Icons.add_circle_outline, size: 20),
-                    onPressed: card.maxRounds >= 5
+                    onPressed: card.maxRounds >= 10
                         ? null
                         : () => _updateSeminarRunCardMaxRounds(
                               card,
@@ -8047,14 +8047,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 ? null
                 : (selected) {
                     if (!selected) return;
-                    setState(() {
-                      _seminarCardSelectedActionIds[sessionId] =
-                          action.asString;
-                    });
-                    _syncSeminarRunCardSnapshot(
-                      sessionId,
-                      runtimeState,
-                    );
+                    setState(() => _seminarCardSelectedActionIds[sessionId] =
+                        action.asString);
+                    if (seminarReaderComposerActionSubmitsImmediately(action)) {
+                      _submitSeminarCardIntervention(
+                          sessionId: sessionId, action: action);
+                    } else {
+                      _syncSeminarRunCardSnapshot(sessionId, runtimeState);
+                    }
                   },
           ),
       ],

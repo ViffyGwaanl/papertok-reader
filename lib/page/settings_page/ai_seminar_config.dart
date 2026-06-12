@@ -135,7 +135,7 @@ class _AiSeminarConfigPageState extends State<AiSeminarConfigPage> {
                 runCostCapController: _runCostCapController,
                 onMaxRoundsChanged: (value) {
                   Prefs().aiSeminarDefaultMaxRounds =
-                      (_positiveIntOrNull(value) ?? 2).clamp(1, 5).toInt();
+                      (_positiveIntOrNull(value) ?? 2).clamp(1, 10).toInt();
                 },
                 onRoleOutputChanged: (value) {
                   Prefs().aiSeminarDefaultRoleOutputTokenBudget =

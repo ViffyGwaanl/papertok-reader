@@ -28,6 +28,13 @@ bool seminarReaderComposerActionShowsTextField(
       action == AiSeminarUserInterventionAction.clarify;
 }
 
+bool seminarReaderComposerActionSubmitsImmediately(
+  AiSeminarUserInterventionAction action,
+) {
+  return action == AiSeminarUserInterventionAction.refreshEvidence ||
+      action == AiSeminarUserInterventionAction.synthesize;
+}
+
 String seminarReaderComposerSubmittedText(
   AiSeminarUserInterventionAction action,
   String draftText,

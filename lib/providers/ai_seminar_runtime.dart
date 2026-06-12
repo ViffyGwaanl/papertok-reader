@@ -1500,35 +1500,35 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       session,
       providerDiagnostics,
     );
-    final startedAt = _nextBackgroundJobStartedAt(
-      DateTime.now().millisecondsSinceEpoch,
-    );
-    final backgroundJob = _newBackgroundJob(
-      resolvedSession,
-      startedAt: startedAt,
-      message: 'AI Seminar refreshing evidence.',
-    );
     final previous = _directorStateWithEvidenceRefresh(
       directorState,
       directorState.evidenceRefreshCount + 1,
     );
-    await _runResolvedSession(
-      resolvedSession,
-      backgroundJob,
-      providerDiagnostics,
-      directorStateSeed: previous,
-      startQueuedAfterCompletion: false,
-    );
+    final backgroundJob = _newBackgroundJob(resolvedSession, startedAt: _nextBackgroundJobStartedAt(DateTime.now().millisecondsSinceEpoch), message: 'AI Seminar refreshing evidence.');
+    state = state.copyWith(status: AiSeminarRunStatus.running, directorState: previous, backgroundJob: backgroundJob, backgroundJobs: _upsertBackgroundJob(state.backgroundJobs, backgroundJob), clearError: true);
+    await _persistState();
+    final refreshedEvidence = await _service.fetchEvidenceBundle(resolvedSession);
     if (!mounted) return;
     final refreshedDirector = _directorStateFor(
-      session: state.session ?? resolvedSession,
-      evidenceBundle: state.evidenceBundle,
+      session: resolvedSession,
+      evidenceBundle: refreshedEvidence,
       turns: state.turns,
       whiteboardEntries: state.whiteboardEntries,
       previous: previous,
     );
+    final status = refreshedEvidence.evidence.isEmpty ||
+            !refreshedEvidence.allEvidenceTraceable
+        ? AiSeminarRunStatus.needsEvidence
+        : AiSeminarRunStatus.completed;
+    final completedJob = _markBackgroundJob(backgroundJob, AiSeminarBackgroundJobStatus.completed, updatedAt: DateTime.now().millisecondsSinceEpoch);
     state = state.copyWith(
+      status: status,
+      session: resolvedSession,
+      evidenceBundle: refreshedEvidence,
       directorState: refreshedDirector ?? previous,
+      backgroundJob: completedJob,
+      backgroundJobs: _upsertBackgroundJob(state.backgroundJobs, completedJob),
+      providerDiagnostics: providerDiagnostics,
       clearError: true,
     );
     await _persistState();

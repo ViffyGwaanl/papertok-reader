@@ -39,7 +39,7 @@ void main() {
       expect(restored.scopes, [AiSeminarEvidenceScope.library]);
       expect(restored.allowWeb, true);
       expect(restored.writeRequiresApproval, false);
-      expect(restored.maxRounds, 5);
+      expect(restored.maxRounds, 10);
     });
 
     test('round-trips local budget policy', () {

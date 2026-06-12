@@ -4082,10 +4082,10 @@ Requirements:
   }
 
   int get aiSeminarDefaultMaxRounds =>
-      (prefs.getInt('aiSeminarDefaultMaxRounds') ?? 2).clamp(1, 5).toInt();
+      (prefs.getInt('aiSeminarDefaultMaxRounds') ?? 2).clamp(1, 10).toInt();
 
   set aiSeminarDefaultMaxRounds(int value) {
-    prefs.setInt('aiSeminarDefaultMaxRounds', value.clamp(1, 5).toInt());
+    prefs.setInt('aiSeminarDefaultMaxRounds', value.clamp(1, 10).toInt());
     touchAiSettingsUpdatedAt();
     notifyListeners();
   }

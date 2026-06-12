@@ -162,14 +162,13 @@ class AiSeminarRuntimeService {
         _streamRole = streamRole,
         _agentRunGraphStore = agentRunGraphStore,
         _now = now;
-
   final AiSeminarEvidenceFetcher _fetchEvidence;
   final AiSeminarStreamingRoleExecutor _streamRole;
   final AgentRunGraphStore? _agentRunGraphStore;
   final AiSeminarClock? _now;
   static const String _localTokenEstimateMethod = 'local-char-estimate-v1';
-  static const String _providerInvoiceNotConnectedReason =
-      'Provider invoice import is not connected for this run.';
+  static const String _providerInvoiceNotConnectedReason = 'Provider invoice import is not connected for this run.';
+  Future<AiSeminarEvidenceBundle> fetchEvidenceBundle(AiSeminarSessionContract session) => _fetchEvidence(session);
 
   static bool canResumeCheckpoint({
     required AiSeminarSessionContract session,

@@ -1122,8 +1122,8 @@ class AiSeminarRunCardMeta {
     this.snapshot,
   }) : maxRounds = maxRounds <= 0
             ? 2
-            : maxRounds > 5
-                ? 5
+            : maxRounds > 10
+                ? 10
                 : maxRounds;
 
   final String question;
@@ -1309,7 +1309,7 @@ class AiSeminarRunCardMeta {
 
   static int _supportedMaxRounds(int value) {
     if (value <= 0) return 2;
-    return value.clamp(1, 5).toInt();
+    return value.clamp(1, 10).toInt();
   }
 
   static bool _boolOrDefault(Object? raw, bool fallback) {

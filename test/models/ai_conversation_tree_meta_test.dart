@@ -487,7 +487,7 @@ void main() {
         'maxRounds': 0,
       });
 
-      expect(restoredHigh.maxRounds, 5);
+      expect(restoredHigh.maxRounds, 10);
       expect(restoredLow.maxRounds, 2);
     });
 

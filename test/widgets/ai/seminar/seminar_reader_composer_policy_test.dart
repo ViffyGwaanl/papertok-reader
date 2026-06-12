@@ -37,6 +37,24 @@ void main() {
       '',
     );
     expect(
+      seminarReaderComposerActionSubmitsImmediately(
+        AiSeminarUserInterventionAction.refreshEvidence,
+      ),
+      true,
+    );
+    expect(
+      seminarReaderComposerActionSubmitsImmediately(
+        AiSeminarUserInterventionAction.synthesize,
+      ),
+      true,
+    );
+    expect(
+      seminarReaderComposerActionSubmitsImmediately(
+        AiSeminarUserInterventionAction.askRole,
+      ),
+      false,
+    );
+    expect(
       seminarReaderComposerSubmittedText(
         AiSeminarUserInterventionAction.askRole,
         ' optional ',
