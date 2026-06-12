@@ -14217,6 +14217,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         collapsedMaxLines: collapsedMaxLines,
         expandLabel: _localizedSeminarCardText(zh: '展开全文', en: 'Expand'),
         collapseLabel: _localizedSeminarCardText(zh: '收起', en: 'Collapse'),
+        evidenceLabelBuilder: (number) =>
+            _localizedSeminarCardText(zh: '证据 $number', en: 'Evidence $number'),
         style: style,
       );
 

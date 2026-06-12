@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:papertok_reader/service/ai/ai_seminar_text_normalizer.dart';
 
 class SeminarExpandableText extends StatefulWidget {
   const SeminarExpandableText({
@@ -10,6 +11,7 @@ class SeminarExpandableText extends StatefulWidget {
     this.expandedMaxHeight = 220,
     this.style,
     this.textAlign,
+    this.evidenceLabelBuilder,
   });
 
   final String text;
@@ -19,6 +21,7 @@ class SeminarExpandableText extends StatefulWidget {
   final double expandedMaxHeight;
   final TextStyle? style;
   final TextAlign? textAlign;
+  final SeminarEvidenceLabelBuilder? evidenceLabelBuilder;
 
   @override
   State<SeminarExpandableText> createState() => _SeminarExpandableTextState();
@@ -29,7 +32,10 @@ class _SeminarExpandableTextState extends State<SeminarExpandableText> {
 
   @override
   Widget build(BuildContext context) {
-    final text = widget.text.trim();
+    final text = normalizeSeminarDisplayText(
+      widget.text,
+      evidenceLabelBuilder: widget.evidenceLabelBuilder,
+    );
     if (text.isEmpty) return const SizedBox.shrink();
 
     final label = _expanded ? widget.collapseLabel : widget.expandLabel;

@@ -45,4 +45,25 @@ void main() {
     expect(find.byType(SelectableText), findsNothing);
     expect(find.text('Expand'), findsOneWidget);
   });
+
+  testWidgets(
+      'SeminarExpandableText hides internal evidence ids and literal newlines',
+      (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SeminarExpandableText(
+            text: r'First line\nSecond line (current-1)',
+            expandLabel: 'Expand',
+            collapseLabel: 'Collapse',
+          ),
+        ),
+      ),
+    );
+
+    expect(find.textContaining(r'\n'), findsNothing);
+    expect(find.textContaining('current-1'), findsNothing);
+    expect(find.textContaining('First line\nSecond line Evidence 1'),
+        findsOneWidget);
+  });
 }

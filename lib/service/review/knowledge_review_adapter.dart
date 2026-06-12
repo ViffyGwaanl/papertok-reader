@@ -4,6 +4,7 @@ import 'package:papertok_reader/models/concept_graph.dart';
 import 'package:papertok_reader/models/knowledge_card.dart';
 import 'package:papertok_reader/models/review_item.dart';
 import 'package:papertok_reader/models/source_ref.dart';
+import 'package:papertok_reader/service/ai/ai_seminar_text_normalizer.dart';
 import 'package:papertok_reader/service/deeplink/paperreader_reader_intent.dart';
 import 'package:papertok_reader/service/memory/memory_candidate.dart';
 
@@ -132,20 +133,21 @@ class SeminarSynthesisReviewAdapter {
       synthesis.evidenceRefIds,
       synthesis.evidence,
     );
+    final summary = normalizeSeminarDisplayText(synthesis.summary);
     return ReviewItem(
       id: 'seminar-synthesis:$seminarId',
       sourceType: ReviewItemSourceType.seminarSynthesis,
       sourceId: seminarId,
       title: 'AI Seminar synthesis',
-      body: synthesis.summary,
+      body: summary,
       status: canReview ? ReviewItemStatus.pending : ReviewItemStatus.draft,
       sourceRefs: canReview ? sourceRefs : const <SourceRef>[],
       createdAt: timestamp,
       updatedAt: timestamp,
       payload: {
-        'summary': synthesis.summary,
-        'supportiveView': synthesis.supportiveView,
-        'criticalView': synthesis.criticalView,
+        'summary': summary,
+        'supportiveView': normalizeSeminarDisplayText(synthesis.supportiveView),
+        'criticalView': normalizeSeminarDisplayText(synthesis.criticalView),
         'disagreements': synthesis.disagreements,
         'openQuestions': synthesis.openQuestions,
         'candidateReviewQuestions': synthesis.candidateReviewQuestions,
@@ -169,13 +171,16 @@ class SeminarSynthesisReviewAdapter {
     return synthesis.candidateCards.indexed.map((indexedEntry) {
       final index = indexedEntry.$1;
       final entry = indexedEntry.$2;
-      final sourceRefs = _sourceRefsForIds(
+      final sourceEvidence = _evidenceForIds(
         entry.evidenceRefIds,
         synthesis.evidence,
       );
+      final sourceRefs =
+          sourceEvidence.map((item) => item.sourceRef).toList(growable: false);
       final quote = sourceRefs
           .map((ref) => ref.sourceTextSnippet ?? '')
           .firstWhere((text) => text.trim().isNotEmpty, orElse: () => '');
+      final cardText = normalizeSeminarDisplayText(entry.text);
       final cardId = _candidateCardId(
         seminarId: seminarId,
         entryId: entry.id,
@@ -184,9 +189,9 @@ class SeminarSynthesisReviewAdapter {
       );
       return KnowledgeCard(
         id: cardId,
-        title: entry.text,
+        title: _candidateCardTitle(cardText),
         quote: quote,
-        explanation: entry.text,
+        explanation: _withEvidenceAppendix(cardText, sourceEvidence),
         sourceRefs: sourceRefs,
         conceptRefs: _candidateConceptRefs(entry),
         reviewState: KnowledgeCardReviewState.pending,
@@ -255,12 +260,55 @@ class SeminarSynthesisReviewAdapter {
     List<String> evidenceRefIds,
     List<AiSeminarEvidence> evidence,
   ) {
+    return _evidenceForIds(evidenceRefIds, evidence)
+        .map((item) => item.sourceRef)
+        .toList(growable: false);
+  }
+
+  static List<AiSeminarEvidence> _evidenceForIds(
+    List<String> evidenceRefIds,
+    List<AiSeminarEvidence> evidence,
+  ) {
     final wanted = evidenceRefIds.map((id) => id.trim()).toSet();
     return evidence
         .where((item) => wanted.contains(item.id.trim()))
-        .map((item) => item.sourceRef)
-        .where((ref) => ref.hasEvidence)
+        .where((item) => item.sourceRef.hasEvidence)
         .toList(growable: false);
+  }
+
+  static String _candidateCardTitle(String text) {
+    for (final line in text.split('\n')) {
+      final trimmed = line.trim();
+      if (trimmed.isNotEmpty) return trimmed;
+    }
+    return 'AI Seminar insight';
+  }
+
+  static String _withEvidenceAppendix(
+    String text,
+    List<AiSeminarEvidence> evidence,
+  ) {
+    final rows = <String>[];
+    for (final indexedEvidence in evidence.indexed) {
+      final evidenceItem = indexedEvidence.$2;
+      final label = seminarEvidenceLabelFromInternalId(evidenceItem.id) ??
+          'Evidence ${indexedEvidence.$1 + 1}';
+      final summary = _evidenceAppendixSummary(evidenceItem);
+      if (summary.isNotEmpty) rows.add('- $label: $summary');
+    }
+    if (rows.isEmpty) return text;
+    return [text, 'Evidence:', ...rows].join('\n');
+  }
+
+  static String _evidenceAppendixSummary(AiSeminarEvidence evidence) {
+    final ref = evidence.sourceRef;
+    final label = [ref.sourceTitle, ref.locationLabel]
+        .where((value) => (value ?? '').trim().isNotEmpty)
+        .join(' - ');
+    final snippet = (ref.sourceTextSnippet ?? evidence.text).trim();
+    if (label.isEmpty) return snippet;
+    if (snippet.isEmpty) return label;
+    return '$label - $snippet';
   }
 
   static List<String> _candidateConceptRefs(AiSeminarWhiteboardEntry entry) {

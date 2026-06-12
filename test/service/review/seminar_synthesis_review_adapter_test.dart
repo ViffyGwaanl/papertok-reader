@@ -16,6 +16,7 @@ void main() {
   AiSeminarSynthesis synthesis({
     bool traceable = true,
     bool readyForReview = true,
+    String evidenceId = 'e1',
     List<AiSeminarWhiteboardEntry> candidateCards = const [
       AiSeminarWhiteboardEntry(
         id: 'card1',
@@ -31,10 +32,10 @@ void main() {
         criticalView: 'Critical view',
         candidateCards: candidateCards,
         candidateReviewQuestions: const ['What assumption matters most?'],
-        evidenceRefIds: const ['e1'],
+        evidenceRefIds: [evidenceId],
         evidence: [
           AiSeminarEvidence(
-            id: 'e1',
+            id: evidenceId,
             scope: AiSeminarEvidenceScope.currentBook,
             text: 'The source passage.',
             sourceRef: traceable
@@ -113,6 +114,35 @@ void main() {
     ]);
     expect(cards.single.origin, KnowledgeCardOrigin.seminar);
     expect(cards.single.isUserAsset, false);
+  });
+
+  test(
+      'cleans internal evidence ids and literal newlines in KnowledgeCard candidates',
+      () {
+    final cards = SeminarSynthesisReviewAdapter.knowledgeCardsFromSynthesis(
+      seminarId: 's1',
+      synthesis: synthesis(
+        evidenceId: 'current-1',
+        candidateCards: const [
+          AiSeminarWhiteboardEntry(
+            id: 'card1',
+            kind: AiSeminarWhiteboardKind.candidateCard,
+            text: r'Hidden premise (current-1)\nSecond line',
+            evidenceRefIds: ['current-1'],
+          ),
+        ],
+      ),
+      now: 100,
+    );
+
+    expect(cards, hasLength(1));
+    expect(cards.single.title, isNot(contains('current-1')));
+    expect(cards.single.explanation, isNot(contains('current-1')));
+    expect(cards.single.explanation, isNot(contains(r'\n')));
+    expect(cards.single.explanation, contains('Hidden premise Evidence 1'));
+    expect(cards.single.explanation, contains('Second line'));
+    expect(cards.single.explanation, contains('Evidence 1:'));
+    expect(cards.single.explanation, contains('The source passage.'));
   });
 
   test('keeps explicitly not-ready synthesis in draft and creates no cards',
