@@ -7,6 +7,7 @@
 ## 目标模型
 
 - 研讨会对主对话而言就是一个可调用的 agent 工具:P1 的 `start_seminar` MVP 在 R3 升级为真正的子 agent 调用——主对话 LLM 发起、研讨结果(总结/分歧/证据)回流主对话上下文,可被后续对话引用。
+- **读者参与在此重生(P1 五轮失败后冻结移交)**:没有卡内第二输入框——研讨运行中,主对话输入框的消息直接路由给 Director,由其分配角色回应或调整讨论;参与反馈以普通研讨流块出现,无跳转。这是"聊天即参与"的最终形态,DoD 必含。
 - Director = parent agent run(调度、轮次、askUser、synthesis)。
 - 每个角色(critical/supportive/synthesizer/verifier)= 平台子 agent:profile + 本场 prompt + evidence scope + 只读工具白名单(`AiToolPermissionMatrix`)。
 - evidence broker = 共享只读工具输入,作为平台工具暴露,不再是私有旁路。

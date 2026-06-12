@@ -5,10 +5,10 @@
 
 | 任务 | 内容 | 状态 | 下一步 | 验收/Brief |
 | --- | --- | --- | --- | --- |
-| P1 | AI Chat 原生研讨会(MVP 闭环) | 待真机验收 | F14/F15/F16/F17 + F18(参与区附近误触回顶)已提交;等待五轮真机复测 | `briefs/P1_ACCEPTANCE_zh.md`(v5) |
+| P1 | AI Chat 原生研讨会(收口为"观看+追问"形态) | in progress | 收口片 F19:a 研讨结论回流主对话上下文 + b 冻结参与层;合入后跑 v6 全量最终验收 | `briefs/P1_ACCEPTANCE_zh.md`(v6) |
 | R1 | 拆分 ai_chat_stream.dart god file | backlog | P1 验收后立即开始,先做结构地图批次 | `briefs/R1_godfile_split_zh.md` |
 | R2 | 事件流单一数据源,删 snapshot 双写与 fallback | backlog | R1 后;第一批产出删除清单 ADR | `briefs/R2_event_ssot_zh.md` |
-| R3 | Seminar 并入 sub-agent 平台(原 P1.5/S7) | backlog | R2 后;自由工具 loop、统一 streaming 组件在此实现 | `briefs/R3_agent_platform_merge_zh.md` |
+| R3 | Seminar 并入 sub-agent 平台(原 P1.5/S7) | backlog | R2 后;自由工具 loop、统一 streaming 组件、**读者参与重生(主输入框路由,P1 冻结移交)**在此实现 | `briefs/R3_agent_platform_merge_zh.md` |
 | P2 | Understand-Anything 式全书 AI 理解地图 | backlog | R1–R3 完成后,开工前重写 brief | 旧版 `priority_plans/P2_*.md` 仅作参考 |
 | P3 | 智能索引/语义检索/ANN 底座 | backlog(暂停) | 生产级 ANN 打包、恢复式构建并入 R2 之后评估 | `priority_plans/P3_*.md` |
 | P4 | AI 辅助产物保存与 Review 异常中心 | backlog(暂停) | 内联保存已可用;AI 预审并入 P2 之后评估 | `priority_plans/P4_*.md` |
@@ -29,3 +29,4 @@
 | 2026-06-11 | P1 二轮(v2 脚本) | 部分通过 | F2/F3 通过;F1 残余开始瞬间抖动(→F4);白板/分歧/观点点不开(→F5);读者动作强制填文本(→F6);全局轮次缺失(→F7);保存后无查看(→F8) |
 | 2026-06-12 | P1 三轮(v3 脚本) | 部分通过 | F4 开始瞬间已稳、F7/F8 可用;生成全程仍上下跳(→F9);整理总结无反应、重新找证据变重跑(→F10);分歧扫描/分歧继续讨论/角色观点仍点不开(→F11);裸 current-N、字面 \n、运行追踪 uuid(→F12/F13) |
 | 2026-06-12 | P1 四轮(v4 脚本) | 部分通过 | 滚动跳动/卡顿已清(F9 ✓);用户拍板:读者参与整体重构为"聊天即参与"(→F14);证据编号对不上(→F15);展开仍有四处漏(→F16);需快速滚动(→F17);角色控制漂移不可用(→F14) |
+| 2026-06-12 | P1 五轮(v5 脚本,build 6531) | 部分通过 | F15/F16/F17 可用;参与区发送无反应、跳转卡顿、双输入框别扭——参与层五轮未稳,判定结构性问题:冻结(→F19b),移交 R3;研讨上下文孤岛(→F19a 回流) |
