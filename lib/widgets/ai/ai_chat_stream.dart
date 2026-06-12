@@ -9349,10 +9349,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             ],
           ),
           const SizedBox(height: 6),
-          Text(
+          _seminarExpandableText(
             synthesis,
-            maxLines: 4,
-            overflow: TextOverflow.ellipsis,
+            collapsedMaxLines: 4,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: ClaudePalette.fg(context),
                   height: 1.35,
@@ -11370,10 +11369,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       ),
                     ],
                     const SizedBox(height: 3),
-                    Text(
+                    _seminarExpandableText(
                       normalizedText,
-                      maxLines: 4,
-                      overflow: TextOverflow.ellipsis,
+                      collapsedMaxLines: 4,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: ClaudePalette.secondary(context),
                             height: 1.32,
@@ -11690,10 +11688,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                   _seminarToolCallOutputLabel(toolCall),
                 ),
                 const SizedBox(height: 4),
-                Text(
+                _seminarExpandableText(
                   outputText,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
+                  collapsedMaxLines: 3,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: ClaudePalette.secondary(context),
                         height: 1.32,
@@ -12163,6 +12160,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     AiSeminarRunCardEvidenceSnapshot evidence, {
     int? fallbackIndex,
     bool anchorEvidence = false,
+    bool expandableSnippet = false,
   }) {
     final title = evidence.title.trim();
     final snippet = evidence.snippet.trim();
@@ -12216,15 +12214,25 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               if (snippet.isNotEmpty) ...[
                 if (title.isNotEmpty || numberChip != null)
                   const SizedBox(height: 3),
-                Text(
-                  snippet,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: ClaudePalette.secondary(context),
-                        height: 1.32,
-                      ),
-                ),
+                if (expandableSnippet)
+                  _seminarExpandableText(
+                    snippet,
+                    collapsedMaxLines: 3,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: ClaudePalette.secondary(context),
+                          height: 1.32,
+                        ),
+                  )
+                else
+                  Text(
+                    snippet,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: ClaudePalette.secondary(context),
+                          height: 1.32,
+                        ),
+                  ),
               ],
               if (title.isEmpty) ...[
                 if (snippet.isNotEmpty) const SizedBox(height: 4),
@@ -12651,10 +12659,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       ),
                     if (part.text?.trim().isNotEmpty == true) ...[
                       if (meta.isNotEmpty) const SizedBox(height: 3),
-                      Text(
+                      _seminarExpandableText(
                         part.text!.trim(),
-                        maxLines: 4,
-                        overflow: TextOverflow.ellipsis,
+                        collapsedMaxLines: 4,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: ClaudePalette.secondary(context),
                               height: 1.32,
@@ -12821,10 +12828,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               ),
               if (prompt != null && prompt.isNotEmpty) ...[
                 const SizedBox(height: 4),
-                Text(
+                _seminarExpandableText(
                   prompt,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
+                  collapsedMaxLines: 3,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: ClaudePalette.secondary(context),
                         height: 1.32,
@@ -12894,10 +12900,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
+                _seminarExpandableText(
                   draftText,
-                  maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
+                  collapsedMaxLines: 4,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: ClaudePalette.secondary(context),
                         height: 1.32,
@@ -13031,10 +13036,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     ),
                     if (cueText != null && cueText.isNotEmpty) ...[
                       const SizedBox(height: 3),
-                      Text(
+                      _seminarExpandableText(
                         cueText,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
+                        collapsedMaxLines: 3,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: ClaudePalette.secondary(context),
                               height: 1.32,
@@ -13167,10 +13171,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     ),
                     if (statusText != null && statusText.isNotEmpty) ...[
                       const SizedBox(height: 3),
-                      Text(
+                      _seminarExpandableText(
                         statusText,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
+                        collapsedMaxLines: 3,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: ClaudePalette.secondary(context),
                               height: 1.32,
@@ -14538,10 +14541,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               for (final text in previewTexts)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 3),
-                  child: Text(
+                  child: _seminarExpandableText(
                     text,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    collapsedMaxLines: 2,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: ClaudePalette.secondary(context),
                           height: 1.3,
@@ -14879,10 +14881,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 ),
               ),
               const SizedBox(height: 4),
-              Text(
+              _seminarExpandableText(
                 summary,
-                maxLines: 5,
-                overflow: TextOverflow.ellipsis,
+                collapsedMaxLines: 5,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: ClaudePalette.fg(context),
                       height: 1.35,
@@ -15299,10 +15300,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       ),
                       const SizedBox(width: 6),
                       Expanded(
-                        child: Text(
+                        child: _seminarExpandableText(
                           item.text,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                          collapsedMaxLines: 2,
                           style:
                               Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: ClaudePalette.secondary(context),
@@ -15324,7 +15324,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                           ),
                           const SizedBox(height: 5),
                           for (final evidence in item.evidenceRefs)
-                            _seminarSnapshotEvidenceTile(evidence),
+                            _seminarSnapshotEvidenceTile(
+                              evidence,
+                              expandableSnippet: true,
+                            ),
                         ],
                       ),
                     ),
