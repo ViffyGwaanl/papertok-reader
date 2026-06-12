@@ -7,7 +7,7 @@ class SeminarAutoScrollPolicy {
   const SeminarAutoScrollPolicy._();
 
   static const double bottomThreshold = 80;
-  static const double shortcutThreshold = 120;
+  static const double shortcutThreshold = 320;
 
   static bool isPinnedToBottom({
     required double maxScrollExtent,

@@ -6071,50 +6071,50 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   }
 
   Widget _buildScrollShortcutOverlay(Widget list) {
-    if (!_showScrollShortcut) return list;
     return Stack(
       children: [
         Positioned.fill(child: list),
-        PositionedDirectional(
-          end: 14,
-          bottom: 14,
-          child: GestureDetector(
-            onLongPress: _scrollToTop,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                FloatingActionButton.small(
-                  heroTag: null,
-                  tooltip: _localizedSeminarCardText(
-                    zh: '回到底部;长按回顶部',
-                    en: 'Back to bottom; hold for top',
-                  ),
-                  onPressed: () => _scrollToBottom(
-                    force: true,
-                    clearNewContentIndicator: true,
-                  ),
-                  child: const Icon(Icons.keyboard_arrow_down_rounded),
-                ),
-                if (_hasNewContentBelow)
-                  PositionedDirectional(
-                    top: -2,
-                    end: -2,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.error,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Theme.of(context).colorScheme.surface,
-                          width: 2,
-                        ),
-                      ),
-                      child: const SizedBox(width: 12, height: 12),
+        if (_showScrollShortcut)
+          PositionedDirectional(
+            end: 14,
+            bottom: 14,
+            child: GestureDetector(
+              onLongPress: _scrollToTop,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  FloatingActionButton.small(
+                    heroTag: null,
+                    tooltip: _localizedSeminarCardText(
+                      zh: '回到底部;长按回顶部',
+                      en: 'Back to bottom; hold for top',
                     ),
+                    onPressed: () => _scrollToBottom(
+                      force: true,
+                      clearNewContentIndicator: true,
+                    ),
+                    child: const Icon(Icons.keyboard_arrow_down_rounded),
                   ),
-              ],
+                  if (_hasNewContentBelow)
+                    PositionedDirectional(
+                      top: -2,
+                      end: -2,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.error,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.surface,
+                            width: 2,
+                          ),
+                        ),
+                        child: const SizedBox(width: 12, height: 12),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
-        ),
       ],
     );
   }

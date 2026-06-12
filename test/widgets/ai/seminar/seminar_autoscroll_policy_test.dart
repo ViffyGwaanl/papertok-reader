@@ -58,14 +58,31 @@ void main() {
     expect(
       SeminarAutoScrollPolicy.shouldShowShortcut(
         maxScrollExtent: 1000,
-        pixels: 879,
+        pixels: 679,
       ),
       true,
     );
     expect(
       SeminarAutoScrollPolicy.shouldShowShortcut(
         maxScrollExtent: 1000,
-        pixels: 881,
+        pixels: 681,
+      ),
+      false,
+    );
+  });
+
+  test('scroll shortcut stays hidden around the bottom interaction zone', () {
+    expect(
+      SeminarAutoScrollPolicy.shouldShowShortcut(
+        maxScrollExtent: 1000,
+        pixels: 760,
+      ),
+      false,
+    );
+    expect(
+      SeminarAutoScrollPolicy.isPinnedToBottom(
+        maxScrollExtent: 1000,
+        pixels: 760,
       ),
       false,
     );
