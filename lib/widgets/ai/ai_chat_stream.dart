@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
-
 import 'package:papertok_reader/app/app_globals.dart';
 import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
@@ -31,6 +30,7 @@ import 'package:papertok_reader/service/memory/memory_workflow_service.dart';
 import 'package:papertok_reader/utils/toast/common.dart';
 import 'package:papertok_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:papertok_reader/utils/ai_reasoning_parser.dart';
+import 'package:papertok_reader/widgets/ai/seminar/seminar_autoscroll_policy.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_expandable_text.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_reader_composer_policy.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_stable_width_section.dart';
@@ -74,9 +74,7 @@ import 'package:langchain_core/chat_models.dart';
 import 'package:path/path.dart' as p;
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
-
 import 'package:papertok_reader/models/ai_quick_prompt_chip.dart';
-
 class _ConfigurableSkillPickerRow extends StatelessWidget {
   const _ConfigurableSkillPickerRow({
     required this.selected,
@@ -902,9 +900,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   // Bottom sheet convenience gesture: swipe down on input box to minimize.
   double _inputSwipeDownDy = 0;
 
-  // Auto-scroll behavior:
-  // - Do NOT jump to bottom when opening the panel.
-  // - While streaming, only keep scrolling if the user is already near bottom.
+  // Auto-scroll: do not jump on open; streaming follows only near bottom.
   bool _pinnedToBottom = false;
 
   // For each user turn, the assistant may have multiple generated variants.
@@ -976,15 +972,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     // Be defensive: scroll controller may be swapped/rebuilt by the sheet.
     try {
       if (!_scrollController.hasClients) return;
-      final max = _scrollController.position.maxScrollExtent;
-      final offset = _scrollController.offset;
-      // Within 120px counts as "at bottom".
-      _pinnedToBottom = (max - offset) < 120;
+      _pinnedToBottom = SeminarAutoScrollPolicy.isPinnedToBottom(
+        maxScrollExtent: _scrollController.position.maxScrollExtent,
+        pixels: _scrollController.offset,
+      );
     } catch (_) {
       // Ignore (e.g. controller disposed during rebuild).
     }
   }
-
   void _attachScrollController(ScrollController? external) {
     // Detach old controller.
     try {
@@ -1656,13 +1651,19 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   }
 
   void _scrollToBottom({bool force = false}) {
-    if (!force && !_pinnedToBottom) return;
-
+    final isScrolling = _scrollController.hasClients &&
+        _scrollController.position.isScrollingNotifier.value;
+    if (!force &&
+        !SeminarAutoScrollPolicy.shouldFollowStreaming(
+          pinnedToBottom: _pinnedToBottom,
+          userScrollInProgress: isScrolling,
+        )) {
+      return;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       try {
         if (_scrollController.hasClients) {
           final target = _scrollController.position.maxScrollExtent;
-          // Use jumpTo during streaming to reduce jank.
           if (_isStreaming) {
             _scrollController.jumpTo(target);
           } else {
