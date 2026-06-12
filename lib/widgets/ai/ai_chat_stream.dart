@@ -33,6 +33,7 @@ import 'package:papertok_reader/utils/ai_reasoning_parser.dart';
 import 'package:papertok_reader/widgets/ai/seminar/composer/seminar_reader_composer_policy.dart';
 import 'package:papertok_reader/widgets/ai/seminar/composer/seminar_reader_participation_composer.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_autoscroll_policy.dart';
+import 'package:papertok_reader/widgets/ai/seminar/seminar_evidence_numbering.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_expandable_text.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_run_trace_label.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_stable_width_section.dart';
@@ -816,6 +817,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   final Map<String, TextEditingController> _seminarCardRolePromptControllers =
       {};
   final Map<String, TextEditingController> _seminarAgentInputControllers = {};
+  final Map<String, GlobalKey> _seminarEvidenceTileKeys = {};
   final Map<String, AiSeminarRole> _seminarCardSelectedRoles = {};
   final Map<String, String> _seminarCardSelectedActionIds = {};
   final Map<String, String> _seminarCardSubmittingIntentIds = {};
@@ -9276,7 +9278,12 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             ),
           ),
           const SizedBox(height: 6),
-          for (final item in evidence) _seminarSnapshotEvidenceTile(item),
+          for (var index = 0; index < evidence.length; index++)
+            _seminarSnapshotEvidenceTile(
+              evidence[index],
+              fallbackIndex: index + 1,
+              anchorEvidence: true,
+            ),
         ],
         if (showRoles && (roles.isNotEmpty || hasRolePartial)) ...[
           if ((showToolCalls && toolCalls.isNotEmpty) ||
@@ -9481,6 +9488,42 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       sourceRef?.sourceKind.asString ?? '',
       sourceRef?.sourceTextSnippet ?? '',
     ].join('|');
+  }
+
+  GlobalKey _seminarEvidenceTileKey(
+    AiSeminarRunCardEvidenceSnapshot evidence,
+  ) {
+    final key = _seminarSnapshotEvidenceKey(evidence);
+    return _seminarEvidenceTileKeys.putIfAbsent(key, GlobalKey.new);
+  }
+
+  void _jumpToSeminarEvidenceRow(
+    AiSeminarRunCardEvidenceSnapshot evidence,
+  ) {
+    final key = _seminarEvidenceTileKeys[_seminarSnapshotEvidenceKey(evidence)];
+    final targetContext = key?.currentContext;
+    if (targetContext != null) {
+      Scrollable.ensureVisible(
+        targetContext,
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOutCubic,
+        alignment: 0.08,
+      );
+      return;
+    }
+    final sourceRef = evidence.sourceRef;
+    if (sourceRef?.hasEvidence == true) {
+      _openSeminarEvidenceSource(sourceRef!);
+      return;
+    }
+    showPaperReaderSourceUnavailable(
+      context,
+      sourceRef == null ? const <SourceRef>[] : [sourceRef],
+      _localizedSeminarCardText(
+        zh: '没有可跳转的证据条目。',
+        en: 'No jumpable evidence item available.',
+      ),
+    );
   }
 
   List<AiSeminarRunCardMessagePart> _seminarSnapshotReviewTriageParts(
@@ -12117,15 +12160,22 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   }
 
   Widget _seminarSnapshotEvidenceTile(
-    AiSeminarRunCardEvidenceSnapshot evidence,
-  ) {
+    AiSeminarRunCardEvidenceSnapshot evidence, {
+    int? fallbackIndex,
+    bool anchorEvidence = false,
+  }) {
     final title = evidence.title.trim();
     final snippet = evidence.snippet.trim();
+    final numberChip = _seminarEvidenceNumberChip(
+      evidence,
+      fallbackIndex: fallbackIndex,
+    );
     final sourceAction = _seminarSnapshotEvidenceSourceAction(
       evidence.sourceRef,
     );
     final sourceStatus = sourceAction ?? _seminarSnapshotMissingSourceChip();
     return Padding(
+      key: anchorEvidence ? _seminarEvidenceTileKey(evidence) : null,
       padding: const EdgeInsets.only(bottom: 6),
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -12137,28 +12187,35 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (title.isNotEmpty)
+              if (title.isNotEmpty || numberChip != null)
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style:
-                            Theme.of(context).textTheme.labelMedium?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: ClaudePalette.fg(context),
-                                ),
+                    if (numberChip != null) ...[
+                      numberChip,
+                      const SizedBox(width: 6),
+                    ],
+                    if (title.isNotEmpty)
+                      Expanded(
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              Theme.of(context).textTheme.labelMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: ClaudePalette.fg(context),
+                                  ),
+                        ),
                       ),
-                    ),
+                    if (title.isEmpty) const Spacer(),
                     const SizedBox(width: 6),
                     sourceStatus,
                   ],
                 ),
               if (snippet.isNotEmpty) ...[
-                if (title.isNotEmpty) const SizedBox(height: 3),
+                if (title.isNotEmpty || numberChip != null)
+                  const SizedBox(height: 3),
                 Text(
                   snippet,
                   maxLines: 3,
@@ -12171,16 +12228,76 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               ],
               if (title.isEmpty) ...[
                 if (snippet.isNotEmpty) const SizedBox(height: 4),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: sourceStatus,
-                ),
+                if (numberChip == null)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: sourceStatus,
+                  ),
               ],
             ],
           ),
         ),
       ),
     );
+  }
+
+  Widget? _seminarEvidenceNumberChip(
+    AiSeminarRunCardEvidenceSnapshot evidence, {
+    int? fallbackIndex,
+  }) {
+    final label = seminarEvidenceLabel(
+      id: evidence.id,
+      fallbackIndex: fallbackIndex,
+      zh: _isChineseLocale,
+    );
+    if (label == null) return null;
+    return Chip(
+      key: ValueKey(
+        'seminar-evidence-number-${evidence.id ?? label}-$fallbackIndex',
+      ),
+      avatar: const Icon(Icons.format_list_numbered, size: 14),
+      label: Text(label),
+      visualDensity: VisualDensity.compact,
+      side: BorderSide(color: ClaudePalette.divider(context)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    );
+  }
+
+  Widget? _seminarEvidenceReferenceChip(
+    AiSeminarRunCardEvidenceSnapshot evidence, {
+    required int keyIndex,
+  }) {
+    final label = seminarEvidenceLabel(
+      id: evidence.id,
+      zh: _isChineseLocale,
+    );
+    if (label == null) return null;
+    final keyId =
+        evidence.id?.trim().isNotEmpty == true ? evidence.id!.trim() : label;
+    return ActionChip(
+      key: ValueKey('seminar-evidence-ref-$keyId-$keyIndex'),
+      avatar: const Icon(Icons.format_list_numbered, size: 14),
+      label: Text(label),
+      onPressed: () => _jumpToSeminarEvidenceRow(evidence),
+      visualDensity: VisualDensity.compact,
+      side: BorderSide(color: ClaudePalette.divider(context)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    );
+  }
+
+  Widget _seminarEvidenceReferenceChips(
+    List<AiSeminarRunCardEvidenceSnapshot> evidenceRefs,
+  ) {
+    final chips = <Widget>[];
+    for (var index = 0; index < evidenceRefs.length; index++) {
+      final chip = _seminarEvidenceReferenceChip(
+        evidenceRefs[index],
+        keyIndex: index,
+      );
+      if (chip != null) chips.add(chip);
+    }
+    if (chips.isEmpty) return const SizedBox.shrink();
+    return Wrap(spacing: 6, runSpacing: 6, children: chips);
   }
 
   Widget? _seminarSnapshotEvidenceSourceAction(SourceRef? sourceRef) {
@@ -12217,11 +12334,24 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                   en: 'No jumpable source available.',
                 ),
               )
-          : () => _sourceOpener(
-                ref,
-                sourceIntent.toUri(),
-              ),
+          : () => _sourceOpener(ref, sourceIntent.toUri()),
     );
+  }
+
+  void _openSeminarEvidenceSource(SourceRef sourceRef) {
+    final sourceIntent = PaperReaderReaderIntent.fromSourceRef(sourceRef);
+    if (sourceIntent == null) {
+      showPaperReaderSourceUnavailable(
+        context,
+        [sourceRef],
+        _localizedSeminarCardText(
+          zh: '没有可跳转的来源。',
+          en: 'No jumpable source available.',
+        ),
+      );
+      return;
+    }
+    _sourceOpener(ref, sourceIntent.toUri());
   }
 
   Widget _seminarSnapshotRoleTile(AiSeminarRunCardRoleSummary role) {
@@ -12229,6 +12359,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         ? role.label.trim()
         : _seminarRoleFallbackLabel(role.roleId);
     final summary = role.summary.trim();
+    final evidenceRefs = role.evidenceRefs
+        .where((item) => !item.isEmpty)
+        .toList(growable: false);
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
@@ -12261,6 +12394,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                           height: 1.32,
                         ),
                   ),
+                if (evidenceRefs.isNotEmpty) ...[
+                  const SizedBox(height: 5),
+                  _seminarEvidenceReferenceChips(evidenceRefs),
+                ],
               ],
             ),
           ),
@@ -13945,7 +14082,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         expandLabel: _localizedSeminarCardText(zh: '展开全文', en: 'Expand'),
         collapseLabel: _localizedSeminarCardText(zh: '收起', en: 'Collapse'),
         evidenceLabelBuilder: (number) =>
-            _localizedSeminarCardText(zh: '证据 $number', en: 'Evidence $number'),
+            _localizedSeminarCardText(zh: '证据$number', en: 'Evidence $number'),
         style: style,
       );
 
@@ -14009,6 +14146,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       parentRunId: parentRunId,
                     ),
                     if (evidenceRefs.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      _seminarEvidenceReferenceChips(evidenceRefs),
                       const SizedBox(height: 7),
                       _seminarSnapshotDetailLabel(
                         _localizedSeminarCardText(
@@ -14017,8 +14156,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         ),
                       ),
                       const SizedBox(height: 5),
-                      for (final evidence in evidenceRefs)
-                        _seminarSnapshotEvidenceTile(evidence),
+                      for (var index = 0; index < evidenceRefs.length; index++)
+                        _seminarSnapshotEvidenceTile(
+                          evidenceRefs[index],
+                          fallbackIndex: index + 1,
+                        ),
                     ],
                   ],
                 ),
