@@ -30,9 +30,10 @@ import 'package:papertok_reader/service/memory/memory_workflow_service.dart';
 import 'package:papertok_reader/utils/toast/common.dart';
 import 'package:papertok_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:papertok_reader/utils/ai_reasoning_parser.dart';
+import 'package:papertok_reader/widgets/ai/seminar/composer/seminar_reader_composer_policy.dart';
+import 'package:papertok_reader/widgets/ai/seminar/composer/seminar_reader_participation_composer.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_autoscroll_policy.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_expandable_text.dart';
-import 'package:papertok_reader/widgets/ai/seminar/seminar_reader_composer_policy.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_run_trace_label.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_stable_width_section.dart';
 import 'package:papertok_reader/widgets/ai/seminar/start_seminar_tool_bridge.dart';
@@ -785,6 +786,9 @@ enum _SeminarRunSnapshotSubview {
   final String id;
 }
 
+const String _seminarParticipationHintDismissedPrefsKey =
+    'ai_seminar_participation_hint_dismissed_v1';
+
 class AiChatStreamState extends ConsumerState<AiChatStream> {
   static const List<String> _seminarRoleToolIds = <String>[
     'semantic_search_current_book',
@@ -805,6 +809,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       widget.sourceOpener ?? openPaperReaderSource;
 
   bool _suppressDraftSync = false;
+  bool _seminarParticipationHintDismissed = false;
   final Map<String, String> _lastSeminarCardSignatures = {};
   final Map<String, TextEditingController> _seminarCardReplyControllers = {};
   final Map<String, TextEditingController> _seminarCardQuestionControllers = {};
@@ -813,6 +818,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   final Map<String, TextEditingController> _seminarAgentInputControllers = {};
   final Map<String, AiSeminarRole> _seminarCardSelectedRoles = {};
   final Map<String, String> _seminarCardSelectedActionIds = {};
+  final Map<String, String> _seminarCardSubmittingIntentIds = {};
   final Map<String, _SeminarRunSnapshotSubview> _seminarCardSnapshotSubviews =
       {};
   final Set<String> _seminarCardSetupExpandedSessionIds = <String>{};
@@ -1004,6 +1010,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   void initState() {
     super.initState();
     _scheduleSyncUiVisible();
+    _seminarParticipationHintDismissed =
+        Prefs().prefs.getBool(_seminarParticipationHintDismissedPrefsKey) ??
+            false;
 
     _scrollController = ScrollController();
     _attachScrollController(widget.scrollController);
@@ -3656,23 +3665,23 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         );
       case AiSeminarDirectorNextIntent.refreshEvidence:
         return _localizedSeminarCardText(
-          zh: '主持人正在判断哪些分歧需要补充证据。',
+          zh: '正在补充证据,已有发言保留',
           en: 'Director is checking which disagreements need more evidence.',
         );
       case AiSeminarDirectorNextIntent.askUser:
         return _localizedSeminarCardText(
-          zh: '主持人正在等待你的选择，以决定继续追问、补证据还是整理总结。',
+          zh: '主持人正在等你插话。',
           en: 'Director is waiting for your choice before continuing.',
         );
       case AiSeminarDirectorNextIntent.synthesize:
         return _localizedSeminarCardText(
-          zh: '主持人正在把证据和角色分歧整理成总结。',
+          zh: '正在整理总结…',
           en: 'Director is preparing an evidence-bound synthesis.',
         );
       case AiSeminarDirectorNextIntent.end:
         if (state.synthesis == null && state.turns.isEmpty) return null;
         return _localizedSeminarCardText(
-          zh: '主持人已基于证据和角色发言整理总结。',
+          zh: '主持人已基于证据和角色发言出总结。',
           en: 'Director reviewed evidence and role turns before synthesis.',
         );
       case null:
@@ -6281,6 +6290,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       card,
       runtimeState,
     );
+    final headerControls = _seminarRunCardHeaderControls(
+      card: card,
+      snapshot: snapshot,
+      canCancelFromCard: canCancelFromCard,
+    );
 
     final showRecoveryDetails = normalizedSessionId != null &&
         normalizedSessionId.isNotEmpty &&
@@ -6313,6 +6327,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Icon(
                     Icons.groups_2_outlined,
@@ -6329,6 +6344,19 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                           ),
                     ),
                   ),
+                  if (headerControls.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Align(
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: headerControls,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 8),
@@ -6390,10 +6418,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     card.sessionId,
                   ),
                 ),
-              ],
-              if (canCancelFromCard) ...[
-                const SizedBox(height: 12),
-                _buildSeminarRunCardCancelAction(card),
               ],
               if (_shouldShowSeminarCardDisagreementActions(
                 card,
@@ -7430,24 +7454,60 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     return runtimeState.session?.id == sessionId && runtimeState.canCancel;
   }
 
+  List<Widget> _seminarRunCardHeaderControls({
+    required AiSeminarRunCardMeta card,
+    required AiSeminarRunCardSnapshot? snapshot,
+    required bool canCancelFromCard,
+  }) {
+    final sessionId = card.sessionId?.trim();
+    if (sessionId == null || sessionId.isEmpty) return const [];
+    final controls = <Widget>[
+      if (canCancelFromCard) _buildSeminarRunCardCancelAction(card),
+    ];
+    if (snapshot != null) {
+      for (final part in snapshot.messageParts) {
+        final actionIds = part.actionIds
+            .map((actionId) => actionId.trim())
+            .where((actionId) =>
+                _seminarAgentControlActionLabel(actionId).isNotEmpty)
+            .where((actionId) => _seminarAgentControlActionIsExecutable(
+                  part,
+                  actionId: actionId,
+                  sessionId: sessionId,
+                ))
+            .toList(growable: false);
+        for (final actionId in actionIds) {
+          controls.add(
+            _seminarAgentControlAction(
+              part,
+              actionId: actionId,
+              sessionId: sessionId,
+            ),
+          );
+        }
+      }
+    }
+    return controls;
+  }
+
   Widget _buildSeminarRunCardCancelAction(AiSeminarRunCardMeta card) {
     final sessionId = card.sessionId?.trim();
     if (sessionId == null || sessionId.isEmpty) {
       return const SizedBox.shrink();
     }
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: OutlinedButton.icon(
-        key: ValueKey('seminar-chat-card-cancel-$sessionId'),
-        onPressed: () => _cancelActiveSeminarRunCard(sessionId),
-        icon: const Icon(Icons.stop_circle_outlined, size: 18),
-        label: Text(
-          _localizedSeminarCardText(
-            zh: '取消研讨',
-            en: 'Cancel seminar',
-          ),
+    return ActionChip(
+      key: ValueKey('seminar-chat-card-cancel-$sessionId'),
+      avatar: const Icon(Icons.stop_circle_outlined, size: 16),
+      label: Text(
+        _localizedSeminarCardText(
+          zh: '取消研讨',
+          en: 'Cancel seminar',
         ),
       ),
+      onPressed: () => _cancelActiveSeminarRunCard(sessionId),
+      visualDensity: VisualDensity.compact,
+      side: BorderSide(color: ClaudePalette.divider(context)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     );
   }
 
@@ -7730,7 +7790,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       }
     }
     return _localizedSeminarCardText(
-      zh: '整理总结',
+      zh: '出总结',
       en: 'Synthesize',
     );
   }
@@ -7862,7 +7922,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     if (sessionId == null || sessionId.isEmpty) return false;
     if (runtimeState.session?.id != sessionId) return false;
     if (runtimeState.evidenceBundle == null) return false;
-    return runtimeState.status == AiSeminarRunStatus.completed ||
+    return runtimeState.status == AiSeminarRunStatus.running ||
+        runtimeState.status == AiSeminarRunStatus.completed ||
         runtimeState.directorState?.needsUserInput == true;
   }
 
@@ -7903,30 +7964,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         : nonSynthesizerRoles;
   }
 
-  AiSeminarRole? _seminarPriorityRebuttalRole(
-    String? sessionId,
-    AiSeminarRuntimeState runtimeState,
-  ) {
-    final sessionRoles = runtimeState.session?.roles ?? const <AiSeminarRole>[];
-    final effectiveRoles =
-        sessionRoles.isEmpty ? AiSeminarRole.defaultRoles : sessionRoles;
-    final nonSynthesizerRoles = effectiveRoles
-        .where((role) => role != AiSeminarRole.synthesizer)
-        .toList(growable: false);
-    final roles = nonSynthesizerRoles.isEmpty
-        ? effectiveRoles.toList(growable: false)
-        : nonSynthesizerRoles;
-    if (roles.isEmpty) return null;
-    if (roles.contains(AiSeminarRole.critical)) {
-      return AiSeminarRole.critical;
-    }
-    final normalizedSessionId = sessionId?.trim();
-    if (normalizedSessionId == null || normalizedSessionId.isEmpty) {
-      return roles.first;
-    }
-    return _seminarCardSelectedRole(normalizedSessionId, roles);
-  }
-
   List<String> _seminarComposerRoleIdsFromState(
     AiSeminarRuntimeState runtimeState,
   ) {
@@ -7946,10 +7983,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   }
 
   String? _seminarComposerDefaultRoleIdFromState(
-    AiSeminarRuntimeState runtimeState,
+    AiSeminarRuntimeState _,
   ) {
-    final roleIds = _seminarComposerRoleIdsFromState(runtimeState);
-    return roleIds.isEmpty ? null : roleIds.first;
+    return null;
   }
 
   String? _seminarComposerSelectedRoleIdFromState(
@@ -7960,7 +7996,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       final selectedRole = _seminarCardSelectedRoles[sessionId];
       if (selectedRole != null) return selectedRole.asString;
     }
-    return _seminarComposerDefaultRoleIdFromState(runtimeState);
+    return null;
   }
 
   String? _seminarComposerSelectedActionIdFromState(
@@ -7985,32 +8021,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     return draft == null || draft.isEmpty ? null : draft;
   }
 
-  List<AiSeminarUserInterventionAction> _seminarComposerAvailableActions() =>
-      seminarReaderComposerActions();
-
-  AiSeminarUserInterventionAction _seminarCardSelectedAction(
-    String sessionId,
-  ) {
-    final available = _seminarComposerAvailableActions();
-    final rawSelected = _seminarCardSelectedActionIds[sessionId]?.trim();
-    if (rawSelected != null && rawSelected.isNotEmpty) {
-      final selected = AiSeminarUserInterventionAction.fromString(rawSelected);
-      if (available.contains(selected)) return selected;
-    }
-    final fallback = AiSeminarUserInterventionAction.askRole;
-    _seminarCardSelectedActionIds[sessionId] = fallback.asString;
-    return fallback;
-  }
-
-  AiSeminarRole _seminarCardSelectedRole(
+  AiSeminarRole? _seminarCardSelectedRole(
     String sessionId,
     List<AiSeminarRole> roles,
   ) {
-    final fallback = roles.isEmpty ? AiSeminarRole.critical : roles.first;
     final selected = _seminarCardSelectedRoles[sessionId];
     if (selected == null || !roles.contains(selected)) {
-      _seminarCardSelectedRoles[sessionId] = fallback;
-      return fallback;
+      _seminarCardSelectedRoles.remove(sessionId);
+      return null;
     }
     return selected;
   }
@@ -8024,226 +8042,84 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final controller = _seminarCardReplyController(sessionId);
     final roles = _seminarCardAvailableRoles(card, runtimeState);
     final selectedRole = _seminarCardSelectedRole(sessionId, roles);
-    final selectedAction = _seminarCardSelectedAction(sessionId);
     final isSubmitting = _seminarCardSubmittingSessionIds.contains(sessionId);
-    final canSubmit = seminarReaderComposerCanSubmit(
-      selectedAction,
-      controller.text,
-      isSubmitting,
-    );
-    final borderColor = ClaudePalette.divider(context);
     final isAwaitingReader = runtimeState.directorState?.needsUserInput == true;
     final askUserQuestion =
         isAwaitingReader ? _seminarCardFirstOpenQuestion(runtimeState) : null;
-    final actionSelector = Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final action in _seminarComposerAvailableActions())
-          ChoiceChip(
-            key: ValueKey(
-              'seminar-chat-card-action-${action.asString}-$sessionId',
-            ),
-            label: Text(_seminarReaderTurnActionLabel(action.asString)),
-            selected: selectedAction == action,
-            onSelected: isSubmitting
-                ? null
-                : (selected) {
-                    if (!selected) return;
-                    setState(() => _seminarCardSelectedActionIds[sessionId] =
-                        action.asString);
-                    if (seminarReaderComposerActionSubmitsImmediately(action)) {
-                      _submitSeminarCardIntervention(
-                          sessionId: sessionId, action: action);
-                    } else {
-                      _syncSeminarRunCardSnapshot(sessionId, runtimeState);
-                    }
-                  },
-          ),
-      ],
-    );
-    final roleSelector = DropdownButtonFormField<AiSeminarRole>(
-      key: ValueKey('seminar-chat-card-role-$sessionId'),
-      initialValue: selectedRole,
-      decoration: InputDecoration(
-        labelText: _localizedSeminarCardText(
-          zh: '回应角色',
-          en: 'Target role',
-        ),
-        border: const OutlineInputBorder(),
-      ),
-      items: [
-        for (final role in roles)
-          DropdownMenuItem(
-            value: role,
-            child: Text(_seminarRoleFallbackLabel(role.asString)),
-          ),
-      ],
-      onChanged:
-          isSubmitting || !seminarReaderComposerActionUsesRole(selectedAction)
-              ? null
-              : (role) {
-                  if (role == null) return;
-                  setState(() {
-                    _seminarCardSelectedRoles[sessionId] = role;
-                  });
-                  _syncSeminarRunCardSnapshot(sessionId, runtimeState);
-                },
-    );
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: borderColor),
-        color: ClaudePalette.accentTint(context).withValues(alpha: 0.45),
+    return SeminarReaderParticipationComposer(
+      key: ValueKey('seminar-chat-card-participation-$sessionId'),
+      sessionId: sessionId,
+      controller: controller,
+      roles: roles,
+      selectedRole: selectedRole,
+      activeIntentId: _seminarCardSubmittingIntentIds[sessionId],
+      isSubmitting: isSubmitting,
+      isAwaitingReader: isAwaitingReader,
+      showHint: !_seminarParticipationHintDismissed,
+      askUserQuestion: askUserQuestion,
+      roleLabelBuilder: _seminarRoleFallbackLabel,
+      onQuickAction: (quickAction) => _submitSeminarQuickAction(
+        sessionId: sessionId,
+        quickAction: quickAction,
+        targetRole: selectedRole,
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.person_outline,
-                  size: 16,
-                  color: ClaudePalette.accent(context),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    _localizedSeminarCardText(
-                      zh: '读者参与',
-                      en: 'Reader turn',
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: ClaudePalette.fg(context),
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              isAwaitingReader
-                  ? _localizedSeminarCardText(
-                      zh: '主持人正在等待你的回应',
-                      en: 'The Director is waiting for your reply',
-                    )
-                  : _localizedSeminarCardText(
-                      zh: '你的输入会作为读者回合记录，可以要求角色继续反驳、重新找证据或整理总结，不会被当成书内证据。',
-                      en: 'Your reply is stored as a reader turn. It can steer a role, refresh evidence, or synthesize the run, and is not treated as book evidence.',
-                    ),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: isAwaitingReader
-                        ? ClaudePalette.fg(context)
-                        : ClaudePalette.secondary(context),
-                    fontWeight:
-                        isAwaitingReader ? FontWeight.w700 : FontWeight.w400,
-                    height: 1.32,
-                  ),
-            ),
-            if (askUserQuestion != null) ...[
-              const SizedBox(height: 3),
-              Text(
-                askUserQuestion,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: ClaudePalette.secondary(context),
-                      height: 1.32,
-                    ),
-              ),
-            ],
-            if (seminarReaderComposerActionShowsTextField(selectedAction)) ...[
-              const SizedBox(height: 8),
-              TextField(
-                key: ValueKey('seminar-chat-card-reply-$sessionId'),
-                controller: controller,
-                minLines: 2,
-                maxLines: 4,
-                decoration: InputDecoration(
-                  labelText: selectedAction ==
-                          AiSeminarUserInterventionAction.clarify
-                      ? L10n.of(context).aiSeminarReaderReplyRequiredLabel
-                      : L10n.of(context).aiSeminarReaderMessageOptionalLabel,
-                  border: const OutlineInputBorder(),
-                ),
-                onChanged: (_) {
-                  setState(() {});
-                  _syncSeminarRunCardSnapshot(sessionId, runtimeState);
-                },
-              ),
-            ],
-            const SizedBox(height: 8),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                if (constraints.maxWidth >= 680) {
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: actionSelector),
-                      const SizedBox(width: 8),
-                      SizedBox(width: 220, child: roleSelector),
-                    ],
-                  );
-                }
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    actionSelector,
-                    const SizedBox(height: 8),
-                    SizedBox(width: double.infinity, child: roleSelector),
-                  ],
-                );
-              },
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                FilledButton.icon(
-                  key: ValueKey('seminar-chat-card-ask-role-$sessionId'),
-                  icon: isSubmitting
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.record_voice_over_outlined),
-                  label: Text(
-                    _seminarReaderTurnActionLabel(selectedAction.asString),
-                  ),
-                  onPressed: canSubmit
-                      ? () => _submitSeminarCardSelectedIntervention(
-                            sessionId: sessionId,
-                            roles: roles,
-                          )
-                      : null,
-                ),
-              ],
-            ),
-          ],
-        ),
+      onSend: () => _submitSeminarCardInterventionText(
+        sessionId: sessionId,
+        text: controller.text,
+        action: AiSeminarUserInterventionAction.clarify,
+        targetRole: selectedRole,
+        activeIntentId: 'send',
+        onSuccess: () => controller.clear(),
       ),
+      onRoleChanged: (role) {
+        setState(() {
+          if (role == null) {
+            _seminarCardSelectedRoles.remove(sessionId);
+          } else {
+            _seminarCardSelectedRoles[sessionId] = role;
+          }
+        });
+        _syncSeminarRunCardSnapshot(sessionId, runtimeState);
+      },
+      onDraftChanged: (_) {
+        setState(() {});
+        _syncSeminarRunCardSnapshot(sessionId, runtimeState);
+      },
+      onDismissHint: () {
+        Prefs().prefs.setBool(
+              _seminarParticipationHintDismissedPrefsKey,
+              true,
+            );
+        setState(() => _seminarParticipationHintDismissed = true);
+      },
     );
   }
 
-  Future<void> _submitSeminarCardSelectedIntervention({
+  Future<void> _submitSeminarQuickAction({
     required String sessionId,
-    required List<AiSeminarRole> roles,
+    required SeminarParticipationQuickAction quickAction,
+    AiSeminarRole? targetRole,
   }) async {
-    final action = _seminarCardSelectedAction(sessionId);
-    await _submitSeminarCardIntervention(
+    final l10n = L10n.of(context);
+    final action = quickAction.interventionAction;
+    final text = switch (quickAction) {
+      SeminarParticipationQuickAction.continueDiscussion =>
+        l10n.aiSeminarParticipationContinuePrompt,
+      SeminarParticipationQuickAction.alternateAngle =>
+        l10n.aiSeminarParticipationAlternatePrompt,
+      SeminarParticipationQuickAction.refreshEvidence =>
+        l10n.aiSeminarParticipationRefreshPrompt,
+      SeminarParticipationQuickAction.synthesize =>
+        l10n.aiSeminarParticipationSynthesizePrompt,
+    };
+    await _submitSeminarCardInterventionText(
       sessionId: sessionId,
+      text: text,
       action: action,
-      targetRole: seminarReaderComposerActionUsesRole(action)
-          ? _seminarCardSelectedRole(sessionId, roles)
-          : null,
+      targetRole:
+          seminarReaderComposerActionUsesRole(action) ? targetRole : null,
+      activeIntentId: quickAction.id,
     );
   }
 
@@ -8271,28 +8147,28 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     }
     final disagreements = _seminarCardActionDisagreements(snapshot);
     if (disagreements.isEmpty) return const SizedBox.shrink();
-    final roles = _seminarCardAvailableRoles(card, runtimeState);
-    final targetRole = roles.contains(AiSeminarRole.critical)
-        ? AiSeminarRole.critical
-        : _seminarCardSelectedRole(sessionId, roles);
     final isSubmitting = _seminarCardSubmittingSessionIds.contains(sessionId);
-    final targetLabel = _seminarRoleFallbackLabel(targetRole.asString);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (var index = 0; index < disagreements.length; index++) ...[
-          _buildSeminarRunCardDisagreementActionTile(
-            sessionId: sessionId,
-            disagreement: disagreements[index],
-            index: index,
-            targetRole: targetRole,
-            targetLabel: targetLabel,
-            isSubmitting: isSubmitting,
-          ),
-          if (index != disagreements.length - 1) const SizedBox(height: 8),
-        ],
-      ],
+    return SeminarDisagreementParticipationChips(
+      sessionId: sessionId,
+      disagreements: disagreements,
+      isSubmitting: isSubmitting,
+      onContinue: (disagreement) {
+        final controller = _seminarCardReplyController(sessionId);
+        controller.text =
+            L10n.of(context).aiSeminarDisagreementContinuePrefill(disagreement);
+        controller.selection = TextSelection.collapsed(
+          offset: controller.text.length,
+        );
+        setState(() {});
+        _syncSeminarRunCardSnapshot(sessionId, runtimeState);
+      },
+      onVerifyEvidence: (disagreement) => _submitSeminarCardInterventionText(
+        sessionId: sessionId,
+        text: L10n.of(context).aiSeminarDisagreementVerifyPrompt(disagreement),
+        action: AiSeminarUserInterventionAction.refreshEvidence,
+        activeIntentId: 'refresh-disagreement',
+      ),
     );
   }
 
@@ -8322,155 +8198,12 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     return out;
   }
 
-  Widget _buildSeminarRunCardDisagreementActionTile({
-    required String sessionId,
-    required String disagreement,
-    required int index,
-    required AiSeminarRole targetRole,
-    required String targetLabel,
-    required bool isSubmitting,
-  }) {
-    final keySuffix = index == 0 ? '' : '-$index';
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: ClaudePalette.divider(context)),
-        color: Theme.of(context)
-            .colorScheme
-            .tertiaryContainer
-            .withValues(alpha: 0.42),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.report_problem_outlined,
-                  size: 16,
-                  color: ClaudePalette.accent(context),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    _localizedSeminarCardText(
-                      zh: '分歧继续讨论',
-                      en: 'Continue from disagreement',
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: ClaudePalette.fg(context),
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            _seminarExpandableText(
-              disagreement,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: ClaudePalette.secondary(context),
-                    height: 1.32,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                FilledButton.icon(
-                  key: ValueKey(
-                    'seminar-chat-card-ask-critical-disagreement-$sessionId$keySuffix',
-                  ),
-                  icon: isSubmitting
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.record_voice_over_outlined),
-                  label: Text(
-                    targetRole == AiSeminarRole.critical
-                        ? _localizedSeminarCardText(
-                            zh: '让批判者反驳',
-                            en: 'Ask Critical to rebut',
-                          )
-                        : _localizedSeminarCardText(
-                            zh: '让$targetLabel回应',
-                            en: 'Ask $targetLabel to respond',
-                          ),
-                  ),
-                  onPressed: isSubmitting
-                      ? null
-                      : () => _submitSeminarCardInterventionText(
-                            sessionId: sessionId,
-                            text: _localizedSeminarCardText(
-                              zh: '围绕分歧继续反驳：$disagreement',
-                              en: 'Continue the rebuttal around this disagreement: $disagreement',
-                            ),
-                            action: AiSeminarUserInterventionAction.askRole,
-                            targetRole: targetRole,
-                          ),
-                ),
-                OutlinedButton.icon(
-                  key: ValueKey(
-                    'seminar-chat-card-refresh-disagreement-$sessionId$keySuffix',
-                  ),
-                  icon: const Icon(Icons.travel_explore_outlined),
-                  label: Text(
-                    _localizedSeminarCardText(
-                      zh: '围绕分歧重找证据',
-                      en: 'Refresh evidence for this',
-                    ),
-                  ),
-                  onPressed: isSubmitting
-                      ? null
-                      : () => _submitSeminarCardInterventionText(
-                            sessionId: sessionId,
-                            text: _localizedSeminarCardText(
-                              zh: '围绕分歧重新找证据：$disagreement',
-                              en: 'Refresh evidence around this disagreement: $disagreement',
-                            ),
-                            action:
-                                AiSeminarUserInterventionAction.refreshEvidence,
-                          ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _submitSeminarCardIntervention({
-    required String sessionId,
-    required AiSeminarUserInterventionAction action,
-    AiSeminarRole? targetRole,
-  }) async {
-    final controller = _seminarCardReplyControllers[sessionId];
-    final text = seminarReaderComposerSubmittedText(
-      action,
-      controller?.text ?? '',
-    );
-    await _submitSeminarCardInterventionText(
-      sessionId: sessionId,
-      text: text,
-      action: action,
-      targetRole: targetRole,
-      onSuccess: () => controller?.clear(),
-    );
-  }
-
   Future<void> _submitSeminarCardInterventionText({
     required String sessionId,
     required String text,
     required AiSeminarUserInterventionAction action,
     AiSeminarRole? targetRole,
+    String? activeIntentId,
     VoidCallback? onSuccess,
   }) async {
     final trimmed = text.trim();
@@ -8482,7 +8215,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       return;
     }
     _seminarCardSelectedActionIds[sessionId] = action.asString;
-    setState(() => _seminarCardSubmittingSessionIds.add(sessionId));
+    setState(() {
+      _seminarCardSubmittingSessionIds.add(sessionId);
+      _seminarCardSubmittingIntentIds[sessionId] =
+          activeIntentId ?? action.asString;
+    });
     try {
       final notifier = _readSeminarRuntimeNotifier(sessionId);
       await notifier.recordUserIntervention(
@@ -8490,12 +8227,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         requestedAction: action,
         targetRole: targetRole,
       );
-      if (action == AiSeminarUserInterventionAction.synthesize) {
+      if (action == AiSeminarUserInterventionAction.synthesize ||
+          action == AiSeminarUserInterventionAction.refreshEvidence) {
         _syncSeminarRunCardSnapshot(
           sessionId,
           _readSeminarRuntimeState(sessionId),
         );
         if (mounted) setState(() {});
+        _scrollToBottom(force: true);
         await Future<void>.delayed(const Duration(milliseconds: 64));
       }
       await notifier.executeDirectorNextStep();
@@ -8513,6 +8252,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       );
     } finally {
       _seminarCardSubmittingSessionIds.remove(sessionId);
+      _seminarCardSubmittingIntentIds.remove(sessionId);
       if (mounted) setState(() {});
     }
   }
@@ -9346,9 +9086,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final showDisagreements =
         selectedSubview == _SeminarRunSnapshotSubview.disagreements;
     final activeSynthesis = isLiveSession ? runtimeState.synthesis : null;
-    final priorityRebuttalRole = isLiveSession
-        ? _seminarPriorityRebuttalRole(sessionId, runtimeState)
-        : null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -9632,10 +9369,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             _seminarSnapshotContradictionScanTiles(
               contradictionScans,
               sessionId: sessionId,
-              canSubmitPriorityActions: isLiveSession,
-              isSubmitting: sessionId != null &&
-                  _seminarCardSubmittingSessionIds.contains(sessionId),
-              priorityRebuttalRole: priorityRebuttalRole,
             ),
           if (contradictionScans.isNotEmpty &&
               (disagreementRebuttals.isNotEmpty ||
@@ -11008,9 +10741,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         return _seminarSnapshotContradictionScanTiles(
           [part],
           sessionId: sessionId,
-          canSubmitPriorityActions: false,
-          isSubmitting: false,
-          priorityRebuttalRole: null,
         );
       case 'disagreement_rebuttal':
         return _seminarSnapshotDisagreementRebuttalTiles([part]);
@@ -12252,8 +11982,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     switch (action?.trim()) {
       case 'wait-tool-call':
         return _localizedSeminarCardText(
-          zh: '等待工具调用',
-          en: 'Wait for tool call',
+          zh: '证据检索中…',
+          en: 'Retrieving evidence...',
         );
       case 'cancel-tool-call':
         return _localizedSeminarCardText(
@@ -13059,8 +12789,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 const SizedBox(height: 8),
                 _seminarSnapshotLabelText(
                   _localizedSeminarCardText(
-                    zh: '可回应角色',
-                    en: 'Target roles',
+                    zh: '可用角色',
+                    en: 'Available roles',
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -13117,13 +12847,13 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         .where(
             (actionId) => _seminarAgentControlActionLabel(actionId).isNotEmpty)
         .toList(growable: false);
-    final hasExecutableControlAction = controlActionIds.any(
-      (actionId) => _seminarAgentControlActionIsExecutable(
-        part,
-        actionId: actionId,
-        sessionId: sessionId,
-      ),
-    );
+    final inlineControlActionIds = controlActionIds
+        .where((actionId) => !_seminarAgentControlActionIsExecutable(
+              part,
+              actionId: actionId,
+              sessionId: sessionId,
+            ))
+        .toList(growable: false);
     final agentRunId = _seminarAgentRunIdFromStatusPart(part);
     final normalizedSessionId = sessionId?.trim();
     final showAgentInput = agentRunId != null &&
@@ -13178,14 +12908,12 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       part.agentRunId,
                       parentRunId: part.parentRunId,
                     ),
-                    if (controlActionIds.isNotEmpty) ...[
+                    if (inlineControlActionIds.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       _seminarSnapshotLabelText(
                         _localizedSeminarCardText(
-                          zh: hasExecutableControlAction ? '可用控制' : '历史控制',
-                          en: hasExecutableControlAction
-                              ? 'Available controls'
-                              : 'Recorded controls',
+                          zh: '历史控制',
+                          en: 'Recorded controls',
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -13193,7 +12921,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         spacing: 6,
                         runSpacing: 6,
                         children: [
-                          for (final actionId in controlActionIds)
+                          for (final actionId in inlineControlActionIds)
                             _seminarAgentControlAction(
                               part,
                               actionId: actionId,
@@ -13232,13 +12960,13 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         .where(
             (actionId) => _seminarAgentControlActionLabel(actionId).isNotEmpty)
         .toList(growable: false);
-    final hasExecutableControlAction = controlActionIds.any(
-      (actionId) => _seminarAgentControlActionIsExecutable(
-        part,
-        actionId: actionId,
-        sessionId: sessionId,
-      ),
-    );
+    final inlineControlActionIds = controlActionIds
+        .where((actionId) => !_seminarAgentControlActionIsExecutable(
+              part,
+              actionId: actionId,
+              sessionId: sessionId,
+            ))
+        .toList(growable: false);
     final allowedToolIds = _effectiveSeminarStatusAllowedToolIds(
       part.allowedToolIds,
       bookId: bookId,
@@ -13336,14 +13064,12 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         ],
                       ),
                     ],
-                    if (controlActionIds.isNotEmpty) ...[
+                    if (inlineControlActionIds.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       _seminarSnapshotLabelText(
                         _localizedSeminarCardText(
-                          zh: hasExecutableControlAction ? '可用控制' : '历史控制',
-                          en: hasExecutableControlAction
-                              ? 'Available controls'
-                              : 'Recorded controls',
+                          zh: '历史控制',
+                          en: 'Recorded controls',
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -13351,7 +13077,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         spacing: 6,
                         runSpacing: 6,
                         children: [
-                          for (final actionId in controlActionIds)
+                          for (final actionId in inlineControlActionIds)
                             _seminarAgentControlAction(
                               part,
                               actionId: actionId,
@@ -13898,8 +13624,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         SnackBar(
           content: Text(
             _localizedSeminarCardText(
-              zh: '未能等待工具调用',
-              en: 'Could not wait for tool call',
+              zh: '未能等待证据检索',
+              en: 'Could not wait for evidence retrieval',
             ),
           ),
         ),
@@ -13979,13 +13705,13 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         );
       case 'refresh-evidence':
         return _localizedSeminarCardText(
-          zh: '主持人准备重新找证据',
-          en: 'The Director will refresh evidence',
+          zh: '正在补充证据,已有发言保留',
+          en: 'Adding evidence while keeping existing turns',
         );
       case 'synthesize':
         return _localizedSeminarCardText(
-          zh: '主持人准备整理总结',
-          en: 'The Director will synthesize',
+          zh: '正在整理总结…',
+          en: 'Preparing summary...',
         );
       case 'pending':
         return _localizedSeminarCardText(
@@ -14124,8 +13850,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         );
       case 'wait-tool-call':
         return _localizedSeminarCardText(
-          zh: '等待工具调用',
-          en: 'Wait for tool call',
+          zh: '证据检索中…',
+          en: 'Retrieving evidence...',
         );
       case 'cancel-tool-call':
         return _localizedSeminarCardText(
@@ -14173,8 +13899,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         );
       case 'wait-tool-call':
         return _localizedSeminarCardText(
-          zh: '等待工具调用',
-          en: 'Wait for tool call',
+          zh: '证据检索中…',
+          en: 'Retrieving evidence...',
         );
       case 'cancel-tool-call':
         return _localizedSeminarCardText(
@@ -14384,9 +14110,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   Widget _seminarSnapshotContradictionScanTiles(
     List<AiSeminarRunCardMessagePart> parts, {
     required String? sessionId,
-    required bool canSubmitPriorityActions,
-    required bool isSubmitting,
-    required AiSeminarRole? priorityRebuttalRole,
   }) {
     final evidenceGapParts = parts
         .where(_seminarContradictionScanIsEvidenceGap)
@@ -14397,9 +14120,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         _seminarSnapshotContradictionScanOverviewTile(
           parts,
           sessionId: sessionId,
-          canSubmitPriorityActions: canSubmitPriorityActions,
-          isSubmitting: isSubmitting,
-          priorityRebuttalRole: priorityRebuttalRole,
         ),
         const SizedBox(height: 6),
         if (evidenceGapParts.length > 1) ...[
@@ -14541,9 +14261,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   Widget _seminarSnapshotContradictionScanOverviewTile(
     List<AiSeminarRunCardMessagePart> parts, {
     required String? sessionId,
-    required bool canSubmitPriorityActions,
-    required bool isSubmitting,
-    required AiSeminarRole? priorityRebuttalRole,
   }) {
     final evidenceGapCount =
         parts.where(_seminarContradictionScanIsEvidenceGap).length;
@@ -14552,11 +14269,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             !_seminarContradictionScanIsEvidenceGap(part) &&
             _seminarContradictionScanHasEvidence(part))
         .length;
-    final nextActions = _seminarContradictionScanNextActions(
-      evidenceGapCount: evidenceGapCount,
-      evidenceBackedCount: evidenceBackedCount,
-    );
-    final priorityItems = _seminarContradictionScanPriorityItems(parts);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: ClaudePalette.accentTint(context).withValues(alpha: 0.3),
@@ -14623,210 +14335,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 ),
               ],
             ),
-            if (nextActions.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              _seminarSnapshotDetailLabel(
-                _localizedSeminarCardText(
-                  zh: '下一步建议',
-                  en: 'Next actions',
-                ),
-              ),
-              const SizedBox(height: 4),
-              for (final action in nextActions)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 3),
-                  child: Text(
-                    action,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: ClaudePalette.secondary(context),
-                          height: 1.3,
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                ),
-            ],
-            if (priorityItems.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              _seminarSnapshotDetailLabel(
-                _localizedSeminarCardText(
-                  zh: '优先处理',
-                  en: 'Priority queue',
-                ),
-              ),
-              const SizedBox(height: 4),
-              for (var index = 0; index < priorityItems.length; index++)
-                _seminarSnapshotContradictionPriorityItem(
-                  priorityItems[index],
-                  index: index,
-                  sessionId: sessionId,
-                  canSubmit: canSubmitPriorityActions,
-                  isSubmitting: isSubmitting,
-                  priorityRebuttalRole: priorityRebuttalRole,
-                ),
-            ],
           ],
         ),
       ),
     );
-  }
-
-  Widget _seminarSnapshotContradictionPriorityItem(
-    _SeminarContradictionScanPriorityItem item, {
-    required int index,
-    required String? sessionId,
-    required bool canSubmit,
-    required bool isSubmitting,
-    required AiSeminarRole? priorityRebuttalRole,
-  }) {
-    final normalizedSessionId = sessionId?.trim();
-    final keySuffix = index == 0 ? '' : '-$index';
-    if (item.action == AiSeminarUserInterventionAction.refreshEvidence &&
-        normalizedSessionId != null &&
-        normalizedSessionId.isNotEmpty &&
-        canSubmit) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 4),
-        child: OutlinedButton.icon(
-          key: ValueKey(
-            'seminar-chat-card-priority-refresh-disagreement-'
-            '$normalizedSessionId$keySuffix',
-          ),
-          icon: isSubmitting
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.travel_explore_outlined),
-          label: Text(item.label),
-          onPressed: isSubmitting
-              ? null
-              : () => _submitSeminarCardInterventionText(
-                    sessionId: normalizedSessionId,
-                    text: _localizedSeminarCardText(
-                      zh: '围绕分歧重新找证据：${item.disagreement}',
-                      en: 'Refresh evidence around this disagreement: ${item.disagreement}',
-                    ),
-                    action: AiSeminarUserInterventionAction.refreshEvidence,
-                  ),
-        ),
-      );
-    }
-    if (item.action == AiSeminarUserInterventionAction.askRole &&
-        priorityRebuttalRole != null &&
-        normalizedSessionId != null &&
-        normalizedSessionId.isNotEmpty &&
-        canSubmit) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 4),
-        child: OutlinedButton.icon(
-          key: ValueKey(
-            'seminar-chat-card-priority-rebut-disagreement-'
-            '$normalizedSessionId$keySuffix',
-          ),
-          icon: isSubmitting
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.record_voice_over_outlined),
-          label: Text(item.label),
-          onPressed: isSubmitting
-              ? null
-              : () => _submitSeminarCardInterventionText(
-                    sessionId: normalizedSessionId,
-                    text: _localizedSeminarCardText(
-                      zh: '围绕分歧继续反驳：${item.disagreement}',
-                      en: 'Continue the rebuttal around this disagreement: ${item.disagreement}',
-                    ),
-                    action: AiSeminarUserInterventionAction.askRole,
-                    targetRole: priorityRebuttalRole,
-                  ),
-        ),
-      );
-    }
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 3),
-      child: Text(
-        item.label,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: ClaudePalette.secondary(context),
-              height: 1.3,
-              fontWeight: FontWeight.w600,
-            ),
-      ),
-    );
-  }
-
-  List<String> _seminarContradictionScanNextActions({
-    required int evidenceGapCount,
-    required int evidenceBackedCount,
-  }) {
-    final actions = <String>[];
-    if (evidenceGapCount > 0) {
-      actions.add(_localizedSeminarCardText(
-        zh: '先围绕证据缺口重找证据',
-        en: 'Refresh evidence around the evidence gaps first',
-      ));
-    }
-    if (evidenceBackedCount > 0) {
-      actions.add(_localizedSeminarCardText(
-        zh: evidenceGapCount > 0 ? '再让角色反驳已有证据分歧' : '让角色反驳已有证据分歧',
-        en: evidenceGapCount > 0
-            ? 'Then ask a role to rebut evidence-backed disagreements'
-            : 'Ask a role to rebut evidence-backed disagreements',
-      ));
-    }
-    return actions;
-  }
-
-  List<_SeminarContradictionScanPriorityItem>
-      _seminarContradictionScanPriorityItems(
-    List<AiSeminarRunCardMessagePart> parts,
-  ) {
-    final items = <_SeminarContradictionScanPriorityItem>[];
-    void addItems(
-      Iterable<AiSeminarRunCardMessagePart> source, {
-      required String zhPrefix,
-      required String enPrefix,
-      AiSeminarUserInterventionAction? action,
-    }) {
-      for (final part in source) {
-        final text = part.text?.trim();
-        if (text == null || text.isEmpty) continue;
-        items.add(
-          _SeminarContradictionScanPriorityItem(
-            label: _localizedSeminarCardText(
-              zh: '$zhPrefix：$text',
-              en: '$enPrefix: $text',
-            ),
-            disagreement: text,
-            action: action,
-          ),
-        );
-      }
-    }
-
-    addItems(
-      parts.where(_seminarContradictionScanIsEvidenceGap),
-      zhPrefix: '补证据',
-      enPrefix: 'Refresh evidence',
-      action: AiSeminarUserInterventionAction.refreshEvidence,
-    );
-    addItems(
-      parts.where((part) =>
-          !_seminarContradictionScanIsEvidenceGap(part) &&
-          _seminarContradictionScanHasEvidence(part)),
-      zhPrefix: '反驳',
-      enPrefix: 'Rebut',
-      action: AiSeminarUserInterventionAction.askRole,
-    );
-    return items;
   }
 
   Widget _seminarSnapshotContradictionGapSummaryTile(
@@ -14983,8 +14495,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       const SizedBox(height: 7),
                       _seminarSnapshotDetailLabel(
                         _localizedSeminarCardText(
-                          zh: '回应角色',
-                          en: 'Responding role',
+                          zh: '角色',
+                          en: 'Role',
                         ),
                       ),
                       const SizedBox(height: 3),
@@ -16982,18 +16494,6 @@ class _SeminarReviewPreviewItem {
   final List<AiSeminarRunCardEvidenceSnapshot> evidenceRefs;
 
   bool get isEmpty => text.trim().isEmpty && evidenceRefs.isEmpty;
-}
-
-class _SeminarContradictionScanPriorityItem {
-  const _SeminarContradictionScanPriorityItem({
-    required this.label,
-    required this.disagreement,
-    this.action,
-  });
-
-  final String label;
-  final String disagreement;
-  final AiSeminarUserInterventionAction? action;
 }
 
 class _AiChatKnowledgeSourceStatus {

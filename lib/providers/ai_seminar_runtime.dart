@@ -1176,10 +1176,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       throw StateError(message);
     }
     final createdAt = now ?? DateTime.now().millisecondsSinceEpoch;
-    final resolvedTargetRole =
-        requestedAction == AiSeminarUserInterventionAction.askRole
-            ? _resolveUserDirectedRole(session, targetRole)
-            : null;
+    final resolvedTargetRole = requestedAction == AiSeminarUserInterventionAction.askRole || (requestedAction == AiSeminarUserInterventionAction.clarify && targetRole != null) ? _resolveUserDirectedRole(session, targetRole) : null;
     final intervention = AiSeminarUserIntervention(
       id: 'user-$createdAt',
       text: trimmed,

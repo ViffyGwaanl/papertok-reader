@@ -934,7 +934,7 @@ void main() {
     );
     await notifier.recordUserIntervention(
       text: '我认为这里应该先区分定义和例子。',
-      requestedAction: AiSeminarUserInterventionAction.askRole,
+      requestedAction: AiSeminarUserInterventionAction.clarify,
       targetRole: AiSeminarRole.critical,
       now: 1234,
     );
@@ -944,7 +944,7 @@ void main() {
         state.directorState!.nextIntent, AiSeminarDirectorNextIntent.runRole);
     expect(
       state.directorState!.lastUserIntervention!.requestedAction,
-      AiSeminarUserInterventionAction.askRole,
+      AiSeminarUserInterventionAction.clarify,
     );
     expect(state.directorState!.lastUserIntervention!.targetRole,
         AiSeminarRole.critical);
@@ -1796,9 +1796,9 @@ void main() {
         }
         firstFetchCount += 1;
         final evidenceId = firstFetchCount == 1 ? 'e1' : 'e2';
-        if (session.id == 's-auto-refresh-with-queue' &&
-            evidenceId == 'e2') {
-          if (!refreshedFetchStarted.isCompleted) refreshedFetchStarted.complete();
+        if (session.id == 's-auto-refresh-with-queue' && evidenceId == 'e2') {
+          if (!refreshedFetchStarted.isCompleted)
+            refreshedFetchStarted.complete();
           await releaseRefreshedFetch.future;
         }
         return AiSeminarEvidenceBundle(

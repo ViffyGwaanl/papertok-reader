@@ -1699,12 +1699,43 @@
   "aiChatSeminarFeatureTitle": "AI Seminar",
   "aiChatSeminarFeatureDesc": "Start a multi-role discussion with critical, supportive, and synthesis views.",
   "aiChatSeminarFeatureAction": "Open",
-  "aiSeminarReaderActionAskRole": "Ask role",
-  "aiSeminarReaderActionRefreshEvidence": "Refresh evidence",
-  "aiSeminarReaderActionSynthesize": "Synthesize",
-  "aiSeminarReaderActionSendReply": "Send my reply",
+  "aiSeminarReaderActionAskRole": "Continue",
+  "aiSeminarReaderActionRefreshEvidence": "Add evidence",
+  "aiSeminarReaderActionSynthesize": "Summarize",
+  "aiSeminarReaderActionSendReply": "Send",
   "aiSeminarReaderMessageOptionalLabel": "Message to role (optional)",
   "aiSeminarReaderReplyRequiredLabel": "My reply (required)",
+  "aiSeminarParticipationTitle": "Join the seminar",
+  "aiSeminarParticipationHint": "You can jump in, add evidence, or ask for a summary at any time.",
+  "aiSeminarParticipationDismissHint": "Dismiss hint",
+  "aiSeminarParticipationContinue": "Continue",
+  "aiSeminarParticipationAlternate": "Another angle",
+  "aiSeminarParticipationRefreshEvidence": "Add evidence",
+  "aiSeminarParticipationSynthesize": "Summarize",
+  "aiSeminarParticipationInputHint": "Say something to steer the seminar...",
+  "aiSeminarParticipationDirectorAssign": "Director assigns",
+  "aiSeminarParticipationSend": "Send",
+  "aiSeminarParticipationAwaitingReader": "The Director is waiting for you to jump in.",
+  "aiSeminarParticipationContinuePrompt": "Please continue this seminar.",
+  "aiSeminarParticipationAlternatePrompt": "Please look at this from another angle.",
+  "aiSeminarParticipationRefreshPrompt": "Please add more direct evidence.",
+  "aiSeminarParticipationSynthesizePrompt": "Please summarize the current stage.",
+  "aiSeminarDisagreementContinue": "Continue here",
+  "aiSeminarDisagreementVerifyEvidence": "Check evidence",
+  "aiSeminarDisagreementContinuePrefill": "Continue around this disagreement: {disagreement}",
+  "@aiSeminarDisagreementContinuePrefill": {
+    "placeholders": {
+      "disagreement": {}
+    }
+  },
+  "aiSeminarDisagreementVerifyPrompt": "Find evidence for this disagreement: {disagreement}",
+  "@aiSeminarDisagreementVerifyPrompt": {
+    "placeholders": {
+      "disagreement": {}
+    }
+  },
+  "aiSeminarParticipationExpand": "Expand",
+  "aiSeminarParticipationCollapse": "Collapse",
   "aiChatAddToProject": "Add to project",
   "aiChatModelLabel": "Model",
   "settingsAiProviderCenterFetchModels": "Fetch models",

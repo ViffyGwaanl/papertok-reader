@@ -1775,12 +1775,43 @@
   "aiChatSeminarFeatureTitle": "AI 研讨会",
   "aiChatSeminarFeatureDesc": "开启批判者、支持者、综合者的多角色讨论。",
   "aiChatSeminarFeatureAction": "打开",
-  "aiSeminarReaderActionAskRole": "让角色回应",
-  "aiSeminarReaderActionRefreshEvidence": "重新找证据",
-  "aiSeminarReaderActionSynthesize": "整理总结",
-  "aiSeminarReaderActionSendReply": "发送我的回复",
+  "aiSeminarReaderActionAskRole": "继续讨论",
+  "aiSeminarReaderActionRefreshEvidence": "补充证据",
+  "aiSeminarReaderActionSynthesize": "出总结",
+  "aiSeminarReaderActionSendReply": "发送",
   "aiSeminarReaderMessageOptionalLabel": "给角色的话（可选）",
   "aiSeminarReaderReplyRequiredLabel": "我的回复（必填）",
+  "aiSeminarParticipationTitle": "参与研讨",
+  "aiSeminarParticipationHint": "你可以随时插话、补充证据或要求总结",
+  "aiSeminarParticipationDismissHint": "关闭提示",
+  "aiSeminarParticipationContinue": "继续讨论",
+  "aiSeminarParticipationAlternate": "换个角度看",
+  "aiSeminarParticipationRefreshEvidence": "补充证据",
+  "aiSeminarParticipationSynthesize": "出总结",
+  "aiSeminarParticipationInputHint": "说点什么,引导这场研讨…",
+  "aiSeminarParticipationDirectorAssign": "主持人分配",
+  "aiSeminarParticipationSend": "发送",
+  "aiSeminarParticipationAwaitingReader": "主持人正在等你插话",
+  "aiSeminarParticipationContinuePrompt": "请继续推进这场研讨。",
+  "aiSeminarParticipationAlternatePrompt": "请换个角度看这个问题。",
+  "aiSeminarParticipationRefreshPrompt": "请补充更直接的证据。",
+  "aiSeminarParticipationSynthesizePrompt": "请整理当前阶段总结。",
+  "aiSeminarDisagreementContinue": "就这点继续讨论",
+  "aiSeminarDisagreementVerifyEvidence": "找证据验证",
+  "aiSeminarDisagreementContinuePrefill": "围绕这条分歧继续: {disagreement}",
+  "@aiSeminarDisagreementContinuePrefill": {
+    "placeholders": {
+      "disagreement": {}
+    }
+  },
+  "aiSeminarDisagreementVerifyPrompt": "围绕这条分歧找证据验证: {disagreement}",
+  "@aiSeminarDisagreementVerifyPrompt": {
+    "placeholders": {
+      "disagreement": {}
+    }
+  },
+  "aiSeminarParticipationExpand": "展开全文",
+  "aiSeminarParticipationCollapse": "收起",
   "aiChatAddToProject": "添加到项目",
   "aiLibraryIndexGlobalLayerTitle": "全局层索引",
   "aiLibraryIndexGlobalLayerDesc": "用已有 chunk 补建整本书摘要和关系层，不重新生成 Embedding。",
