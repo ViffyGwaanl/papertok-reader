@@ -4811,7 +4811,7 @@ void main() {
       );
       expect(find.text('运行追踪'), findsOneWidget);
       expect(find.text('Agent trace'), findsNothing);
-      expect(find.text('seminar-chat-history'), findsAtLeastNWidgets(1));
+      expect(find.text('本场研讨'), findsAtLeastNWidgets(1));
     },
   );
 
@@ -5329,7 +5329,7 @@ void main() {
       expect(find.text('critical'), findsNothing);
       expect(find.text('Critical is running.'), findsOneWidget);
       expect(find.text('运行追踪'), findsOneWidget);
-      expect(find.text('seminar-chat-history:role-critical-0'), findsOneWidget);
+      expect(find.text('本场研讨 · 批判者'), findsOneWidget);
       expect(find.text('允许工具'), findsOneWidget);
       expect(find.text('书内语义检索'), findsOneWidget);
       expect(find.text('笔记搜索'), findsAtLeastNWidgets(1));
@@ -5505,7 +5505,7 @@ void main() {
       expect(find.text('等待角色'), findsOneWidget);
       expect(find.text('停止角色'), findsOneWidget);
       expect(find.text('运行追踪'), findsOneWidget);
-      expect(find.text('seminar-chat-history:role-critical-0'), findsOneWidget);
+      expect(find.text('本场研讨 · 批判者'), findsOneWidget);
     },
   );
 
@@ -7407,7 +7407,7 @@ void main() {
       expect(find.text('可见角色'), findsOneWidget);
       expect(find.text('批判者、支持者'), findsOneWidget);
       expect(find.text('运行追踪'), findsOneWidget);
-      expect(find.text('seminar-chat-history:role-critical-0'), findsOneWidget);
+      expect(find.text('本场研讨 · 批判者'), findsOneWidget);
       expect(find.text('Tool call evidence.'), findsAtLeastNWidgets(1));
     },
   );
@@ -7475,7 +7475,7 @@ void main() {
       expect(find.text('工具输出'), findsOneWidget);
       expect(find.text('Returned 1 traceable evidence chunk.'), findsOneWidget);
       expect(find.text('运行追踪'), findsOneWidget);
-      expect(find.text('seminar-chat-history:role-critical-0'), findsOneWidget);
+      expect(find.text('本场研讨 · 批判者'), findsOneWidget);
       expect(find.text('Tool call evidence.'), findsAtLeastNWidgets(1));
 
       await tester.tap(find.byKey(const ValueKey(
@@ -8420,7 +8420,7 @@ void main() {
       expect(find.textContaining('执行时间'), findsOneWidget);
       expect(find.text('执行结果'), findsOneWidget);
       expect(find.text('运行追踪'), findsOneWidget);
-      expect(find.text('seminar-chat-history'), findsAtLeastNWidgets(1));
+      expect(find.text('本场研讨'), findsAtLeastNWidgets(1));
     },
   );
 
@@ -9572,17 +9572,11 @@ void main() {
       expect(find.text('Native traced reader turn.'), findsOneWidget);
       expect(find.text('运行追踪'), findsAtLeastNWidgets(4));
       expect(find.text('父运行'), findsAtLeastNWidgets(4));
-      expect(find.text('seminar-chat-history:role-critical-0'), findsOneWidget);
-      expect(
-        find.text('seminar-chat-history:role-supportive-1'),
-        findsOneWidget,
-      );
-      expect(find.text('seminar-chat-history:director'), findsOneWidget);
-      expect(
-        find.text('seminar-chat-history:role-verifier-2'),
-        findsOneWidget,
-      );
-      expect(find.text('seminar-chat-history'), findsAtLeastNWidgets(4));
+      expect(find.text('本场研讨 · 批判者'), findsOneWidget);
+      expect(find.text('本场研讨 · 支持者'), findsOneWidget);
+      expect(find.text('本场研讨 · 主持人'), findsOneWidget);
+      expect(find.text('本场研讨 · 核验者'), findsOneWidget);
+      expect(find.text('本场研讨'), findsAtLeastNWidgets(4));
     },
   );
 
@@ -10365,8 +10359,7 @@ void main() {
       expect(find.text('关联证据'), findsOneWidget);
       expect(find.text('Working memory evidence.'), findsOneWidget);
       expect(find.text('运行追踪'), findsOneWidget);
-      expect(find.text('seminar-chat-history:director:disagreement'),
-          findsOneWidget);
+      expect(find.text('本场研讨 · 主持人'), findsOneWidget);
       expect(find.text('父运行'), findsOneWidget);
     },
   );
@@ -10503,7 +10496,7 @@ void main() {
       expect(find.text('关联证据'), findsOneWidget);
       expect(find.text('Scan evidence snippet.'), findsOneWidget);
       expect(find.text('运行追踪'), findsOneWidget);
-      expect(find.text('seminar-chat-history:director:scan'), findsOneWidget);
+      expect(find.text('本场研讨 · 主持人'), findsOneWidget);
       expect(find.text('父运行'), findsOneWidget);
     },
   );
@@ -11365,7 +11358,7 @@ void main() {
       expect(find.text('critical follow-up response'), findsOneWidget);
       expect(find.text('The source passage.'), findsOneWidget);
       expect(find.text('运行追踪'), findsOneWidget);
-      expect(find.text('seminar-chat-history:role-critical-1'), findsOneWidget);
+      expect(find.text('本场研讨 · 批判者'), findsOneWidget);
       expect(find.text('父运行'), findsOneWidget);
     },
   );

@@ -33,6 +33,7 @@ import 'package:papertok_reader/utils/ai_reasoning_parser.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_autoscroll_policy.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_expandable_text.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_reader_composer_policy.dart';
+import 'package:papertok_reader/widgets/ai/seminar/seminar_run_trace_label.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_stable_width_section.dart';
 import 'package:papertok_reader/widgets/ai/seminar/start_seminar_tool_bridge.dart';
 import 'package:papertok_reader/widgets/ai/tool_step_tile.dart';
@@ -11751,7 +11752,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       if (hasAgentRunId) ...[
         const SizedBox(height: 4),
         Text(
-          normalizedRunId,
+          seminarRunTraceLabel(normalizedRunId, zh: _isChineseLocale),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -11770,7 +11771,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         ),
         const SizedBox(height: 3),
         Text(
-          normalizedParentRunId,
+          seminarRunTraceLabel(normalizedParentRunId, zh: _isChineseLocale),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
