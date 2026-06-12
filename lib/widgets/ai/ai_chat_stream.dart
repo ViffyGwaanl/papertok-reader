@@ -912,6 +912,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
   // Auto-scroll: do not jump on open; streaming follows only near bottom.
   bool _pinnedToBottom = false;
+  bool _showScrollShortcut = false;
+  bool _hasNewContentBelow = false;
+  String _scrollShortcutContentSignature = '';
 
   // For each user turn, the assistant may have multiple generated variants.
   // We keep a lightweight UI-only selection index per turn.
@@ -982,10 +985,25 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     // Be defensive: scroll controller may be swapped/rebuilt by the sheet.
     try {
       if (!_scrollController.hasClients) return;
-      _pinnedToBottom = SeminarAutoScrollPolicy.isPinnedToBottom(
+      final pinnedToBottom = SeminarAutoScrollPolicy.isPinnedToBottom(
         maxScrollExtent: _scrollController.position.maxScrollExtent,
         pixels: _scrollController.offset,
       );
+      final showShortcut = SeminarAutoScrollPolicy.shouldShowShortcut(
+        maxScrollExtent: _scrollController.position.maxScrollExtent,
+        pixels: _scrollController.offset,
+      );
+      final hasNewContentBelow = pinnedToBottom ? false : _hasNewContentBelow;
+      if (pinnedToBottom == _pinnedToBottom &&
+          showShortcut == _showScrollShortcut &&
+          hasNewContentBelow == _hasNewContentBelow) {
+        return;
+      }
+      setState(() {
+        _pinnedToBottom = pinnedToBottom;
+        _showScrollShortcut = showShortcut;
+        _hasNewContentBelow = hasNewContentBelow;
+      });
     } catch (_) {
       // Ignore (e.g. controller disposed during rebuild).
     }
@@ -1664,7 +1682,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     return prompts.take(3).toList(growable: false);
   }
 
-  void _scrollToBottom({bool force = false}) {
+  void _scrollToBottom({
+    bool force = false,
+    bool clearNewContentIndicator = false,
+  }) {
     final isScrolling = _scrollController.hasClients &&
         _scrollController.position.isScrollingNotifier.value;
     if (!force &&
@@ -1673,6 +1694,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           userScrollInProgress: isScrolling,
         )) {
       return;
+    }
+    if (clearNewContentIndicator &&
+        (_hasNewContentBelow || _showScrollShortcut || !_pinnedToBottom)) {
+      setState(() {
+        _hasNewContentBelow = false;
+        _showScrollShortcut = false;
+        _pinnedToBottom = true;
+      });
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       try {
@@ -1688,6 +1717,21 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             );
           }
         }
+      } catch (_) {
+        // Ignore (e.g. controller disposed/replaced while minimizing).
+      }
+    });
+  }
+
+  void _scrollToTop() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        if (!_scrollController.hasClients) return;
+        _scrollController.animateTo(
+          _scrollController.position.minScrollExtent,
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOutCubic,
+        );
       } catch (_) {
         // Ignore (e.g. controller disposed/replaced while minimizing).
       }
@@ -5951,6 +5995,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             child: ref.watch(aiChatProvider).when(
                   data: (messages) {
                     if (messages.isEmpty) {
+                      _resetScrollShortcutForEmptyList();
                       return buildEmptyState();
                     }
 
@@ -5984,12 +6029,103 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         .copyWith(height: 1.55);
   }
 
+  String _scrollShortcutSignatureFor(List<ChatMessage> messages) {
+    if (messages.isEmpty) return '0';
+    final last = messages.last;
+    final text = last is HumanChatMessage
+        ? _extractUserTextFromHuman(last)
+        : last.contentAsString;
+    return Object.hash(messages.length, last.runtimeType, text.length, text)
+        .toString();
+  }
+
+  void _syncScrollShortcutSignature(String signature) {
+    if (_scrollShortcutContentSignature == signature) return;
+    final previous = _scrollShortcutContentSignature;
+    _scrollShortcutContentSignature = signature;
+    if (!SeminarAutoScrollPolicy.shouldMarkNewContentBelow(
+      pinnedToBottom: _pinnedToBottom,
+      previousSignature: previous,
+      currentSignature: signature,
+    )) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _hasNewContentBelow) return;
+      setState(() {
+        _hasNewContentBelow = true;
+      });
+    });
+  }
+
+  void _resetScrollShortcutForEmptyList() {
+    _scrollShortcutContentSignature = '';
+    if (!_showScrollShortcut && !_hasNewContentBelow) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _showScrollShortcut = false;
+        _hasNewContentBelow = false;
+      });
+    });
+  }
+
+  Widget _buildScrollShortcutOverlay(Widget list) {
+    if (!_showScrollShortcut) return list;
+    return Stack(
+      children: [
+        Positioned.fill(child: list),
+        PositionedDirectional(
+          end: 14,
+          bottom: 14,
+          child: GestureDetector(
+            onLongPress: _scrollToTop,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                FloatingActionButton.small(
+                  heroTag: null,
+                  tooltip: _localizedSeminarCardText(
+                    zh: '回到底部;长按回顶部',
+                    en: 'Back to bottom; hold for top',
+                  ),
+                  onPressed: () => _scrollToBottom(
+                    force: true,
+                    clearNewContentIndicator: true,
+                  ),
+                  child: const Icon(Icons.keyboard_arrow_down_rounded),
+                ),
+                if (_hasNewContentBelow)
+                  PositionedDirectional(
+                    top: -2,
+                    end: -2,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.error,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.surface,
+                          width: 2,
+                        ),
+                      ),
+                      child: const SizedBox(width: 12, height: 12),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildMessageList(List<ChatMessage> messages) {
     _scheduleStartSeminarToolBridges(messages);
+    _syncScrollShortcutSignature(_scrollShortcutSignatureFor(messages));
     final lastHumanIndex = _findLastHumanIndex(messages);
     final isStreaming = ref.watch(aiChatStreamingProvider);
 
-    return ListView.builder(
+    final list = ListView.builder(
       controller: _scrollController,
       itemCount: messages.length,
       itemBuilder: (context, index) {
@@ -6004,6 +6140,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         );
       },
     );
+    return _buildScrollShortcutOverlay(list);
   }
 
   int? _findLastHumanIndex(List<ChatMessage> messages) {

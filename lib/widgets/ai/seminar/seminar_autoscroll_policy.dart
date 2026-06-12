@@ -7,6 +7,7 @@ class SeminarAutoScrollPolicy {
   const SeminarAutoScrollPolicy._();
 
   static const double bottomThreshold = 80;
+  static const double shortcutThreshold = 120;
 
   static bool isPinnedToBottom({
     required double maxScrollExtent,
@@ -26,5 +27,22 @@ class SeminarAutoScrollPolicy {
     return isStreaming
         ? SeminarAutoScrollMethod.jump
         : SeminarAutoScrollMethod.animate;
+  }
+
+  static bool shouldShowShortcut({
+    required double maxScrollExtent,
+    required double pixels,
+  }) {
+    return (maxScrollExtent - pixels) >= shortcutThreshold;
+  }
+
+  static bool shouldMarkNewContentBelow({
+    required bool pinnedToBottom,
+    required String previousSignature,
+    required String currentSignature,
+  }) {
+    return !pinnedToBottom &&
+        previousSignature.isNotEmpty &&
+        previousSignature != currentSignature;
   }
 }

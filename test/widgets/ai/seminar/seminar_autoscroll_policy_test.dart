@@ -53,4 +53,48 @@ void main() {
       SeminarAutoScrollMethod.animate,
     );
   });
+
+  test('scroll shortcut appears only away from the bottom', () {
+    expect(
+      SeminarAutoScrollPolicy.shouldShowShortcut(
+        maxScrollExtent: 1000,
+        pixels: 879,
+      ),
+      true,
+    );
+    expect(
+      SeminarAutoScrollPolicy.shouldShowShortcut(
+        maxScrollExtent: 1000,
+        pixels: 881,
+      ),
+      false,
+    );
+  });
+
+  test('new-content dot is only marked while the user is above bottom', () {
+    expect(
+      SeminarAutoScrollPolicy.shouldMarkNewContentBelow(
+        pinnedToBottom: false,
+        previousSignature: '3:10',
+        currentSignature: '3:12',
+      ),
+      true,
+    );
+    expect(
+      SeminarAutoScrollPolicy.shouldMarkNewContentBelow(
+        pinnedToBottom: true,
+        previousSignature: '3:10',
+        currentSignature: '3:12',
+      ),
+      false,
+    );
+    expect(
+      SeminarAutoScrollPolicy.shouldMarkNewContentBelow(
+        pinnedToBottom: false,
+        previousSignature: '',
+        currentSignature: '3:12',
+      ),
+      false,
+    );
+  });
 }
