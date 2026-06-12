@@ -9,6 +9,7 @@ import 'package:papertok_reader/service/ai/agent_run_graph_store.dart';
 import 'package:papertok_reader/service/ai/conversation_title_service.dart';
 import 'package:papertok_reader/service/ai/index.dart';
 import 'package:papertok_reader/service/ai/prompt_budgeting_service.dart';
+import 'package:papertok_reader/service/ai/seminar_prompt_context.dart';
 import 'package:papertok_reader/service/ai/sub_agent_runner.dart';
 import 'package:papertok_reader/service/mcp/mcp_client_service.dart';
 import 'package:papertok_reader/models/ai_conversation_tree.dart';
@@ -826,14 +827,17 @@ class AiChat extends _$AiChat {
         openQuestions: snapshot.openQuestions,
       );
       if (!_seminarSnapshotChanged(snapshot, normalizedSnapshot)) continue;
+      final normalizedCard = card.copyWith(snapshot: normalizedSnapshot);
       tree = tree.copyWithNode(
         entry.key,
         node.copyWith(
+          message:
+              ChatMessage.ai(seminarRunCardPromptText(normalizedCard)).toMap(),
           meta: AiSegmentMeta(
             model: meta.model,
             inputTokens: meta.inputTokens,
             outputTokens: meta.outputTokens,
-            seminarRunCard: card.copyWith(snapshot: normalizedSnapshot),
+            seminarRunCard: normalizedCard,
           ),
         ),
       );
@@ -848,8 +852,7 @@ class AiChat extends _$AiChat {
     var currentId = humanNodeId;
     while (currentId != _tree.rootId) {
       ids.add(currentId);
-      final node = _tree.nodes[currentId];
-      final parentId = node?.parentId;
+      final parentId = _tree.nodes[currentId]?.parentId;
       if (parentId == null) break;
       currentId = parentId;
     }
@@ -858,11 +861,8 @@ class AiChat extends _$AiChat {
 
     final messages = <ChatMessage>[];
     for (final id in orderedIds) {
-      final node = _tree.nodes[id];
-      final msg = node?.toChatMessage();
-      if (msg != null) {
-        messages.add(msg);
-      }
+      final msg = _tree.nodes[id]?.toChatMessage();
+      if (msg != null) messages.add(msg);
     }
 
     return _stripHistoryImagesFromPrompt(messages);
@@ -1213,6 +1213,7 @@ class AiChat extends _$AiChat {
     _tree = _tree.copyWithNode(
       targetNodeId,
       targetNode.copyWith(
+        message: ChatMessage.ai(seminarRunCardPromptText(updatedCard)).toMap(),
         meta: AiSegmentMeta(
           model: meta.model,
           inputTokens: meta.inputTokens,
@@ -4986,11 +4987,8 @@ class AiChat extends _$AiChat {
   }
 
   String _seminarRunCardFallbackText(AiSeminarRunCardMeta card) {
-    final question = card.question.trim();
-    if (question.isEmpty) {
-      return 'AI Seminar';
-    }
-    return 'AI Seminar: $question';
+    // P1 F19a: the card node's message text is the LLM-facing seminar digest.
+    return seminarRunCardPromptText(card);
   }
 
   String _seminarSessionId({
