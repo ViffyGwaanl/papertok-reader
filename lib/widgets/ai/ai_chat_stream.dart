@@ -30,8 +30,6 @@ import 'package:papertok_reader/service/memory/memory_workflow_service.dart';
 import 'package:papertok_reader/utils/toast/common.dart';
 import 'package:papertok_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:papertok_reader/utils/ai_reasoning_parser.dart';
-import 'package:papertok_reader/widgets/ai/seminar/composer/seminar_reader_composer_policy.dart';
-import 'package:papertok_reader/widgets/ai/seminar/composer/seminar_reader_participation_composer.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_autoscroll_policy.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_evidence_numbering.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_expandable_text.dart';
@@ -787,8 +785,6 @@ enum _SeminarRunSnapshotSubview {
   final String id;
 }
 
-const String _seminarParticipationHintDismissedPrefsKey =
-    'ai_seminar_participation_hint_dismissed_v1';
 
 class AiChatStreamState extends ConsumerState<AiChatStream> {
   static const List<String> _seminarRoleToolIds = <String>[
@@ -810,7 +806,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       widget.sourceOpener ?? openPaperReaderSource;
 
   bool _suppressDraftSync = false;
-  bool _seminarParticipationHintDismissed = false;
   final Map<String, String> _lastSeminarCardSignatures = {};
   final Map<String, TextEditingController> _seminarCardReplyControllers = {};
   final Map<String, TextEditingController> _seminarCardQuestionControllers = {};
@@ -820,7 +815,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   final Map<String, GlobalKey> _seminarEvidenceTileKeys = {};
   final Map<String, AiSeminarRole> _seminarCardSelectedRoles = {};
   final Map<String, String> _seminarCardSelectedActionIds = {};
-  final Map<String, String> _seminarCardSubmittingIntentIds = {};
   final Map<String, _SeminarRunSnapshotSubview> _seminarCardSnapshotSubviews =
       {};
   final Set<String> _seminarCardSetupExpandedSessionIds = <String>{};
@@ -1030,9 +1024,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   void initState() {
     super.initState();
     _scheduleSyncUiVisible();
-    _seminarParticipationHintDismissed =
-        Prefs().prefs.getBool(_seminarParticipationHintDismissedPrefsKey) ??
-            false;
 
     _scrollController = ScrollController();
     _attachScrollController(widget.scrollController);
@@ -6558,16 +6549,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                   ),
                 ),
               ],
-              if (_shouldShowSeminarCardDisagreementActions(
-                card,
-                runtimeState,
-              )) ...[
+              if (_shouldShowSeminarCardFollowUpHint(card, runtimeState)) ...[
                 const SizedBox(height: 12),
-                _buildSeminarRunCardDisagreementActions(card, runtimeState),
-              ],
-              if (_shouldShowSeminarCardComposer(card, runtimeState)) ...[
-                const SizedBox(height: 12),
-                _buildSeminarRunCardComposer(card, runtimeState),
+                _buildSeminarRunCardFollowUpHint(),
               ],
               if (hasIgnoredActions) ...[
                 const SizedBox(height: 12),
@@ -8053,27 +8037,45 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     return roles.isEmpty ? const [AiSeminarRole.synthesizer] : roles;
   }
 
-  bool _shouldShowSeminarCardComposer(
+  // P1 F19b: the in-card participation layer is frozen. Completed cards show
+  // a static hint pointing readers to the main composer, where seminar
+  // conclusions are available through the F19a prompt digest.
+  bool _shouldShowSeminarCardFollowUpHint(
     AiSeminarRunCardMeta card,
     AiSeminarRuntimeState runtimeState,
   ) {
+    if (card.status.trim() == 'completed') return true;
     final sessionId = card.sessionId?.trim();
     if (sessionId == null || sessionId.isEmpty) return false;
-    if (runtimeState.session?.id != sessionId) return false;
-    if (runtimeState.evidenceBundle == null) return false;
-    return runtimeState.status == AiSeminarRunStatus.running ||
-        runtimeState.status == AiSeminarRunStatus.completed ||
-        runtimeState.directorState?.needsUserInput == true;
+    return runtimeState.session?.id == sessionId &&
+        runtimeState.status == AiSeminarRunStatus.completed;
   }
 
-  bool _shouldShowSeminarCardDisagreementActions(
-    AiSeminarRunCardMeta card,
-    AiSeminarRuntimeState runtimeState,
-  ) {
-    if (!_shouldShowSeminarCardComposer(card, runtimeState)) return false;
-    final snapshot = card.snapshot;
-    if (snapshot == null) return false;
-    return _seminarCardActionDisagreements(snapshot).isNotEmpty;
+  Widget _buildSeminarRunCardFollowUpHint() {
+    final theme = Theme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          Icons.chat_bubble_outline,
+          size: 16,
+          color: theme.colorScheme.outline,
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            _localizedSeminarCardText(
+              zh: '研讨已结束,可直接在下方对话框继续追问本场结论',
+              en: 'Seminar finished — ask follow-ups about its conclusions '
+                  'in the chat box below',
+            ),
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.outline,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   TextEditingController _seminarCardReplyController(String sessionId) {
@@ -8081,26 +8083,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       sessionId,
       () => TextEditingController(),
     );
-  }
-
-  List<AiSeminarRole> _seminarCardAvailableRoles(
-    AiSeminarRunCardMeta card,
-    AiSeminarRuntimeState runtimeState,
-  ) {
-    final sessionRoles = runtimeState.session?.roles;
-    final roles = sessionRoles != null && sessionRoles.isNotEmpty
-        ? sessionRoles
-        : card.roleIds
-            .map(AiSeminarRole.fromString)
-            .nonNulls
-            .toList(growable: false);
-    final effectiveRoles = roles.isEmpty ? AiSeminarRole.defaultRoles : roles;
-    final nonSynthesizerRoles = effectiveRoles
-        .where((role) => role != AiSeminarRole.synthesizer)
-        .toList(growable: false);
-    return nonSynthesizerRoles.isEmpty
-        ? effectiveRoles.toList(growable: false)
-        : nonSynthesizerRoles;
   }
 
   List<String> _seminarComposerRoleIdsFromState(
@@ -8160,108 +8142,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     return draft == null || draft.isEmpty ? null : draft;
   }
 
-  AiSeminarRole? _seminarCardSelectedRole(
-    String sessionId,
-    List<AiSeminarRole> roles,
-  ) {
-    final selected = _seminarCardSelectedRoles[sessionId];
-    if (selected == null || !roles.contains(selected)) {
-      _seminarCardSelectedRoles.remove(sessionId);
-      return null;
-    }
-    return selected;
-  }
-
-  Widget _buildSeminarRunCardComposer(
-    AiSeminarRunCardMeta card,
-    AiSeminarRuntimeState runtimeState,
-  ) {
-    final sessionId = card.sessionId?.trim();
-    if (sessionId == null || sessionId.isEmpty) return const SizedBox.shrink();
-    final controller = _seminarCardReplyController(sessionId);
-    final roles = _seminarCardAvailableRoles(card, runtimeState);
-    final selectedRole = _seminarCardSelectedRole(sessionId, roles);
-    final isSubmitting = _seminarCardSubmittingSessionIds.contains(sessionId);
-    final isAwaitingReader = runtimeState.directorState?.needsUserInput == true;
-    final askUserQuestion =
-        isAwaitingReader ? _seminarCardFirstOpenQuestion(runtimeState) : null;
-
-    return SeminarReaderParticipationComposer(
-      key: ValueKey('seminar-chat-card-participation-$sessionId'),
-      sessionId: sessionId,
-      controller: controller,
-      roles: roles,
-      selectedRole: selectedRole,
-      activeIntentId: _seminarCardSubmittingIntentIds[sessionId],
-      isSubmitting: isSubmitting,
-      isAwaitingReader: isAwaitingReader,
-      showHint: !_seminarParticipationHintDismissed,
-      askUserQuestion: askUserQuestion,
-      roleLabelBuilder: _seminarRoleFallbackLabel,
-      onQuickAction: (quickAction) => _submitSeminarQuickAction(
-        sessionId: sessionId,
-        quickAction: quickAction,
-        targetRole: selectedRole,
-      ),
-      onSend: () => _submitSeminarCardInterventionText(
-        sessionId: sessionId,
-        text: controller.text,
-        action: AiSeminarUserInterventionAction.clarify,
-        targetRole: selectedRole,
-        activeIntentId: 'send',
-        onSuccess: () => controller.clear(),
-      ),
-      onRoleChanged: (role) {
-        setState(() {
-          if (role == null) {
-            _seminarCardSelectedRoles.remove(sessionId);
-          } else {
-            _seminarCardSelectedRoles[sessionId] = role;
-          }
-        });
-        _syncSeminarRunCardSnapshot(sessionId, runtimeState);
-      },
-      onDraftChanged: (_) {
-        setState(() {});
-        _syncSeminarRunCardSnapshot(sessionId, runtimeState);
-      },
-      onDismissHint: () {
-        Prefs().prefs.setBool(
-              _seminarParticipationHintDismissedPrefsKey,
-              true,
-            );
-        setState(() => _seminarParticipationHintDismissed = true);
-      },
-    );
-  }
-
-  Future<void> _submitSeminarQuickAction({
-    required String sessionId,
-    required SeminarParticipationQuickAction quickAction,
-    AiSeminarRole? targetRole,
-  }) async {
-    final l10n = L10n.of(context);
-    final action = quickAction.interventionAction;
-    final text = switch (quickAction) {
-      SeminarParticipationQuickAction.continueDiscussion =>
-        l10n.aiSeminarParticipationContinuePrompt,
-      SeminarParticipationQuickAction.alternateAngle =>
-        l10n.aiSeminarParticipationAlternatePrompt,
-      SeminarParticipationQuickAction.refreshEvidence =>
-        l10n.aiSeminarParticipationRefreshPrompt,
-      SeminarParticipationQuickAction.synthesize =>
-        l10n.aiSeminarParticipationSynthesizePrompt,
-    };
-    await _submitSeminarCardInterventionText(
-      sessionId: sessionId,
-      text: text,
-      action: action,
-      targetRole:
-          seminarReaderComposerActionUsesRole(action) ? targetRole : null,
-      activeIntentId: quickAction.id,
-    );
-  }
-
   String? _seminarCardFirstOpenQuestion(AiSeminarRuntimeState runtimeState) {
     final entries = <AiSeminarWhiteboardEntry>[
       ...runtimeState.whiteboardEntries,
@@ -8273,127 +8153,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       if (text.isNotEmpty) return text;
     }
     return null;
-  }
-
-  Widget _buildSeminarRunCardDisagreementActions(
-    AiSeminarRunCardMeta card,
-    AiSeminarRuntimeState runtimeState,
-  ) {
-    final sessionId = card.sessionId?.trim();
-    final snapshot = card.snapshot;
-    if (sessionId == null || sessionId.isEmpty || snapshot == null) {
-      return const SizedBox.shrink();
-    }
-    final disagreements = _seminarCardActionDisagreements(snapshot);
-    if (disagreements.isEmpty) return const SizedBox.shrink();
-    final isSubmitting = _seminarCardSubmittingSessionIds.contains(sessionId);
-
-    return SeminarDisagreementParticipationChips(
-      sessionId: sessionId,
-      disagreements: disagreements,
-      isSubmitting: isSubmitting,
-      onContinue: (disagreement) {
-        final controller = _seminarCardReplyController(sessionId);
-        controller.text =
-            L10n.of(context).aiSeminarDisagreementContinuePrefill(disagreement);
-        controller.selection = TextSelection.collapsed(
-          offset: controller.text.length,
-        );
-        setState(() {});
-        _syncSeminarRunCardSnapshot(sessionId, runtimeState);
-      },
-      onVerifyEvidence: (disagreement) => _submitSeminarCardInterventionText(
-        sessionId: sessionId,
-        text: L10n.of(context).aiSeminarDisagreementVerifyPrompt(disagreement),
-        action: AiSeminarUserInterventionAction.refreshEvidence,
-        activeIntentId: 'refresh-disagreement',
-      ),
-    );
-  }
-
-  List<String> _seminarCardActionDisagreements(
-    AiSeminarRunCardSnapshot snapshot,
-  ) {
-    final seen = <String>{};
-    final out = <String>[];
-    void add(String raw) {
-      final text = raw.trim();
-      if (text.isEmpty) return;
-      final key = text.toLowerCase();
-      if (!seen.add(key)) return;
-      out.add(text);
-    }
-
-    for (final part in snapshot.messageParts) {
-      if (part.type.trim() != 'disagreement') continue;
-      add(part.text ?? '');
-    }
-    for (final detail in snapshot.disagreementDetails) {
-      add(detail.text);
-    }
-    for (final item in snapshot.disagreements) {
-      add(item);
-    }
-    return out;
-  }
-
-  Future<void> _submitSeminarCardInterventionText({
-    required String sessionId,
-    required String text,
-    required AiSeminarUserInterventionAction action,
-    AiSeminarRole? targetRole,
-    String? activeIntentId,
-    VoidCallback? onSuccess,
-  }) async {
-    final trimmed = text.trim();
-    if (!seminarReaderComposerCanSubmit(
-      action,
-      trimmed,
-      _seminarCardSubmittingSessionIds.contains(sessionId),
-    )) {
-      return;
-    }
-    _seminarCardSelectedActionIds[sessionId] = action.asString;
-    setState(() {
-      _seminarCardSubmittingSessionIds.add(sessionId);
-      _seminarCardSubmittingIntentIds[sessionId] =
-          activeIntentId ?? action.asString;
-    });
-    try {
-      final notifier = _readSeminarRuntimeNotifier(sessionId);
-      await notifier.recordUserIntervention(
-        text: trimmed,
-        requestedAction: action,
-        targetRole: targetRole,
-      );
-      if (action == AiSeminarUserInterventionAction.synthesize ||
-          action == AiSeminarUserInterventionAction.refreshEvidence) {
-        _syncSeminarRunCardSnapshot(
-          sessionId,
-          _readSeminarRuntimeState(sessionId),
-        );
-        if (mounted) setState(() {});
-        _scrollToBottom(force: true);
-        await Future<void>.delayed(const Duration(milliseconds: 64));
-      }
-      await notifier.executeDirectorNextStep();
-      _syncSeminarRunCardSnapshot(
-        sessionId,
-        _readSeminarRuntimeState(sessionId),
-      );
-      if (!mounted) return;
-      onSuccess?.call();
-      setState(() {});
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
-      );
-    } finally {
-      _seminarCardSubmittingSessionIds.remove(sessionId);
-      _seminarCardSubmittingIntentIds.remove(sessionId);
-      if (mounted) setState(() {});
-    }
   }
 
   Future<void> _sendActiveSeminarRunCardToReview(String? sessionId) async {
