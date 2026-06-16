@@ -2252,7 +2252,6 @@
   "aiSeminarParticipationInputHint": "说点什么,引导这场研讨…",
   "aiSeminarParticipationDirectorAssign": "主持人分配",
   "aiSeminarParticipationSend": "发送",
-  "aiSeminarParticipationAwaitingReader": "主持人正在等你插话",
   "aiSeminarParticipationContinuePrompt": "请继续推进这场研讨。",
   "aiSeminarParticipationAlternatePrompt": "请换个角度看这个问题。",
   "aiSeminarParticipationRefreshPrompt": "请补充更直接的证据。",

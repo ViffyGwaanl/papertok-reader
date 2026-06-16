@@ -647,7 +647,7 @@ void main() {
     );
   });
 
-  test('director asks for user input when completed run leaves open questions',
+  test('director ends completed run when synthesis leaves open questions',
       () async {
     configureProvider();
     final runtimeService = AiSeminarRuntimeService(
@@ -688,13 +688,12 @@ void main() {
     final state = container.read(aiSeminarRuntimeProvider);
 
     expect(state.status, AiSeminarRunStatus.completed);
-    expect(
-        state.directorState!.nextIntent, AiSeminarDirectorNextIntent.askUser);
-    expect(state.directorState!.needsUserInput, true);
+    expect(state.directorState!.nextIntent, AiSeminarDirectorNextIntent.end);
+    expect(state.directorState!.needsUserInput, false);
     expect(state.directorState!.whiteboardLedger, contains('open-question-1'));
   });
 
-  test('director askUser state writes waiting input event to agent graph',
+  test('completed run with open questions does not write waiting input events',
       () async {
     configureProvider();
     final tempDir = await Directory.systemTemp.createTemp(
@@ -744,16 +743,18 @@ void main() {
         );
 
     final events = await graphStore.listEvents('s-open-question');
-    final waitingEvent = events.singleWhere(
-      (event) => event.status == SubAgentRunStatus.waitingInput,
-    );
-    expect(waitingEvent.roleId, 'director');
-    expect(waitingEvent.nickname, 'Director');
     expect(
-      waitingEvent.delta,
-      'Which interpretation should the reader test next?',
+      events.where((event) => event.status == SubAgentRunStatus.waitingInput),
+      isEmpty,
     );
-    expect(waitingEvent.roleIds, ['critical', 'supportive']);
+    expect(
+      events.where(
+        (event) =>
+            event.delta?.contains('Director is waiting for reader input') ??
+            false,
+      ),
+      isEmpty,
+    );
   });
 
   test('auto refresh asks reader when disagreement exhausts round budget',
@@ -805,10 +806,7 @@ void main() {
 
     expect(fetchCount, 2);
     expect(state.status, AiSeminarRunStatus.completed);
-    expect(
-      state.directorState!.nextIntent,
-      AiSeminarDirectorNextIntent.askUser,
-    );
+    expect(state.directorState!.nextIntent, AiSeminarDirectorNextIntent.end);
     expect(state.directorState!.evidenceRefreshCount, 1);
     expect(state.directorState!.disagreementIds, ['disagreement-1']);
   });
@@ -887,10 +885,7 @@ void main() {
     ]);
     expect(state.directorState!.evidenceRefreshCount, 1);
     expect(state.directorState!.disagreementIds, ['disagreement-1']);
-    expect(
-      state.directorState!.nextIntent,
-      AiSeminarDirectorNextIntent.askUser,
-    );
+    expect(state.directorState!.nextIntent, AiSeminarDirectorNextIntent.end);
     expect(state.synthesis!.summary, 'synthesizer response using e1');
   });
 

@@ -167,8 +167,11 @@ class AiSeminarRuntimeService {
   final AgentRunGraphStore? _agentRunGraphStore;
   final AiSeminarClock? _now;
   static const String _localTokenEstimateMethod = 'local-char-estimate-v1';
-  static const String _providerInvoiceNotConnectedReason = 'Provider invoice import is not connected for this run.';
-  Future<AiSeminarEvidenceBundle> fetchEvidenceBundle(AiSeminarSessionContract session) => _fetchEvidence(session);
+  static const String _providerInvoiceNotConnectedReason =
+      'Provider invoice import is not connected for this run.';
+  Future<AiSeminarEvidenceBundle> fetchEvidenceBundle(
+          AiSeminarSessionContract session) =>
+      _fetchEvidence(session);
 
   static bool canResumeCheckpoint({
     required AiSeminarSessionContract session,
@@ -787,38 +790,6 @@ class AiSeminarRuntimeService {
       run: run,
       message: run.message,
     );
-  }
-
-  Future<void> recordDirectorWaitingInput({
-    required AiSeminarSessionContract session,
-    String? prompt,
-  }) async {
-    final store = _agentRunGraphStore;
-    if (store == null) return;
-    final createdAt = _nowDateTime();
-    final trimmedPrompt = _trimmedOrNull(prompt);
-    await store.upsertEvent(AgentRunEvent(
-      eventId: '${session.id}:thinking:waiting_input',
-      runId: session.id,
-      type: AgentRunEventType.thinking,
-      createdAt: createdAt,
-      roleId: 'director',
-      nickname: 'Director',
-      delta: trimmedPrompt == null
-          ? 'Director is waiting for reader input.'
-          : 'Director is waiting for reader input: $trimmedPrompt',
-    ));
-    await store.upsertEvent(AgentRunEvent(
-      eventId: '${session.id}:status:waiting_input',
-      runId: session.id,
-      type: AgentRunEventType.status,
-      createdAt: createdAt,
-      status: SubAgentRunStatus.waitingInput,
-      roleId: 'director',
-      nickname: 'Director',
-      roleIds: _seminarReaderTargetRoleIds(session),
-      delta: trimmedPrompt,
-    ));
   }
 
   Stream<AiSeminarRuntimeEvent> runPendingAgentControl(
@@ -1539,21 +1510,6 @@ class AiSeminarRuntimeService {
     }
     return priorTurns
         .where((turn) => !(turn.role == targetRole && turn.isFailed))
-        .toList(growable: false);
-  }
-
-  List<String> _seminarReaderTargetRoleIds(AiSeminarSessionContract session) {
-    final roles = session.roles.isEmpty
-        ? AiSeminarRole.defaultRoles
-        : session.roles.toList(growable: false);
-    final nonSynthesizerRoles = roles
-        .where((role) => role != AiSeminarRole.synthesizer)
-        .toList(growable: false);
-    final effectiveRoles =
-        nonSynthesizerRoles.isEmpty ? roles : nonSynthesizerRoles;
-    return effectiveRoles
-        .map((role) => role.asString)
-        .where((roleId) => roleId.trim().isNotEmpty)
         .toList(growable: false);
   }
 

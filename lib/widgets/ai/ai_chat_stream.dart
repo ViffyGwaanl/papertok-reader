@@ -785,7 +785,6 @@ enum _SeminarRunSnapshotSubview {
   final String id;
 }
 
-
 class AiChatStreamState extends ConsumerState<AiChatStream> {
   static const List<String> _seminarRoleToolIds = <String>[
     'semantic_search_current_book',
@@ -3707,8 +3706,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         );
       case AiSeminarDirectorNextIntent.askUser:
         return _localizedSeminarCardText(
-          zh: '主持人正在等你插话。',
-          en: 'Director is waiting for your choice before continuing.',
+          zh: '研讨已结束,可直接在下方对话框继续追问本场结论',
+          en: 'The seminar is complete. Continue the discussion in the chat box below.',
         );
       case AiSeminarDirectorNextIntent.synthesize:
         return _localizedSeminarCardText(

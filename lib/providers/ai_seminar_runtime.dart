@@ -843,7 +843,6 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
     )) {
       if (!mounted || generation != _generation) return;
       _applyEvent(event);
-      await _recordDirectorWaitingInputEventIfNeeded();
       if (event.type != AiSeminarRuntimeEventType.roleDelta) {
         await _persistState();
       }
@@ -860,36 +859,6 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
         (generation == _generation || continuedAutomaticDirectorLoop)) {
       await _startNextQueuedJobIfAvailable();
     }
-  }
-
-  Future<void> _recordDirectorWaitingInputEventIfNeeded() async {
-    final session = state.session;
-    final directorState = state.directorState;
-    if (session == null || directorState?.needsUserInput != true) return;
-    await _service.recordDirectorWaitingInput(
-      session: session,
-      prompt: _directorWaitingInputPrompt(state),
-    );
-  }
-
-  String? _directorWaitingInputPrompt(AiSeminarRuntimeState runtimeState) {
-    final entries = <AiSeminarWhiteboardEntry>[
-      ...runtimeState.whiteboardEntries,
-      for (final turn in runtimeState.turns) ...turn.whiteboardEntries,
-    ];
-    for (final entry in entries) {
-      if (entry.kind == AiSeminarWhiteboardKind.openQuestion &&
-          entry.text.trim().isNotEmpty) {
-        return entry.text.trim();
-      }
-    }
-    for (final entry in entries) {
-      if (entry.kind == AiSeminarWhiteboardKind.disagreement &&
-          entry.text.trim().isNotEmpty) {
-        return entry.text.trim();
-      }
-    }
-    return null;
   }
 
   Future<void> _resumeRestoredRunningSession() async {
@@ -1176,7 +1145,12 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       throw StateError(message);
     }
     final createdAt = now ?? DateTime.now().millisecondsSinceEpoch;
-    final resolvedTargetRole = requestedAction == AiSeminarUserInterventionAction.askRole || (requestedAction == AiSeminarUserInterventionAction.clarify && targetRole != null) ? _resolveUserDirectedRole(session, targetRole) : null;
+    final resolvedTargetRole =
+        requestedAction == AiSeminarUserInterventionAction.askRole ||
+                (requestedAction == AiSeminarUserInterventionAction.clarify &&
+                    targetRole != null)
+            ? _resolveUserDirectedRole(session, targetRole)
+            : null;
     final intervention = AiSeminarUserIntervention(
       id: 'user-$createdAt',
       text: trimmed,
@@ -1501,10 +1475,20 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       directorState,
       directorState.evidenceRefreshCount + 1,
     );
-    final backgroundJob = _newBackgroundJob(resolvedSession, startedAt: _nextBackgroundJobStartedAt(DateTime.now().millisecondsSinceEpoch), message: 'AI Seminar refreshing evidence.');
-    state = state.copyWith(status: AiSeminarRunStatus.running, directorState: previous, backgroundJob: backgroundJob, backgroundJobs: _upsertBackgroundJob(state.backgroundJobs, backgroundJob), clearError: true);
+    final backgroundJob = _newBackgroundJob(resolvedSession,
+        startedAt:
+            _nextBackgroundJobStartedAt(DateTime.now().millisecondsSinceEpoch),
+        message: 'AI Seminar refreshing evidence.');
+    state = state.copyWith(
+        status: AiSeminarRunStatus.running,
+        directorState: previous,
+        backgroundJob: backgroundJob,
+        backgroundJobs:
+            _upsertBackgroundJob(state.backgroundJobs, backgroundJob),
+        clearError: true);
     await _persistState();
-    final refreshedEvidence = await _service.fetchEvidenceBundle(resolvedSession);
+    final refreshedEvidence =
+        await _service.fetchEvidenceBundle(resolvedSession);
     if (!mounted) return;
     final refreshedDirector = _directorStateFor(
       session: resolvedSession,
@@ -1517,7 +1501,9 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
             !refreshedEvidence.allEvidenceTraceable
         ? AiSeminarRunStatus.needsEvidence
         : AiSeminarRunStatus.completed;
-    final completedJob = _markBackgroundJob(backgroundJob, AiSeminarBackgroundJobStatus.completed, updatedAt: DateTime.now().millisecondsSinceEpoch);
+    final completedJob = _markBackgroundJob(
+        backgroundJob, AiSeminarBackgroundJobStatus.completed,
+        updatedAt: DateTime.now().millisecondsSinceEpoch);
     state = state.copyWith(
       status: status,
       session: resolvedSession,
@@ -2061,7 +2047,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       (entry) => entry.kind == AiSeminarWhiteboardKind.openQuestion,
     );
     if (hasOpenQuestion) {
-      return AiSeminarDirectorNextIntent.askUser;
+      return AiSeminarDirectorNextIntent.end;
     }
 
     final hasDisagreement = whiteboardEntries.any(
@@ -2073,7 +2059,7 @@ class AiSeminarRuntimeNotifier extends StateNotifier<AiSeminarRuntimeState> {
       if (refreshCount < refreshBudget) {
         return AiSeminarDirectorNextIntent.refreshEvidence;
       }
-      return AiSeminarDirectorNextIntent.askUser;
+      return AiSeminarDirectorNextIntent.end;
     }
 
     return AiSeminarDirectorNextIntent.end;

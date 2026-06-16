@@ -295,61 +295,6 @@ void main() {
     expect(toolEvents.single.resultCount, 1);
   });
 
-  test('writes Director waiting-input thinking event to agent graph', () async {
-    final tempDir = await Directory.systemTemp.createTemp(
-      'seminar-director-thinking-test-',
-    );
-    addTearDown(() async {
-      if (await tempDir.exists()) {
-        await tempDir.delete(recursive: true);
-      }
-    });
-    final graphStore = AgentRunGraphStore(rootDir: tempDir);
-    final service = AiSeminarRuntimeService(
-      fetchEvidence: (_) async => bundle(),
-      streamRole: (_, __) => const Stream<AiSeminarRoleStreamChunk>.empty(),
-      agentRunGraphStore: graphStore,
-      now: () => 1000,
-    );
-    final session = AiSeminarSessionContract(
-      id: 'seminar-director-thinking',
-      question: 'What should the reader decide?',
-      roleProfiles: [
-        AiSeminarRoleProfile(
-          role: AiSeminarRole.synthesizer,
-          enabled: false,
-        ),
-      ],
-    );
-
-    await service.recordDirectorWaitingInput(
-      session: session,
-      prompt: 'Which role should answer next?',
-    );
-
-    final parentEvents = await graphStore.listEvents(session.id);
-    expect(
-        parentEvents.map((event) => event.type),
-        containsAll([
-          AgentRunEventType.status,
-          AgentRunEventType.thinking,
-        ]));
-    final thinkingEvent = parentEvents.singleWhere(
-      (event) => event.type == AgentRunEventType.thinking,
-    );
-    expect(thinkingEvent.eventId, '${session.id}:thinking:waiting_input');
-    expect(thinkingEvent.roleId, 'director');
-    expect(thinkingEvent.nickname, 'Director');
-    expect(
-      thinkingEvent.delta,
-      'Director is waiting for reader input: Which role should answer next?',
-    );
-    final statusEvent = parentEvents.singleWhere(
-      (event) => event.type == AgentRunEventType.status,
-    );
-    expect(statusEvent.status, SubAgentRunStatus.waitingInput);
-  });
-
   test('writes Director evidence collection thinking event to agent graph',
       () async {
     final tempDir = await Directory.systemTemp.createTemp(
