@@ -33,3 +33,7 @@ bash tool/check_repo_budgets.sh
 - 纯机械移动 + 显式化依赖,**禁止顺手改行为/改文案/加功能**。
 - 新文件一律 `pointer_interceptor` 等既有约定照旧;l10n 引用方式不变。
 - 每批次一个 commit:`refactor(ai-chat): extract Seminar <view> view (R1 batch N)`。
+
+## 拆分完成后的独立小增强(backlog,不在机械拆分内)
+
+- 双击 `AI 对话` 标题栏一键回到顶部(与现有"回到底部"悬浮键对称)。等聊天头部拆为独立 widget 后,作为单独一个 `feat` 切片做,不混进任何 R1 机械搬移 commit。来源:P1 六轮用户请求(2026-06-15)。
