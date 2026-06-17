@@ -36,6 +36,7 @@ import 'package:papertok_reader/widgets/ai/seminar/seminar_autoscroll_policy.dar
 import 'package:papertok_reader/widgets/ai/seminar/roles/seminar_role_widgets.dart';
 import 'package:papertok_reader/widgets/ai/seminar/shared/seminar_snapshot_widgets.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_stable_width_section.dart';
+import 'package:papertok_reader/widgets/ai/seminar/timeline/seminar_timeline_widgets.dart';
 import 'package:papertok_reader/widgets/ai/seminar/tools/seminar_tool_widgets.dart';
 import 'package:papertok_reader/widgets/ai/seminar/whiteboard/seminar_whiteboard_widgets.dart';
 import 'package:papertok_reader/widgets/ai/seminar/start_seminar_tool_bridge.dart';
@@ -8636,17 +8637,32 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           const SizedBox(height: 8),
         ],
         if (showNativeTimeline) ...[
-          _seminarSnapshotNativeTimeline(
-            nativeTimelineParts,
+          SeminarSnapshotNativeTimeline(
+            parts: nativeTimelineParts,
             sessionId: sessionId,
-            bookId: bookId,
             hiddenPartCount: hiddenNativeTimelinePartCount,
             canToggleExpansion: canToggleNativeTimelineExpansion,
             isExpanded: isNativeTimelineExpanded,
-            showInlineEvidence:
-                !useCompactNativeTimeline || isNativeTimelineExpanded,
-            showTraceDetails:
-                !useCompactNativeTimeline || isNativeTimelineExpanded,
+            zh: _isChineseLocale,
+            onToggleExpansion: () {
+              setState(() {
+                if (isNativeTimelineExpanded) {
+                  _seminarCardTimelineExpandedSessionIds.remove(sessionId);
+                } else if (sessionId != null) {
+                  _seminarCardTimelineExpandedSessionIds.add(sessionId);
+                }
+              });
+            },
+            partBuilder: (part, roleTurnNumber) => _seminarTimelinePartView(
+              part,
+              sessionId: sessionId,
+              bookId: bookId,
+              showInlineEvidence:
+                  !useCompactNativeTimeline || isNativeTimelineExpanded,
+              showTraceDetails:
+                  !useCompactNativeTimeline || isNativeTimelineExpanded,
+              roleTurnNumber: roleTurnNumber,
+            ),
           ),
           if (showToolCalls && toolCalls.isNotEmpty) const SizedBox(height: 10),
         ],
@@ -8678,7 +8694,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           ),
           const SizedBox(height: 6),
           for (final part in thinkingParts)
-            _seminarSnapshotNativeTimelinePart(
+            _seminarTimelinePartView(
               part,
               sessionId: sessionId,
               bookId: bookId,
@@ -9133,7 +9149,19 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           ),
           const SizedBox(height: 6),
           for (final part in artifactActionParts)
-            _seminarSnapshotArtifactActionsPartTile(part),
+            SeminarSnapshotArtifactActionsPartTile(
+              part: part,
+              zh: _isChineseLocale,
+              actionChipLabelBuilder: _seminarArtifactActionChipLabel,
+              displayTextBuilder: _seminarArtifactActionDisplayText,
+              statusLabelBuilder: _seminarArtifactActionStatusLabel,
+              completedAtLabelBuilder: _seminarArtifactActionCompletedAtLabel,
+              detailLabelBuilder: _seminarArtifactActionDetailLabel,
+              linkedEvidenceLabel: _seminarLinkedEvidenceLabel,
+              missingSourceLabel: _seminarMissingSourceLabel,
+              evidenceSourceActionBuilder: (evidence) =>
+                  _seminarSnapshotEvidenceSourceAction(evidence.sourceRef),
+            ),
         ],
         if (showWhiteboard &&
             (disagreementTexts.isNotEmpty || openQuestions.isNotEmpty)) ...[
@@ -10314,94 +10342,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     }
   }
 
-  Widget _seminarSnapshotNativeTimeline(
-    List<AiSeminarRunCardMessagePart> parts, {
-    required String? sessionId,
-    required int? bookId,
-    required int hiddenPartCount,
-    required bool canToggleExpansion,
-    required bool isExpanded,
-    required bool showInlineEvidence,
-    required bool showTraceDetails,
-  }) {
-    var roleTurnNumber = 0;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SeminarSnapshotHeading(
-          Icons.timeline_outlined,
-          _localizedSeminarCardText(zh: '研讨流', en: 'Seminar stream'),
-        ),
-        const SizedBox(height: 6),
-        for (final part in parts)
-          _seminarSnapshotNativeTimelinePart(
-            part,
-            sessionId: sessionId,
-            bookId: bookId,
-            showInlineEvidence: showInlineEvidence,
-            showTraceDetails: showTraceDetails,
-            roleTurnNumber:
-                part.type.trim() == 'role_turn' ? ++roleTurnNumber : null,
-          ),
-        if (hiddenPartCount > 0 ||
-            (canToggleExpansion && sessionId != null && isExpanded))
-          Wrap(
-            spacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              if (hiddenPartCount > 0)
-                Text(
-                  _localizedSeminarCardText(
-                    zh: '还有 $hiddenPartCount 个研讨片段可在分类视图中查看。',
-                    en: '$hiddenPartCount more Seminar parts are available in tabs.',
-                  ),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: ClaudePalette.secondary(context),
-                      ),
-                ),
-              if (canToggleExpansion && sessionId != null)
-                TextButton.icon(
-                  key: ValueKey(
-                    'seminar-chat-card-native-timeline-toggle-$sessionId',
-                  ),
-                  style: TextButton.styleFrom(
-                    minimumSize: const Size(0, 28),
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      if (isExpanded) {
-                        _seminarCardTimelineExpandedSessionIds
-                            .remove(sessionId);
-                      } else {
-                        _seminarCardTimelineExpandedSessionIds.add(sessionId);
-                      }
-                    });
-                  },
-                  icon: Icon(
-                    isExpanded
-                        ? Icons.unfold_less_outlined
-                        : Icons.unfold_more_outlined,
-                    size: 16,
-                  ),
-                  label: Text(
-                    _localizedSeminarCardText(
-                      zh: isExpanded ? '收起研讨流' : '展开全部研讨流',
-                      en: isExpanded
-                          ? 'Collapse Seminar stream'
-                          : 'Expand full Seminar stream',
-                    ),
-                  ),
-                ),
-            ],
-          ),
-      ],
-    );
-  }
-
-  Widget _seminarSnapshotNativeTimelinePart(
+  Widget _seminarTimelinePartView(
     AiSeminarRunCardMessagePart part, {
     required String? sessionId,
     required int? bookId,
@@ -10409,10 +10350,23 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     required bool showTraceDetails,
     required int? roleTurnNumber,
   }) {
-    switch (part.type.trim()) {
-      case 'seminar_run_setup':
-        return _seminarSnapshotRunSetupPartTile(part);
-      case 'tool_call':
+    Widget evidenceTile(AiSeminarRunCardEvidenceSnapshot evidence) =>
+        SeminarSnapshotEvidenceTile(
+          evidence,
+          zh: _isChineseLocale,
+          missingSourceLabel: _seminarMissingSourceLabel,
+          sourceAction: _seminarSnapshotEvidenceSourceAction(
+            evidence.sourceRef,
+          ),
+        );
+
+    return SeminarSnapshotNativeTimelinePart(
+      part: part,
+      zh: _isChineseLocale,
+      showInlineEvidence: showInlineEvidence,
+      showTraceDetails: showTraceDetails,
+      roleTurnNumber: roleTurnNumber,
+      toolCallBuilder: (part) {
         final toolCall = _seminarSnapshotToolCallFromPart(part);
         return SeminarSnapshotToolCallTile(
           toolCall: toolCall,
@@ -10440,43 +10394,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           isSubmitting: _seminarCardSubmittingSessionIds.contains(
             sessionId?.trim(),
           ),
-          evidenceTileBuilder: (evidence) => SeminarSnapshotEvidenceTile(
-            evidence,
-            zh: _isChineseLocale,
-            missingSourceLabel: _seminarMissingSourceLabel,
-            sourceAction: _seminarSnapshotEvidenceSourceAction(
-              evidence.sourceRef,
-            ),
-          ),
+          evidenceTileBuilder: evidenceTile,
         );
-      case 'evidence':
-      case 'evidence_bundle':
-        final evidenceRefs = part.evidenceRefs
-            .where((item) => !item.isEmpty)
-            .toList(growable: false);
-        final label = part.label?.trim().isNotEmpty == true
-            ? part.label!.trim()
-            : _localizedSeminarCardText(
-                zh: '证据快照',
-                en: 'Evidence snapshot',
-              );
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SeminarSnapshotHeading(Icons.fact_check_outlined, label),
-            const SizedBox(height: 6),
-            for (final evidence in evidenceRefs)
-              SeminarSnapshotEvidenceTile(
-                evidence,
-                zh: _isChineseLocale,
-                missingSourceLabel: _seminarMissingSourceLabel,
-                sourceAction: _seminarSnapshotEvidenceSourceAction(
-                  evidence.sourceRef,
-                ),
-              ),
-          ],
-        );
-      case 'role_turn':
+      },
+      roleTurnBuilder: (part, roleTurnNumber) {
         final role = _seminarSnapshotRoleFromPart(part);
         return SeminarSnapshotTimelineTurn(
           role: role,
@@ -10500,7 +10421,8 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           agentRunId: showTraceDetails ? part.agentRunId : null,
           parentRunId: showTraceDetails ? part.parentRunId : null,
         );
-      case 'role_partial':
+      },
+      rolePartialBuilder: (part) {
         final partial = _seminarSnapshotRoleFromPart(part);
         return SeminarSnapshotRolePartialTile(
           partial: partial,
@@ -10510,157 +10432,64 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           icon: _seminarRoleIconById(partial.roleId),
           zh: _isChineseLocale,
         );
-      case 'director_state':
-        return _seminarSnapshotDirectorCueTile(part, sessionId: sessionId);
-      case 'agent_status':
-        return SeminarSnapshotAgentStatusTile(
-          part: part,
-          zh: _isChineseLocale,
-          statusLabelBuilder: _seminarAgentStatusLabel,
-          roleLabelBuilder: _seminarRoleFallbackLabel,
-          actionLabelBuilder: _seminarAgentControlActionLabel,
-          actionEnabledBuilder: (actionId) =>
-              _seminarAgentControlActionIsExecutable(
-            part,
-            actionId: actionId,
-            sessionId: sessionId,
-          ),
-          actionWidgetBuilder: (actionId) => _seminarAgentControlAction(
-            part,
-            actionId: actionId,
-            sessionId: sessionId,
-          ),
-          allowedToolIdsBuilder: (toolIds) =>
-              _effectiveSeminarStatusAllowedToolIds(
-            toolIds,
-            bookId: bookId,
-          ),
-          toolLabelBuilder: _seminarToolDisplayLabel,
-          agentInputComposer: _seminarAgentInputComposerForPart(
-            part,
-            sessionId: sessionId,
-          ),
-        );
-      case 'thinking':
-        final thinkingRoleId = part.roleId?.trim() ?? '';
-        final thinkingContextLabel =
-            thinkingRoleId.isEmpty || thinkingRoleId == 'director'
-                ? null
-                : (part.label?.trim().isNotEmpty ?? false)
-                    ? part.label!.trim()
-                    : _seminarRoleFallbackLabel(thinkingRoleId);
-        return _seminarSnapshotNativeTextPartTile(
-          icon: Icons.psychology_outlined,
-          label: _localizedSeminarCardText(
-            zh: '思考',
-            en: 'Thinking',
-          ),
-          contextLabel: thinkingContextLabel,
-          text: part.text?.trim() ?? part.label?.trim() ?? '',
-          detailChipLabel: _seminarThinkingCompletedAtLabel(part.completedAt),
-          agentRunId: showTraceDetails ? part.agentRunId : null,
-          parentRunId: showTraceDetails ? part.parentRunId : null,
-        );
-      case 'reader_turn':
-        return _seminarSnapshotReaderTurnTile(part);
-      case 'reader_composer':
-        return _seminarSnapshotReaderComposerTile(part);
-      case 'synthesis':
-        return _seminarSnapshotNativeTextPartTile(
-          icon: Icons.auto_awesome_outlined,
-          label: _localizedSeminarCardText(
-            zh: '研讨总结',
-            en: 'Seminar summary',
-          ),
-          text: part.text?.trim() ?? '',
-          agentRunId: showTraceDetails ? part.agentRunId : null,
-          parentRunId: showTraceDetails ? part.parentRunId : null,
-          evidenceRefs: showInlineEvidence
-              ? part.evidenceRefs
-              : const <AiSeminarRunCardEvidenceSnapshot>[],
-        );
-      case 'disagreement':
-        return SeminarSnapshotDisagreementDetails(
-          details: [
-            AiSeminarRunCardDisagreementDetail(
-              text: part.text ?? '',
-              agentRunId: part.agentRunId,
-              parentRunId: part.parentRunId,
-              roleIds: part.roleIds,
-              evidenceRefs: part.evidenceRefs,
-            ),
-          ],
-          zh: _isChineseLocale,
-          roleLabelsBuilder: _seminarRoleLabels,
-          evidenceTileBuilder: (evidence) => SeminarSnapshotEvidenceTile(
-            evidence,
-            zh: _isChineseLocale,
-            missingSourceLabel: _seminarMissingSourceLabel,
-            sourceAction: _seminarSnapshotEvidenceSourceAction(
-              evidence.sourceRef,
-            ),
-          ),
-        );
-      case 'contradiction_scan':
-        return SeminarSnapshotContradictionScanTiles(
-          parts: [part],
-          zh: _isChineseLocale,
-          roleLabelsBuilder: _seminarRoleLabels,
-          countLabelBuilder: _seminarCountLabel,
-          evidenceTileBuilder: (evidence) => SeminarSnapshotEvidenceTile(
-            evidence,
-            zh: _isChineseLocale,
-            missingSourceLabel: _seminarMissingSourceLabel,
-            sourceAction: _seminarSnapshotEvidenceSourceAction(
-              evidence.sourceRef,
-            ),
-          ),
-        );
-      case 'disagreement_rebuttal':
-        return SeminarSnapshotDisagreementRebuttalTiles(
-          parts: [part],
-          zh: _isChineseLocale,
-          roleLabelBuilder: _seminarRoleFallbackLabel,
-          evidenceTileBuilder: (evidence) => SeminarSnapshotEvidenceTile(
-            evidence,
-            zh: _isChineseLocale,
-            missingSourceLabel: _seminarMissingSourceLabel,
-            sourceAction: _seminarSnapshotEvidenceSourceAction(
-              evidence.sourceRef,
-            ),
-          ),
-        );
-      case 'review_triage':
-        return _seminarSnapshotReviewTriagePartTile(
+      },
+      directorStateBuilder: (part) =>
+          _seminarSnapshotDirectorCueTile(part, sessionId: sessionId),
+      agentStatusBuilder: (part) => SeminarSnapshotAgentStatusTile(
+        part: part,
+        zh: _isChineseLocale,
+        statusLabelBuilder: _seminarAgentStatusLabel,
+        roleLabelBuilder: _seminarRoleFallbackLabel,
+        actionLabelBuilder: _seminarAgentControlActionLabel,
+        actionEnabledBuilder: (actionId) =>
+            _seminarAgentControlActionIsExecutable(
           part,
-          agentRunId: showTraceDetails ? part.agentRunId : null,
-          parentRunId: showTraceDetails ? part.parentRunId : null,
-          evidenceRefs: showInlineEvidence
-              ? part.evidenceRefs
-              : const <AiSeminarRunCardEvidenceSnapshot>[],
-        );
-      case 'artifact_actions':
-        return _seminarSnapshotArtifactActionsPartTile(part);
-      default:
-        return const SizedBox.shrink();
-    }
-  }
-
-  Widget _seminarSnapshotReviewTriagePartTile(
-    AiSeminarRunCardMessagePart part, {
-    required String? agentRunId,
-    required String? parentRunId,
-    required List<AiSeminarRunCardEvidenceSnapshot> evidenceRefs,
-  }) {
-    final label = _seminarReviewTriageTimelineLabel(part.label);
-    final text = _seminarReviewTriageTimelineText(part);
-    return _seminarSnapshotNativeTextPartTile(
-      icon: Icons.rule_folder_outlined,
-      label: label,
-      text: text,
-      agentRunId: agentRunId,
-      parentRunId: parentRunId,
-      evidenceRefs: evidenceRefs,
+          actionId: actionId,
+          sessionId: sessionId,
+        ),
+        actionWidgetBuilder: (actionId) => _seminarAgentControlAction(
+          part,
+          actionId: actionId,
+          sessionId: sessionId,
+        ),
+        allowedToolIdsBuilder: (toolIds) =>
+            _effectiveSeminarStatusAllowedToolIds(
+          toolIds,
+          bookId: bookId,
+        ),
+        toolLabelBuilder: _seminarToolDisplayLabel,
+        agentInputComposer: _seminarAgentInputComposerForPart(
+          part,
+          sessionId: sessionId,
+        ),
+      ),
+      readerTurnBuilder: _seminarSnapshotReaderTurnTile,
+      readerComposerBuilder: _seminarSnapshotReaderComposerTile,
+      thinkingContextLabelBuilder: (part) {
+        final thinkingRoleId = part.roleId?.trim() ?? '';
+        if (thinkingRoleId.isEmpty || thinkingRoleId == 'director') {
+          return null;
+        }
+        return (part.label?.trim().isNotEmpty ?? false)
+            ? part.label!.trim()
+            : _seminarRoleFallbackLabel(thinkingRoleId);
+      },
+      thinkingCompletedAtLabelBuilder: _seminarThinkingCompletedAtLabel,
+      roleLabelsBuilder: _seminarRoleLabels,
+      roleLabelBuilder: _seminarRoleFallbackLabel,
+      countLabelBuilder: _seminarCountLabel,
+      reviewTriageLabelBuilder: _seminarReviewTriageTimelineLabel,
+      reviewTriageTextBuilder: _seminarReviewTriageTimelineText,
+      artifactChipLabelBuilder: _seminarArtifactActionChipLabel,
+      artifactDisplayTextBuilder: _seminarArtifactActionDisplayText,
+      artifactStatusLabelBuilder: _seminarArtifactActionStatusLabel,
+      artifactCompletedAtLabelBuilder: _seminarArtifactActionCompletedAtLabel,
+      artifactDetailLabelBuilder: _seminarArtifactActionDetailLabel,
+      evidenceTileBuilder: evidenceTile,
+      linkedEvidenceLabel: _seminarLinkedEvidenceLabel,
+      missingSourceLabel: _seminarMissingSourceLabel,
+      evidenceSourceActionBuilder: (evidence) =>
+          _seminarSnapshotEvidenceSourceAction(evidence.sourceRef),
     );
   }
 
@@ -10717,128 +10546,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       default:
         return text.isNotEmpty ? text : label ?? '';
     }
-  }
-
-  Widget _seminarSnapshotArtifactActionsPartTile(
-    AiSeminarRunCardMessagePart part,
-  ) {
-    final actionLabels = part.actionIds
-        .map(_seminarArtifactActionChipLabel)
-        .where((label) => label.isNotEmpty)
-        .toList(growable: false);
-    final text = _seminarArtifactActionDisplayText(part.text?.trim() ?? '');
-    final statusLabel = _seminarArtifactActionStatusLabel(part.status);
-    final completedAtLabel = _seminarArtifactActionCompletedAtLabel(
-      part.status,
-      part.completedAt,
-    );
-    final detailLabel = _seminarArtifactActionDetailLabel(part.status);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: ClaudePalette.accentTint(context).withValues(alpha: 0.22),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: ClaudePalette.divider(context)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                Icons.inventory_2_outlined,
-                size: 18,
-                color: ClaudePalette.accent(context),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _localizedSeminarCardText(
-                              zh: '沉淀动作',
-                              en: 'Artifact actions',
-                            ),
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelLarge
-                                ?.copyWith(
-                                  color: ClaudePalette.fg(context),
-                                  fontWeight: FontWeight.w700,
-                                ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (statusLabel != null || completedAtLabel != null) ...[
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          if (statusLabel != null)
-                            SeminarSnapshotTinyChip(statusLabel),
-                          if (completedAtLabel != null)
-                            SeminarSnapshotTinyChip(completedAtLabel),
-                        ],
-                      ),
-                    ],
-                    SeminarSnapshotAgentTraceRows(
-                      part.agentRunId,
-                      parentRunId: part.parentRunId,
-                      zh: _isChineseLocale,
-                    ),
-                    SeminarSnapshotCompactEvidenceRows(
-                      evidenceRefs: part.evidenceRefs,
-                      linkedEvidenceLabel: _seminarLinkedEvidenceLabel,
-                      missingSourceLabel: _seminarMissingSourceLabel,
-                      sourceActionBuilder: (evidence) =>
-                          _seminarSnapshotEvidenceSourceAction(
-                        evidence.sourceRef,
-                      ),
-                    ),
-                    if (text.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        detailLabel,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: ClaudePalette.secondary(context),
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        text,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: ClaudePalette.secondary(context),
-                              height: 1.3,
-                            ),
-                      ),
-                    ],
-                    if (actionLabels.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          for (final label in actionLabels)
-                            SeminarSnapshotTinyChip(label),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   String _seminarArtifactActionDisplayText(String rawText) {
@@ -11075,64 +10782,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     }
   }
 
-  Widget _seminarSnapshotRunSetupPartTile(
-    AiSeminarRunCardMessagePart part,
-  ) {
-    final lines = <String>[
-      part.text?.trim() ?? '',
-      part.label?.trim() ?? '',
-    ].where((line) => line.isNotEmpty).toList(growable: false);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: ClaudePalette.divider(context)),
-        color: ClaudePalette.accentTint(context).withValues(alpha: 0.28),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              Icons.tune_outlined,
-              size: 18,
-              color: ClaudePalette.accent(context),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _localizedSeminarCardText(
-                      zh: '本次设置',
-                      en: 'Run setup',
-                    ),
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: ClaudePalette.fg(context),
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                  if (lines.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    for (final line in lines)
-                      Text(
-                        line,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: ClaudePalette.secondary(context),
-                              height: 1.3,
-                            ),
-                      ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   AiSeminarRunCardToolCallSnapshot _seminarSnapshotToolCallFromPart(
     AiSeminarRunCardMessagePart part,
   ) {
@@ -11162,105 +10811,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       label: part.label ?? '',
       summary: part.text ?? '',
       evidenceRefs: part.evidenceRefs,
-    );
-  }
-
-  Widget _seminarSnapshotNativeTextPartTile({
-    required IconData icon,
-    required String label,
-    String? contextLabel,
-    required String text,
-    String? detailChipLabel,
-    String? agentRunId,
-    String? parentRunId,
-    List<AiSeminarRunCardEvidenceSnapshot> evidenceRefs = const [],
-  }) {
-    final normalizedText = text.trim();
-    final normalizedContextLabel = contextLabel?.trim() ?? '';
-    final normalizedDetailChipLabel = detailChipLabel?.trim() ?? '';
-    if (normalizedText.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: ClaudePalette.elevated(context).withValues(alpha: 0.55),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: ClaudePalette.divider(context)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, size: 17, color: ClaudePalette.accent(context)),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: ClaudePalette.fg(context),
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                    if (normalizedContextLabel.isNotEmpty) ...[
-                      const SizedBox(height: 3),
-                      Text(
-                        normalizedContextLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: ClaudePalette.secondary(context),
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
-                    ],
-                    const SizedBox(height: 3),
-                    SeminarSnapshotExpandableText(
-                      normalizedText,
-                      collapsedMaxLines: 4,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: ClaudePalette.secondary(context),
-                            height: 1.32,
-                          ),
-                    ),
-                    if (normalizedDetailChipLabel.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 5,
-                        runSpacing: 4,
-                        children: [
-                          SeminarSnapshotTinyChip(
-                            normalizedDetailChipLabel,
-                          ),
-                        ],
-                      ),
-                    ],
-                    SeminarSnapshotAgentTraceRows(
-                      agentRunId,
-                      parentRunId: parentRunId,
-                      zh: _isChineseLocale,
-                    ),
-                    SeminarSnapshotCompactEvidenceRows(
-                      evidenceRefs: evidenceRefs,
-                      linkedEvidenceLabel: _seminarLinkedEvidenceLabel,
-                      missingSourceLabel: _seminarMissingSourceLabel,
-                      sourceActionBuilder: (evidence) =>
-                          _seminarSnapshotEvidenceSourceAction(
-                        evidence.sourceRef,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
