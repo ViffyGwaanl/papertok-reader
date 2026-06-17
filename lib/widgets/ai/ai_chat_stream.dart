@@ -32,6 +32,7 @@ import 'package:papertok_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:papertok_reader/utils/ai_reasoning_parser.dart';
 import 'package:papertok_reader/widgets/ai/seminar/disagreement/seminar_disagreement_widgets.dart';
 import 'package:papertok_reader/widgets/ai/seminar/evidence/seminar_evidence_widgets.dart';
+import 'package:papertok_reader/widgets/ai/seminar/participation/seminar_participation_widgets.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_autoscroll_policy.dart';
 import 'package:papertok_reader/widgets/ai/seminar/roles/seminar_role_widgets.dart';
 import 'package:papertok_reader/widgets/ai/seminar/shared/seminar_snapshot_widgets.dart';
@@ -7232,9 +7233,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       for (final part in snapshot.messageParts) {
         final actionIds = part.actionIds
             .map((actionId) => actionId.trim())
-            .where((actionId) =>
-                _seminarAgentControlActionLabel(actionId).isNotEmpty)
-            .where((actionId) => _seminarAgentControlActionIsExecutable(
+            .where((actionId) => seminarAgentControlActionLabel(
+                  actionId,
+                  zh: _isChineseLocale,
+                ).isNotEmpty)
+            .where((actionId) => seminarAgentControlActionIsExecutable(
                   part,
                   actionId: actionId,
                   sessionId: sessionId,
@@ -7242,7 +7245,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             .toList(growable: false);
         for (final actionId in actionIds) {
           controls.add(
-            _seminarAgentControlAction(
+            _buildSeminarAgentControlActionView(
               part,
               actionId: actionId,
               sessionId: sessionId,
@@ -8676,7 +8679,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           ),
           const SizedBox(height: 6),
           for (final cue in directorCues)
-            _seminarSnapshotDirectorCueTile(cue, sessionId: sessionId),
+            _buildSeminarDirectorCueView(cue, sessionId: sessionId),
           if (showToolCalls && toolCalls.isNotEmpty) const SizedBox(height: 10),
         ],
         if (showThinking && thinkingParts.isNotEmpty) ...[
@@ -8714,21 +8717,25 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           ),
           const SizedBox(height: 6),
           for (final cue in controlDirectorCues)
-            _seminarSnapshotDirectorCueTile(cue, sessionId: sessionId),
+            _buildSeminarDirectorCueView(cue, sessionId: sessionId),
           for (final status in agentStatuses)
             SeminarSnapshotAgentStatusTile(
               part: status,
               zh: _isChineseLocale,
               statusLabelBuilder: _seminarAgentStatusLabel,
               roleLabelBuilder: _seminarRoleFallbackLabel,
-              actionLabelBuilder: _seminarAgentControlActionLabel,
+              actionLabelBuilder: (actionId) => seminarAgentControlActionLabel(
+                actionId,
+                zh: _isChineseLocale,
+              ),
               actionEnabledBuilder: (actionId) =>
-                  _seminarAgentControlActionIsExecutable(
+                  seminarAgentControlActionIsExecutable(
                 status,
                 actionId: actionId,
                 sessionId: sessionId,
               ),
-              actionWidgetBuilder: (actionId) => _seminarAgentControlAction(
+              actionWidgetBuilder: (actionId) =>
+                  _buildSeminarAgentControlActionView(
                 status,
                 actionId: actionId,
                 sessionId: sessionId,
@@ -8739,15 +8746,15 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 bookId: bookId,
               ),
               toolLabelBuilder: _seminarToolDisplayLabel,
-              agentInputComposer: _seminarAgentInputComposerForPart(
+              agentInputComposer: _buildSeminarAgentInputComposerForPart(
                 status,
                 sessionId: sessionId,
               ),
             ),
           for (final composer in readerComposers)
-            _seminarSnapshotReaderComposerTile(composer),
+            _buildSeminarReaderComposerView(composer),
           for (final readerTurn in readerTurns)
-            _seminarSnapshotReaderTurnTile(readerTurn),
+            _buildSeminarReaderTurnView(readerTurn),
           if (showToolCalls && toolCalls.isNotEmpty) const SizedBox(height: 10),
         ],
         if (showTimeline) ...[
@@ -8791,7 +8798,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           ),
           const SizedBox(height: 6),
           for (final cue in directorCues)
-            _seminarSnapshotDirectorCueTile(cue, sessionId: sessionId),
+            _buildSeminarDirectorCueView(cue, sessionId: sessionId),
           if ((showToolCalls && toolCalls.isNotEmpty) ||
               (showEvidence && evidence.isNotEmpty) ||
               showAgentStatuses ||
@@ -8816,14 +8823,18 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               zh: _isChineseLocale,
               statusLabelBuilder: _seminarAgentStatusLabel,
               roleLabelBuilder: _seminarRoleFallbackLabel,
-              actionLabelBuilder: _seminarAgentControlActionLabel,
+              actionLabelBuilder: (actionId) => seminarAgentControlActionLabel(
+                actionId,
+                zh: _isChineseLocale,
+              ),
               actionEnabledBuilder: (actionId) =>
-                  _seminarAgentControlActionIsExecutable(
+                  seminarAgentControlActionIsExecutable(
                 status,
                 actionId: actionId,
                 sessionId: sessionId,
               ),
-              actionWidgetBuilder: (actionId) => _seminarAgentControlAction(
+              actionWidgetBuilder: (actionId) =>
+                  _buildSeminarAgentControlActionView(
                 status,
                 actionId: actionId,
                 sessionId: sessionId,
@@ -8834,7 +8845,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 bookId: bookId,
               ),
               toolLabelBuilder: _seminarToolDisplayLabel,
-              agentInputComposer: _seminarAgentInputComposerForPart(
+              agentInputComposer: _buildSeminarAgentInputComposerForPart(
                 status,
                 sessionId: sessionId,
               ),
@@ -8857,9 +8868,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           ),
           const SizedBox(height: 6),
           for (final composer in readerComposers)
-            _seminarSnapshotReaderComposerTile(composer),
+            _buildSeminarReaderComposerView(composer),
           for (final readerTurn in readerTurns)
-            _seminarSnapshotReaderTurnTile(readerTurn),
+            _buildSeminarReaderTurnView(readerTurn),
           if ((showToolCalls && toolCalls.isNotEmpty) ||
               (showEvidence && evidence.isNotEmpty) ||
               (showSummary && synthesis != null && synthesis.isNotEmpty) ||
@@ -9412,8 +9423,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     return directorCues
         .where(
           (part) => part.actionIds.any(
-            (actionId) =>
-                _seminarAgentControlActionLabel(actionId.trim()).isNotEmpty,
+            (actionId) => seminarAgentControlActionLabel(
+              actionId.trim(),
+              zh: _isChineseLocale,
+            ).isNotEmpty,
           ),
         )
         .toList(growable: false);
@@ -10434,20 +10447,23 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         );
       },
       directorStateBuilder: (part) =>
-          _seminarSnapshotDirectorCueTile(part, sessionId: sessionId),
+          _buildSeminarDirectorCueView(part, sessionId: sessionId),
       agentStatusBuilder: (part) => SeminarSnapshotAgentStatusTile(
         part: part,
         zh: _isChineseLocale,
         statusLabelBuilder: _seminarAgentStatusLabel,
         roleLabelBuilder: _seminarRoleFallbackLabel,
-        actionLabelBuilder: _seminarAgentControlActionLabel,
+        actionLabelBuilder: (actionId) => seminarAgentControlActionLabel(
+          actionId,
+          zh: _isChineseLocale,
+        ),
         actionEnabledBuilder: (actionId) =>
-            _seminarAgentControlActionIsExecutable(
+            seminarAgentControlActionIsExecutable(
           part,
           actionId: actionId,
           sessionId: sessionId,
         ),
-        actionWidgetBuilder: (actionId) => _seminarAgentControlAction(
+        actionWidgetBuilder: (actionId) => _buildSeminarAgentControlActionView(
           part,
           actionId: actionId,
           sessionId: sessionId,
@@ -10458,13 +10474,13 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           bookId: bookId,
         ),
         toolLabelBuilder: _seminarToolDisplayLabel,
-        agentInputComposer: _seminarAgentInputComposerForPart(
+        agentInputComposer: _buildSeminarAgentInputComposerForPart(
           part,
           sessionId: sessionId,
         ),
       ),
-      readerTurnBuilder: _seminarSnapshotReaderTurnTile,
-      readerComposerBuilder: _seminarSnapshotReaderComposerTile,
+      readerTurnBuilder: _buildSeminarReaderTurnView,
+      readerComposerBuilder: _buildSeminarReaderComposerView,
       thinkingContextLabelBuilder: (part) {
         final thinkingRoleId = part.roleId?.trim() ?? '';
         if (thinkingRoleId.isEmpty || thinkingRoleId == 'director') {
@@ -11250,129 +11266,15 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     _sourceOpener(ref, sourceIntent.toUri());
   }
 
-  Widget _seminarSnapshotReaderTurnTile(AiSeminarRunCardMessagePart part) {
-    final targetRole = part.roleId?.trim();
-    final action = part.label?.trim();
-    final targetLabel = targetRole == null || targetRole.isEmpty
-        ? ''
-        : _seminarRoleFallbackLabel(targetRole);
-    final actionLabel = _seminarReaderTurnActionLabel(action);
-    final statusLabel = _seminarReaderTurnStatusLabel(part.status);
-    final completedAtLabel = _seminarReaderTurnCompletedAtLabel(
-      part.status,
-      part.completedAt,
-    );
-    final toolId = part.toolId?.trim() ?? '';
-    final toolLabel =
-        toolId.isEmpty ? '' : _seminarToolDisplayLabel(toolId).trim();
-    final query = part.query?.trim() ?? '';
-    final meta = [
-      if (actionLabel.isNotEmpty) actionLabel,
-      if (targetLabel.isNotEmpty) targetLabel,
-    ].join(' · ');
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: ClaudePalette.elevated(context).withValues(alpha: 0.55),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: ClaudePalette.divider(context)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                Icons.person_outline,
-                size: 17,
-                color: ClaudePalette.accent(context),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (meta.isNotEmpty)
-                      Text(
-                        meta,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style:
-                            Theme.of(context).textTheme.labelMedium?.copyWith(
-                                  color: ClaudePalette.fg(context),
-                                  fontWeight: FontWeight.w700,
-                                ),
-                      ),
-                    if (part.text?.trim().isNotEmpty == true) ...[
-                      if (meta.isNotEmpty) const SizedBox(height: 3),
-                      SeminarSnapshotExpandableText(
-                        part.text!.trim(),
-                        collapsedMaxLines: 4,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: ClaudePalette.secondary(context),
-                              height: 1.32,
-                            ),
-                      ),
-                    ],
-                    if (toolLabel.isNotEmpty || query.isNotEmpty) ...[
-                      if (meta.isNotEmpty ||
-                          part.text?.trim().isNotEmpty == true)
-                        const SizedBox(height: 5),
-                      if (toolLabel.isNotEmpty)
-                        Text(
-                          _localizedSeminarCardText(
-                            zh: '工具：$toolLabel',
-                            en: 'Tool: $toolLabel',
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: ClaudePalette.secondary(context),
-                                    height: 1.32,
-                                  ),
-                        ),
-                      if (query.isNotEmpty)
-                        Text(
-                          _localizedSeminarCardText(
-                            zh: '查询：$query',
-                            en: 'Query: $query',
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: ClaudePalette.secondary(context),
-                                    height: 1.32,
-                                  ),
-                        ),
-                    ],
-                    if (statusLabel != null || completedAtLabel != null) ...[
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          if (statusLabel != null)
-                            SeminarSnapshotTinyChip(statusLabel),
-                          if (completedAtLabel != null)
-                            SeminarSnapshotTinyChip(completedAtLabel),
-                        ],
-                      ),
-                    ],
-                    SeminarSnapshotAgentTraceRows(
-                      part.agentRunId,
-                      parentRunId: part.parentRunId,
-                      zh: _isChineseLocale,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+  Widget _buildSeminarReaderTurnView(AiSeminarRunCardMessagePart part) {
+    return SeminarSnapshotReaderTurnTile(
+      part: part,
+      zh: _isChineseLocale,
+      roleLabelBuilder: _seminarRoleFallbackLabel,
+      actionLabelBuilder: _seminarReaderTurnActionLabel,
+      statusLabelBuilder: _seminarReaderTurnStatusLabel,
+      completedAtLabelBuilder: _seminarReaderTurnCompletedAtLabel,
+      toolLabelBuilder: _seminarToolDisplayLabel,
     );
   }
 
@@ -11426,289 +11328,153 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     );
   }
 
-  Widget _seminarSnapshotReaderComposerTile(AiSeminarRunCardMessagePart part) {
-    final prompt = part.text?.trim();
-    final actionLabels = part.actionIds
-        .map(_seminarReaderTurnActionLabel)
-        .where((label) => label.trim().isNotEmpty)
-        .toList(growable: false);
-    final roleLabels = part.roleIds
-        .map((roleId) => _seminarRoleFallbackLabel(roleId.trim()))
-        .where((label) => label.trim().isNotEmpty)
-        .toList(growable: false);
-    final defaultActionLabel = part.defaultActionId?.trim().isNotEmpty == true
-        ? _seminarReaderTurnActionLabel(part.defaultActionId!.trim())
-        : null;
-    final defaultRoleLabel = part.defaultRoleId?.trim().isNotEmpty == true
-        ? _seminarRoleFallbackLabel(part.defaultRoleId!.trim())
-        : null;
-    final selectedActionLabel = part.selectedActionId?.trim().isNotEmpty == true
-        ? _seminarReaderTurnActionLabel(part.selectedActionId!.trim())
-        : null;
-    final selectedRoleLabel = part.selectedRoleId?.trim().isNotEmpty == true
-        ? _seminarRoleFallbackLabel(part.selectedRoleId!.trim())
-        : null;
-    final draftText = part.draftText?.trim();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: ClaudePalette.accentTint(context).withValues(alpha: 0.35),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: ClaudePalette.divider(context)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _localizedSeminarCardText(
-                  zh: '这场研讨可继续由读者参与',
-                  en: 'This Seminar can continue with a reader turn',
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: ClaudePalette.fg(context),
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-              if (prompt != null && prompt.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                SeminarSnapshotExpandableText(
-                  prompt,
-                  collapsedMaxLines: 3,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: ClaudePalette.secondary(context),
-                        height: 1.32,
-                      ),
-                ),
-              ],
-              SeminarSnapshotAgentTraceRows(
-                part.agentRunId,
-                parentRunId: part.parentRunId,
-                zh: _isChineseLocale,
-              ),
-              if (defaultActionLabel != null || defaultRoleLabel != null) ...[
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    if (defaultActionLabel != null)
-                      SeminarSnapshotLabeledTinyChip(
-                        label: _localizedSeminarCardText(
-                          zh: '默认动作',
-                          en: 'Default action',
-                        ),
-                        value: defaultActionLabel,
-                      ),
-                    if (defaultRoleLabel != null)
-                      SeminarSnapshotLabeledTinyChip(
-                        label: _localizedSeminarCardText(
-                          zh: '默认角色',
-                          en: 'Default role',
-                        ),
-                        value: defaultRoleLabel,
-                      ),
-                  ],
-                ),
-              ],
-              if (selectedActionLabel != null || selectedRoleLabel != null) ...[
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    if (selectedActionLabel != null)
-                      SeminarSnapshotLabeledTinyChip(
-                        label: _localizedSeminarCardText(
-                          zh: '当前动作',
-                          en: 'Current action',
-                        ),
-                        value: selectedActionLabel,
-                      ),
-                    if (selectedRoleLabel != null)
-                      SeminarSnapshotLabeledTinyChip(
-                        label: _localizedSeminarCardText(
-                          zh: '当前角色',
-                          en: 'Current role',
-                        ),
-                        value: selectedRoleLabel,
-                      ),
-                  ],
-                ),
-              ],
-              if (draftText != null && draftText.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                SeminarSnapshotLabelText(
-                  _localizedSeminarCardText(
-                    zh: '草稿回复',
-                    en: 'Draft reply',
-                  ),
-                ),
-                const SizedBox(height: 4),
-                SeminarSnapshotExpandableText(
-                  draftText,
-                  collapsedMaxLines: 4,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: ClaudePalette.secondary(context),
-                        height: 1.32,
-                      ),
-                ),
-              ],
-              if (actionLabels.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                SeminarSnapshotLabelText(
-                  _localizedSeminarCardText(
-                    zh: '可用动作',
-                    en: 'Available actions',
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    for (final label in actionLabels)
-                      SeminarSnapshotTinyChip(label),
-                  ],
-                ),
-              ],
-              if (roleLabels.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                SeminarSnapshotLabelText(
-                  _localizedSeminarCardText(
-                    zh: '可用角色',
-                    en: 'Available roles',
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    for (final label in roleLabels)
-                      SeminarSnapshotTinyChip(label),
-                  ],
-                ),
-              ],
-            ],
-          ),
-        ),
+  Widget _buildSeminarReaderComposerView(AiSeminarRunCardMessagePart part) {
+    return SeminarSnapshotReaderComposerTile(
+      part: part,
+      zh: _isChineseLocale,
+      roleLabelBuilder: _seminarRoleFallbackLabel,
+      actionLabelBuilder: _seminarReaderTurnActionLabel,
+    );
+  }
+
+  Widget _buildSeminarDirectorCueView(
+    AiSeminarRunCardMessagePart part, {
+    required String? sessionId,
+  }) {
+    return SeminarSnapshotDirectorCueTile(
+      part: part,
+      zh: _isChineseLocale,
+      directorCueLabelBuilder: _seminarDirectorCueLabel,
+      actionLabelBuilder: (actionId) => seminarAgentControlActionLabel(
+        actionId,
+        zh: _isChineseLocale,
+      ),
+      actionEnabledBuilder: (actionId) => seminarAgentControlActionIsExecutable(
+        part,
+        actionId: actionId,
+        sessionId: sessionId,
+      ),
+      actionWidgetBuilder: (actionId) => _buildSeminarAgentControlActionView(
+        part,
+        actionId: actionId,
+        sessionId: sessionId,
+      ),
+      agentInputComposer: _buildSeminarAgentInputComposerForPart(
+        part,
+        sessionId: sessionId,
       ),
     );
   }
 
-  Widget _seminarSnapshotDirectorCueTile(
+  Widget? _buildSeminarAgentInputComposerForPart(
     AiSeminarRunCardMessagePart part, {
     required String? sessionId,
   }) {
-    final intent = part.label?.trim();
-    final cueText = part.text?.trim();
     final controlActionIds = part.actionIds
         .map((actionId) => actionId.trim())
-        .where(
-            (actionId) => _seminarAgentControlActionLabel(actionId).isNotEmpty)
+        .where((actionId) => seminarAgentControlActionLabel(
+              actionId,
+              zh: _isChineseLocale,
+            ).isNotEmpty)
         .toList(growable: false);
-    final inlineControlActionIds = controlActionIds
-        .where((actionId) => !_seminarAgentControlActionIsExecutable(
-              part,
-              actionId: actionId,
-              sessionId: sessionId,
-            ))
-        .toList(growable: false);
-    final agentRunId = _seminarAgentRunIdFromStatusPart(part);
+    final agentRunId = seminarAgentRunIdFromStatusPart(part);
     final normalizedSessionId = sessionId?.trim();
     final showAgentInput = agentRunId != null &&
         normalizedSessionId?.isNotEmpty == true &&
         controlActionIds.contains('send-input') &&
         _seminarAgentInputExpandedRunIds.contains(agentRunId);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: ClaudePalette.accentTint(context).withValues(alpha: 0.45),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: ClaudePalette.divider(context)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                Icons.psychology_outlined,
-                size: 17,
-                color: ClaudePalette.accent(context),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _seminarDirectorCueLabel(intent),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: ClaudePalette.fg(context),
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                    if (cueText != null && cueText.isNotEmpty) ...[
-                      const SizedBox(height: 3),
-                      SeminarSnapshotExpandableText(
-                        cueText,
-                        collapsedMaxLines: 3,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: ClaudePalette.secondary(context),
-                              height: 1.32,
-                            ),
-                      ),
-                    ],
-                    SeminarSnapshotAgentTraceRows(
-                      part.agentRunId,
-                      parentRunId: part.parentRunId,
-                      zh: _isChineseLocale,
-                    ),
-                    if (inlineControlActionIds.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      SeminarSnapshotLabelText(
-                        _localizedSeminarCardText(
-                          zh: '历史控制',
-                          en: 'Recorded controls',
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          for (final actionId in inlineControlActionIds)
-                            _seminarAgentControlAction(
-                              part,
-                              actionId: actionId,
-                              sessionId: sessionId,
-                            ),
-                        ],
-                      ),
-                    ],
-                    if (showAgentInput) ...[
-                      const SizedBox(height: 8),
-                      _seminarAgentInputComposer(
-                        sessionId: normalizedSessionId!,
-                        agentRunId: agentRunId,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    if (!showAgentInput) return null;
+    return _buildSeminarAgentInputComposer(
+      sessionId: normalizedSessionId!,
+      agentRunId: agentRunId,
+    );
+  }
+
+  Widget _buildSeminarAgentInputComposer({
+    required String sessionId,
+    required String agentRunId,
+  }) {
+    final controller = _seminarAgentInputController(agentRunId);
+    final isSubmitting = _seminarCardSubmittingSessionIds.contains(sessionId);
+    return SeminarAgentInputComposer(
+      agentRunId: agentRunId,
+      controller: controller,
+      zh: _isChineseLocale,
+      isSubmitting: isSubmitting,
+      onChanged: (_) => setState(() {}),
+      onSubmit: () => unawaited(_sendSeminarAgentInputControl(
+        sessionId: sessionId,
+        agentRunId: agentRunId,
+      )),
+    );
+  }
+
+  Widget _buildSeminarAgentControlActionView(
+    AiSeminarRunCardMessagePart part, {
+    required String actionId,
+    required String? sessionId,
+  }) {
+    final label = seminarAgentControlActionLabel(
+      actionId,
+      zh: _isChineseLocale,
+    );
+    if (label.isEmpty) return const SizedBox.shrink();
+    final agentRunId = seminarAgentRunIdFromStatusPart(part);
+    final normalizedSessionId = sessionId?.trim();
+    final isExecutable = seminarAgentControlActionIsExecutable(
+      part,
+      actionId: actionId,
+      sessionId: sessionId,
+    );
+    final executableAgentRunId = isExecutable ? agentRunId! : '';
+    final isSubmitting =
+        _seminarCardSubmittingSessionIds.contains(normalizedSessionId);
+    return SeminarAgentControlAction(
+      actionId: actionId,
+      agentRunId: executableAgentRunId,
+      label: label,
+      icon: seminarAgentControlActionIcon(actionId),
+      isExecutable: isExecutable,
+      isSubmitting: isSubmitting,
+      onPressed: () {
+        if (actionId == 'close-agent') {
+          unawaited(_closeSeminarAgentControl(
+            sessionId: normalizedSessionId!,
+            agentRunId: executableAgentRunId,
+          ));
+        } else if (actionId == 'wait-agent') {
+          unawaited(_waitSeminarAgentControl(
+            sessionId: normalizedSessionId!,
+            agentRunId: executableAgentRunId,
+          ));
+        } else if (actionId == 'send-input') {
+          setState(() {
+            if (_seminarAgentInputExpandedRunIds
+                .contains(executableAgentRunId)) {
+              _seminarAgentInputExpandedRunIds.remove(executableAgentRunId);
+            } else {
+              _seminarAgentInputExpandedRunIds.add(executableAgentRunId);
+            }
+          });
+        } else if (actionId == 'resume-agent') {
+          unawaited(_resumeSeminarAgentControl(
+            sessionId: normalizedSessionId!,
+            agentRunId: executableAgentRunId,
+          ));
+        } else if (actionId == 'retry-agent-control') {
+          unawaited(_retrySeminarAgentControl(
+            sessionId: normalizedSessionId!,
+            agentRunId: executableAgentRunId,
+          ));
+        }
+      },
+    );
+  }
+
+  TextEditingController _seminarAgentInputController(String agentRunId) {
+    return _seminarAgentInputControllers.putIfAbsent(
+      agentRunId,
+      () => TextEditingController(),
     );
   }
 
@@ -11734,224 +11500,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       out.add(toolId);
     }
     return List.unmodifiable(out);
-  }
-
-  Widget _seminarAgentControlAction(
-    AiSeminarRunCardMessagePart part, {
-    required String actionId,
-    required String? sessionId,
-  }) {
-    final label = _seminarAgentControlActionLabel(actionId);
-    if (label.isEmpty) return const SizedBox.shrink();
-    final agentRunId = _seminarAgentRunIdFromStatusPart(part);
-    final normalizedSessionId = sessionId?.trim();
-    if (!_seminarAgentControlActionIsExecutable(
-      part,
-      actionId: actionId,
-      sessionId: sessionId,
-    )) {
-      return SeminarSnapshotTinyChip(label);
-    }
-    final executableAgentRunId = agentRunId!;
-    final isSubmitting =
-        _seminarCardSubmittingSessionIds.contains(normalizedSessionId);
-    return ActionChip(
-      key: ValueKey(
-        'seminar-chat-card-agent-action-$actionId-$executableAgentRunId',
-      ),
-      avatar: Icon(
-        _seminarAgentControlActionIcon(actionId),
-        size: 16,
-        color: isSubmitting
-            ? ClaudePalette.secondary(context)
-            : ClaudePalette.accent(context),
-      ),
-      label: Text(label),
-      onPressed: isSubmitting
-          ? null
-          : () {
-              if (actionId == 'close-agent') {
-                unawaited(_closeSeminarAgentControl(
-                  sessionId: normalizedSessionId!,
-                  agentRunId: executableAgentRunId,
-                ));
-              } else if (actionId == 'wait-agent') {
-                unawaited(_waitSeminarAgentControl(
-                  sessionId: normalizedSessionId!,
-                  agentRunId: executableAgentRunId,
-                ));
-              } else if (actionId == 'send-input') {
-                setState(() {
-                  if (_seminarAgentInputExpandedRunIds
-                      .contains(executableAgentRunId)) {
-                    _seminarAgentInputExpandedRunIds
-                        .remove(executableAgentRunId);
-                  } else {
-                    _seminarAgentInputExpandedRunIds.add(executableAgentRunId);
-                  }
-                });
-              } else if (actionId == 'resume-agent') {
-                unawaited(_resumeSeminarAgentControl(
-                  sessionId: normalizedSessionId!,
-                  agentRunId: executableAgentRunId,
-                ));
-              } else if (actionId == 'retry-agent-control') {
-                unawaited(_retrySeminarAgentControl(
-                  sessionId: normalizedSessionId!,
-                  agentRunId: executableAgentRunId,
-                ));
-              }
-            },
-      labelStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: ClaudePalette.fg(context),
-            fontWeight: FontWeight.w700,
-          ),
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-      visualDensity: VisualDensity.compact,
-      backgroundColor:
-          Theme.of(context).colorScheme.secondaryContainer.withValues(
-                alpha: 0.72,
-              ),
-      side: BorderSide(color: ClaudePalette.divider(context)),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-    );
-  }
-
-  Widget? _seminarAgentInputComposerForPart(
-    AiSeminarRunCardMessagePart part, {
-    required String? sessionId,
-  }) {
-    final controlActionIds = part.actionIds
-        .map((actionId) => actionId.trim())
-        .where(
-            (actionId) => _seminarAgentControlActionLabel(actionId).isNotEmpty)
-        .toList(growable: false);
-    final agentRunId = _seminarAgentRunIdFromStatusPart(part);
-    final normalizedSessionId = sessionId?.trim();
-    final showAgentInput = agentRunId != null &&
-        normalizedSessionId?.isNotEmpty == true &&
-        controlActionIds.contains('send-input') &&
-        _seminarAgentInputExpandedRunIds.contains(agentRunId);
-    if (!showAgentInput) return null;
-    return _seminarAgentInputComposer(
-      sessionId: normalizedSessionId!,
-      agentRunId: agentRunId,
-    );
-  }
-
-  bool _seminarAgentControlActionIsExecutable(
-    AiSeminarRunCardMessagePart part, {
-    required String actionId,
-    required String? sessionId,
-  }) {
-    final normalizedSessionId = sessionId?.trim();
-    if (normalizedSessionId?.isNotEmpty != true) return false;
-    final agentRunId = _seminarAgentRunIdFromStatusPart(part);
-    if (agentRunId == null) return false;
-    switch (actionId.trim()) {
-      case 'wait-agent':
-        return _isSeminarAgentStatusOneOf(
-          part,
-          const ['role-pending', 'role-running'],
-        );
-      case 'close-agent':
-        return _isSeminarAgentStatusOneOf(
-          part,
-          const [
-            'role-pending',
-            'role-running',
-            'role-waiting-input',
-            'role-interrupted',
-          ],
-        );
-      case 'send-input':
-        return _isSeminarAgentStatusOneOf(part, const ['role-waiting-input']);
-      case 'resume-agent':
-        return _isSeminarAgentStatusOneOf(part, const ['role-interrupted']);
-      case 'retry-agent-control':
-        return _isSeminarAgentStatusOneOf(part, const ['role-error', 'failed']);
-      default:
-        return false;
-    }
-  }
-
-  bool _isSeminarAgentStatusOneOf(
-    AiSeminarRunCardMessagePart part,
-    List<String> statuses,
-  ) {
-    final status = part.label?.trim();
-    return status != null && statuses.contains(status);
-  }
-
-  IconData _seminarAgentControlActionIcon(String actionId) {
-    switch (actionId.trim()) {
-      case 'close-agent':
-        return Icons.stop_circle_outlined;
-      case 'wait-agent':
-        return Icons.hourglass_empty_outlined;
-      case 'send-input':
-        return Icons.send_outlined;
-      case 'resume-agent':
-        return Icons.restart_alt_outlined;
-      case 'retry-agent-control':
-        return Icons.replay_outlined;
-      default:
-        return Icons.tune_outlined;
-    }
-  }
-
-  TextEditingController _seminarAgentInputController(String agentRunId) {
-    return _seminarAgentInputControllers.putIfAbsent(
-      agentRunId,
-      () => TextEditingController(),
-    );
-  }
-
-  Widget _seminarAgentInputComposer({
-    required String sessionId,
-    required String agentRunId,
-  }) {
-    final controller = _seminarAgentInputController(agentRunId);
-    final isSubmitting = _seminarCardSubmittingSessionIds.contains(sessionId);
-    final hasText = controller.text.trim().isNotEmpty;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: TextField(
-            key: ValueKey('seminar-chat-card-agent-input-$agentRunId'),
-            controller: controller,
-            minLines: 1,
-            maxLines: 3,
-            enabled: !isSubmitting,
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              isDense: true,
-              labelText: _localizedSeminarCardText(
-                zh: '输入给角色',
-                en: 'Input for role',
-              ),
-              border: const OutlineInputBorder(),
-            ),
-          ),
-        ),
-        const SizedBox(width: 6),
-        IconButton.filledTonal(
-          key: ValueKey('seminar-chat-card-agent-input-submit-$agentRunId'),
-          tooltip: _localizedSeminarCardText(
-            zh: '发送输入',
-            en: 'Send input',
-          ),
-          onPressed: isSubmitting || !hasText
-              ? null
-              : () => unawaited(_sendSeminarAgentInputControl(
-                    sessionId: sessionId,
-                    agentRunId: agentRunId,
-                  )),
-          icon: const Icon(Icons.send_outlined, size: 18),
-        ),
-      ],
-    );
   }
 
   Future<void> _sendSeminarAgentInputControl({
@@ -12312,21 +11860,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     }
   }
 
-  String? _seminarAgentRunIdFromStatusPart(
-    AiSeminarRunCardMessagePart part,
-  ) {
-    final type = part.type.trim();
-    if (type != 'director_state' && type != 'agent_status') return null;
-    final agentRunId = part.agentRunId?.trim();
-    if (agentRunId != null && agentRunId.isNotEmpty) return agentRunId;
-    final id = part.id?.trim();
-    if (id == null || id.isEmpty) return null;
-    const marker = ':status:';
-    final markerIndex = id.lastIndexOf(marker);
-    if (markerIndex <= 0) return null;
-    return id.substring(0, markerIndex);
-  }
-
   String _seminarDirectorCueLabel(String? intent) {
     switch (intent?.trim()) {
       case 'ask-user':
@@ -12469,48 +12002,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           zh: '角色状态更新',
           en: 'Role status update',
         );
-    }
-  }
-
-  String _seminarAgentControlActionLabel(String? action) {
-    switch (action?.trim()) {
-      case 'wait-agent':
-        return _localizedSeminarCardText(
-          zh: '等待角色',
-          en: 'Wait for role',
-        );
-      case 'wait-tool-call':
-        return _localizedSeminarCardText(
-          zh: '证据检索中…',
-          en: 'Retrieving evidence...',
-        );
-      case 'cancel-tool-call':
-        return _localizedSeminarCardText(
-          zh: '取消工具调用',
-          en: 'Cancel tool call',
-        );
-      case 'send-input':
-        return _localizedSeminarCardText(
-          zh: '发送输入',
-          en: 'Send input',
-        );
-      case 'resume-agent':
-        return _localizedSeminarCardText(
-          zh: '继续角色',
-          en: 'Resume role',
-        );
-      case 'close-agent':
-        return _localizedSeminarCardText(
-          zh: '停止角色',
-          en: 'Stop role',
-        );
-      case 'retry-agent-control':
-        return _localizedSeminarCardText(
-          zh: '重新生成角色',
-          en: 'Regenerate role',
-        );
-      default:
-        return '';
     }
   }
 
