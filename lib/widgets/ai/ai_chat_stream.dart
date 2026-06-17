@@ -32,8 +32,8 @@ import 'package:papertok_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:papertok_reader/utils/ai_reasoning_parser.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_autoscroll_policy.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_evidence_numbering.dart';
-import 'package:papertok_reader/widgets/ai/seminar/seminar_expandable_text.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_run_trace_label.dart';
+import 'package:papertok_reader/widgets/ai/seminar/shared/seminar_snapshot_widgets.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_stable_width_section.dart';
 import 'package:papertok_reader/widgets/ai/seminar/start_seminar_tool_bridge.dart';
 import 'package:papertok_reader/widgets/ai/tool_step_tile.dart';
@@ -6084,10 +6084,53 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 ],
               ),
               const SizedBox(height: 8),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: _seminarMetaChips(card),
+              SeminarMetaChips(
+                chips: [
+                  SeminarMetaChipData(
+                    icon: Icons.flag_outlined,
+                    label: _seminarStatusLabel(card.status, l10n),
+                  ),
+                  SeminarMetaChipData(
+                    icon: Icons.groups_2_outlined,
+                    label: _seminarRoleCountLabel(card.roleIds.length),
+                  ),
+                  SeminarMetaChipData(
+                    icon: Icons.manage_search_outlined,
+                    label: _seminarEvidenceScopeSummary(
+                      card.evidenceScopeIds,
+                      l10n,
+                    ),
+                  ),
+                  if (card.sourceRefCount > 0)
+                    SeminarMetaChipData(
+                      icon: Icons.link_outlined,
+                      label: _seminarSourceCountLabel(card.sourceRefCount),
+                    ),
+                  if (card.writeRequiresApproval)
+                    SeminarMetaChipData(
+                      icon: Icons.fact_check_outlined,
+                      label: _localizedSeminarCardText(
+                        zh: '写入需确认',
+                        en: 'Approval before write',
+                      ),
+                    ),
+                  if (card.allowWeb)
+                    SeminarMetaChipData(
+                      icon: Icons.public_outlined,
+                      label: _localizedSeminarCardText(
+                        zh: '允许联网',
+                        en: 'Web allowed',
+                      ),
+                    ),
+                  if (card.maxRounds > 1)
+                    SeminarMetaChipData(
+                      icon: Icons.repeat_outlined,
+                      label: _localizedSeminarCardText(
+                        zh: '最多 ${card.maxRounds} 轮',
+                        en: 'Up to ${card.maxRounds} rounds',
+                      ),
+                    ),
+                ],
               ),
               if (question.isNotEmpty) ...[
                 const SizedBox(height: 7),
@@ -8605,7 +8648,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           if (showToolCalls && toolCalls.isNotEmpty) const SizedBox(height: 10),
         ],
         if (showStatus) ...[
-          _seminarSnapshotHeading(
+          SeminarSnapshotHeading(
             Icons.pending_actions_outlined,
             _localizedSeminarCardText(
               zh: '状态详情',
@@ -8618,7 +8661,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           if (showToolCalls && toolCalls.isNotEmpty) const SizedBox(height: 10),
         ],
         if (showThinking && thinkingParts.isNotEmpty) ...[
-          _seminarSnapshotHeading(
+          SeminarSnapshotHeading(
             Icons.psychology_outlined,
             selectedSubview == _SeminarRunSnapshotSubview.thinking
                 ? _localizedSeminarCardText(
@@ -8643,7 +8686,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           if (showToolCalls && toolCalls.isNotEmpty) const SizedBox(height: 10),
         ],
         if (showControls) ...[
-          _seminarSnapshotHeading(
+          SeminarSnapshotHeading(
             Icons.tune_outlined,
             _localizedSeminarCardText(
               zh: '控制详情',
@@ -8683,7 +8726,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             const SizedBox(height: 10),
         ],
         if (showDirectorCues) ...[
-          _seminarSnapshotHeading(
+          SeminarSnapshotHeading(
             Icons.psychology_outlined,
             _localizedSeminarCardText(
               zh: '主持人下一步',
@@ -8703,7 +8746,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             const SizedBox(height: 10),
         ],
         if (showAgentStatuses) ...[
-          _seminarSnapshotHeading(
+          SeminarSnapshotHeading(
             Icons.support_agent_outlined,
             _localizedSeminarCardText(
               zh: '角色状态',
@@ -8726,7 +8769,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             const SizedBox(height: 10),
         ],
         if (showReaderActivity) ...[
-          _seminarSnapshotHeading(
+          SeminarSnapshotHeading(
             Icons.person_outline,
             _localizedSeminarCardText(
               zh: '读者参与',
@@ -8746,7 +8789,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             const SizedBox(height: 10),
         ],
         if (showToolCalls && toolCalls.isNotEmpty) ...[
-          _seminarSnapshotHeading(
+          SeminarSnapshotHeading(
             Icons.travel_explore_outlined,
             _localizedSeminarCardText(
               zh: '工具调用详情',
@@ -8760,7 +8803,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         if (showEvidence && evidence.isNotEmpty) ...[
           if ((showToolCalls && toolCalls.isNotEmpty) || showReaderActivity)
             const SizedBox(height: 10),
-          _seminarSnapshotHeading(
+          SeminarSnapshotHeading(
             Icons.fact_check_outlined,
             _localizedSeminarCardText(
               zh: '证据快照',
@@ -8780,7 +8823,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               showReaderActivity ||
               (showEvidence && evidence.isNotEmpty))
             const SizedBox(height: 10),
-          _seminarSnapshotHeading(
+          SeminarSnapshotHeading(
             Icons.forum_outlined,
             _localizedSeminarCardText(
               zh: '角色观点',
@@ -8803,7 +8846,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
-                child: _seminarSnapshotHeading(
+                child: SeminarSnapshotHeading(
                   Icons.auto_awesome_outlined,
                   _localizedSeminarCardText(
                     zh: '研讨总结',
@@ -8817,7 +8860,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 children: [
                   if (snapshot.disagreements.isNotEmpty ||
                       disagreementDetails.isNotEmpty)
-                    _seminarSnapshotTinyChip(
+                    SeminarSnapshotTinyChip(
                       _seminarCountLabel(
                         disagreementTexts.length,
                         zhUnit: '个分歧',
@@ -8826,7 +8869,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       ),
                     ),
                   if (snapshot.openQuestions.isNotEmpty)
-                    _seminarSnapshotTinyChip(
+                    SeminarSnapshotTinyChip(
                       _seminarCountLabel(
                         snapshot.openQuestions.length,
                         zhUnit: '个问题',
@@ -8839,7 +8882,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             ],
           ),
           const SizedBox(height: 6),
-          _seminarExpandableText(
+          SeminarSnapshotExpandableText(
             synthesis,
             collapsedMaxLines: 4,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -8853,7 +8896,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             (disagreementTexts.isNotEmpty ||
                 contradictionScans.isNotEmpty ||
                 disagreementRebuttals.isNotEmpty)) ...[
-          _seminarSnapshotHeading(
+          SeminarSnapshotHeading(
             Icons.report_problem_outlined,
             _localizedSeminarCardText(
               zh: '分歧视图',
@@ -8898,7 +8941,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           ),
         ],
         if (showArtifacts && artifactActionParts.isNotEmpty) ...[
-          _seminarSnapshotHeading(
+          SeminarSnapshotHeading(
             Icons.inventory_2_outlined,
             _localizedSeminarCardText(
               zh: '沉淀动作详情',
@@ -10101,7 +10144,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _seminarSnapshotHeading(
+        SeminarSnapshotHeading(
           Icons.timeline_outlined,
           _localizedSeminarCardText(zh: '研讨流', en: 'Seminar stream'),
         ),
@@ -10204,7 +10247,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _seminarSnapshotHeading(Icons.fact_check_outlined, label),
+            SeminarSnapshotHeading(Icons.fact_check_outlined, label),
             const SizedBox(height: 6),
             for (final evidence in evidenceRefs)
               _seminarSnapshotEvidenceTile(evidence),
@@ -10436,9 +10479,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         runSpacing: 6,
                         children: [
                           if (statusLabel != null)
-                            _seminarSnapshotTinyChip(statusLabel),
+                            SeminarSnapshotTinyChip(statusLabel),
                           if (completedAtLabel != null)
-                            _seminarSnapshotTinyChip(completedAtLabel),
+                            SeminarSnapshotTinyChip(completedAtLabel),
                         ],
                       ),
                     ],
@@ -10474,7 +10517,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         runSpacing: 6,
                         children: [
                           for (final label in actionLabels)
-                            _seminarSnapshotTinyChip(label),
+                            SeminarSnapshotTinyChip(label),
                         ],
                       ),
                     ],
@@ -10867,7 +10910,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       ),
                     ],
                     const SizedBox(height: 3),
-                    _seminarExpandableText(
+                    SeminarSnapshotExpandableText(
                       normalizedText,
                       collapsedMaxLines: 4,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -10881,7 +10924,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         spacing: 5,
                         runSpacing: 4,
                         children: [
-                          _seminarSnapshotTinyChip(
+                          SeminarSnapshotTinyChip(
                             normalizedDetailChipLabel,
                           ),
                         ],
@@ -10919,7 +10962,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     if (visibleEvidenceRefs.isEmpty) return const <Widget>[];
     return [
       const SizedBox(height: 6),
-      _seminarSnapshotDetailLabel(
+      SeminarSnapshotDetailLabel(
         _localizedSeminarCardText(
           zh: '关联证据',
           en: 'Linked evidence',
@@ -10937,8 +10980,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final sourceAction = _seminarSnapshotEvidenceSourceAction(
       evidence.sourceRef,
     );
-    final missingSourceChip =
-        sourceAction == null ? _seminarSnapshotMissingSourceChip() : null;
+    final missingSourceChip = sourceAction == null
+        ? SeminarSnapshotMissingSourceChip(
+            _localizedSeminarCardText(
+              zh: '来源缺失',
+              en: 'Source missing',
+            ),
+          )
+        : null;
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
       child: Row(
@@ -10969,35 +11018,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     );
   }
 
-  Widget _seminarSnapshotMissingSourceChip() {
-    return _seminarSnapshotTinyChip(
-      _localizedSeminarCardText(
-        zh: '来源缺失',
-        en: 'Source missing',
-      ),
-    );
-  }
-
-  Widget _seminarSnapshotHeading(IconData icon, String label) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 15, color: ClaudePalette.secondary(context)),
-        const SizedBox(width: 5),
-        Flexible(
-          child: Text(
-            label,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: ClaudePalette.secondary(context),
-                  fontWeight: FontWeight.w700,
-                ),
-          ),
-        ),
-      ],
-    );
-  }
-
   List<Widget> _seminarSnapshotAgentTraceRows(
     String? agentRunId, {
     String? parentRunId,
@@ -11012,7 +11032,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     }
     return [
       const SizedBox(height: 6),
-      _seminarSnapshotDetailLabel(
+      SeminarSnapshotDetailLabel(
         _localizedSeminarCardText(
           zh: '运行追踪',
           en: 'Agent trace',
@@ -11032,7 +11052,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       ],
       if (hasParentRunId) ...[
         const SizedBox(height: 4),
-        _seminarSnapshotDetailLabel(
+        SeminarSnapshotDetailLabel(
           _localizedSeminarCardText(
             zh: '父运行',
             en: 'Parent run',
@@ -11127,19 +11147,19 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         alignment: WrapAlignment.end,
                         children: [
                           if (statusLabel != null)
-                            _seminarSnapshotTinyChip(statusLabel)
+                            SeminarSnapshotTinyChip(statusLabel)
                           else if (toolCall.resultCount > 0)
-                            _seminarSnapshotTinyChip(
+                            SeminarSnapshotTinyChip(
                               _seminarToolCallResultCountLabel(
                                 toolCall.resultCount,
                               ),
                             ),
                           if (startedAtLabel != null)
-                            _seminarSnapshotTinyChip(startedAtLabel),
+                            SeminarSnapshotTinyChip(startedAtLabel),
                           if (completedAtLabel != null)
-                            _seminarSnapshotTinyChip(completedAtLabel),
+                            SeminarSnapshotTinyChip(completedAtLabel),
                           if (durationLabel != null)
-                            _seminarSnapshotTinyChip(durationLabel),
+                            SeminarSnapshotTinyChip(durationLabel),
                         ],
                       ),
                     ),
@@ -11163,7 +11183,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               ],
               if (visibleRoleLabels.isNotEmpty) ...[
                 const SizedBox(height: 6),
-                _seminarSnapshotDetailLabel(
+                SeminarSnapshotDetailLabel(
                   _localizedSeminarCardText(
                     zh: '可见角色',
                     en: 'Visible roles',
@@ -11182,11 +11202,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               ],
               if (outputText.isNotEmpty) ...[
                 const SizedBox(height: 6),
-                _seminarSnapshotDetailLabel(
+                SeminarSnapshotDetailLabel(
                   _seminarToolCallOutputLabel(toolCall),
                 ),
                 const SizedBox(height: 4),
-                _seminarExpandableText(
+                SeminarSnapshotExpandableText(
                   outputText,
                   collapsedMaxLines: 3,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -11201,7 +11221,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               ),
               if (actionIds.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                _seminarSnapshotDetailLabel(
+                SeminarSnapshotDetailLabel(
                   _localizedSeminarCardText(
                     zh: hasExecutableAction ? '可用控制' : '历史控制',
                     en: hasExecutableAction
@@ -11225,7 +11245,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               ],
               if (evidenceRefs.isNotEmpty) ...[
                 const SizedBox(height: 7),
-                _seminarSnapshotDetailLabel(
+                SeminarSnapshotDetailLabel(
                   _localizedSeminarCardText(
                     zh: '返回证据',
                     en: 'Returned evidence',
@@ -11548,7 +11568,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       actionId: actionId,
       sessionId: sessionId,
     )) {
-      return _seminarSnapshotTinyChip(label);
+      return SeminarSnapshotTinyChip(label);
     }
     final isSubmitting =
         _seminarCardSubmittingSessionIds.contains(normalizedSessionId);
@@ -11669,7 +11689,13 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final sourceAction = _seminarSnapshotEvidenceSourceAction(
       evidence.sourceRef,
     );
-    final sourceStatus = sourceAction ?? _seminarSnapshotMissingSourceChip();
+    final sourceStatus = sourceAction ??
+        SeminarSnapshotMissingSourceChip(
+          _localizedSeminarCardText(
+            zh: '来源缺失',
+            en: 'Source missing',
+          ),
+        );
     return Padding(
       key: anchorEvidence ? _seminarEvidenceTileKey(evidence) : null,
       padding: const EdgeInsets.only(bottom: 6),
@@ -11713,7 +11739,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 if (title.isNotEmpty || numberChip != null)
                   const SizedBox(height: 3),
                 if (expandableSnippet)
-                  _seminarExpandableText(
+                  SeminarSnapshotExpandableText(
                     snippet,
                     collapsedMaxLines: 3,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -11893,7 +11919,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       ),
                 ),
                 if (summary.isNotEmpty)
-                  _seminarExpandableText(
+                  SeminarSnapshotExpandableText(
                     summary,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: ClaudePalette.secondary(context),
@@ -11929,7 +11955,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _seminarSnapshotHeading(
+        SeminarSnapshotHeading(
           Icons.chat_bubble_outline,
           _localizedSeminarCardText(
             zh: '研讨时间线',
@@ -12003,7 +12029,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     ),
                     if (partialText.isNotEmpty) ...[
                       const SizedBox(height: 3),
-                      _seminarExpandableText(
+                      SeminarSnapshotExpandableText(
                         partialText,
                         collapsedMaxLines: 4,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -12074,7 +12100,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     ),
                     if (partialText.trim().isNotEmpty) ...[
                       const SizedBox(height: 3),
-                      _seminarExpandableText(
+                      SeminarSnapshotExpandableText(
                         partialText.trim(),
                         collapsedMaxLines: 4,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -12149,7 +12175,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       ),
                     if (part.text?.trim().isNotEmpty == true) ...[
                       if (meta.isNotEmpty) const SizedBox(height: 3),
-                      _seminarExpandableText(
+                      SeminarSnapshotExpandableText(
                         part.text!.trim(),
                         collapsedMaxLines: 4,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -12198,9 +12224,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         runSpacing: 6,
                         children: [
                           if (statusLabel != null)
-                            _seminarSnapshotTinyChip(statusLabel),
+                            SeminarSnapshotTinyChip(statusLabel),
                           if (completedAtLabel != null)
-                            _seminarSnapshotTinyChip(completedAtLabel),
+                            SeminarSnapshotTinyChip(completedAtLabel),
                         ],
                       ),
                     ],
@@ -12318,7 +12344,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               ),
               if (prompt != null && prompt.isNotEmpty) ...[
                 const SizedBox(height: 4),
-                _seminarExpandableText(
+                SeminarSnapshotExpandableText(
                   prompt,
                   collapsedMaxLines: 3,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -12338,7 +12364,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                   runSpacing: 6,
                   children: [
                     if (defaultActionLabel != null)
-                      _seminarSnapshotLabeledTinyChip(
+                      SeminarSnapshotLabeledTinyChip(
                         label: _localizedSeminarCardText(
                           zh: '默认动作',
                           en: 'Default action',
@@ -12346,7 +12372,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         value: defaultActionLabel,
                       ),
                     if (defaultRoleLabel != null)
-                      _seminarSnapshotLabeledTinyChip(
+                      SeminarSnapshotLabeledTinyChip(
                         label: _localizedSeminarCardText(
                           zh: '默认角色',
                           en: 'Default role',
@@ -12363,7 +12389,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                   runSpacing: 6,
                   children: [
                     if (selectedActionLabel != null)
-                      _seminarSnapshotLabeledTinyChip(
+                      SeminarSnapshotLabeledTinyChip(
                         label: _localizedSeminarCardText(
                           zh: '当前动作',
                           en: 'Current action',
@@ -12371,7 +12397,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         value: selectedActionLabel,
                       ),
                     if (selectedRoleLabel != null)
-                      _seminarSnapshotLabeledTinyChip(
+                      SeminarSnapshotLabeledTinyChip(
                         label: _localizedSeminarCardText(
                           zh: '当前角色',
                           en: 'Current role',
@@ -12383,14 +12409,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               ],
               if (draftText != null && draftText.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                _seminarSnapshotLabelText(
+                SeminarSnapshotLabelText(
                   _localizedSeminarCardText(
                     zh: '草稿回复',
                     en: 'Draft reply',
                   ),
                 ),
                 const SizedBox(height: 4),
-                _seminarExpandableText(
+                SeminarSnapshotExpandableText(
                   draftText,
                   collapsedMaxLines: 4,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -12401,7 +12427,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               ],
               if (actionLabels.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                _seminarSnapshotLabelText(
+                SeminarSnapshotLabelText(
                   _localizedSeminarCardText(
                     zh: '可用动作',
                     en: 'Available actions',
@@ -12413,13 +12439,13 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                   runSpacing: 6,
                   children: [
                     for (final label in actionLabels)
-                      _seminarSnapshotTinyChip(label),
+                      SeminarSnapshotTinyChip(label),
                   ],
                 ),
               ],
               if (roleLabels.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                _seminarSnapshotLabelText(
+                SeminarSnapshotLabelText(
                   _localizedSeminarCardText(
                     zh: '可用角色',
                     en: 'Available roles',
@@ -12431,7 +12457,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                   runSpacing: 6,
                   children: [
                     for (final label in roleLabels)
-                      _seminarSnapshotTinyChip(label),
+                      SeminarSnapshotTinyChip(label),
                   ],
                 ),
               ],
@@ -12439,32 +12465,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _seminarSnapshotLabeledTinyChip({
-    required String label,
-    required String value,
-  }) {
-    return Wrap(
-      spacing: 4,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        _seminarSnapshotLabelText(label),
-        _seminarSnapshotTinyChip(value),
-      ],
-    );
-  }
-
-  Widget _seminarSnapshotLabelText(String label) {
-    return Text(
-      label,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: ClaudePalette.secondary(context),
-            fontWeight: FontWeight.w700,
-          ),
     );
   }
 
@@ -12526,7 +12526,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     ),
                     if (cueText != null && cueText.isNotEmpty) ...[
                       const SizedBox(height: 3),
-                      _seminarExpandableText(
+                      SeminarSnapshotExpandableText(
                         cueText,
                         collapsedMaxLines: 3,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -12541,7 +12541,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     ),
                     if (inlineControlActionIds.isNotEmpty) ...[
                       const SizedBox(height: 8),
-                      _seminarSnapshotLabelText(
+                      SeminarSnapshotLabelText(
                         _localizedSeminarCardText(
                           zh: '历史控制',
                           en: 'Recorded controls',
@@ -12631,7 +12631,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _seminarSnapshotLabelText(
+                    SeminarSnapshotLabelText(
                       _localizedSeminarCardText(
                         zh: '角色状态',
                         en: 'Role status',
@@ -12654,14 +12654,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                                   ),
                         ),
                         if (roleId != null && roleId.isNotEmpty)
-                          _seminarSnapshotTinyChip(
+                          SeminarSnapshotTinyChip(
                             _seminarRoleFallbackLabel(roleId),
                           ),
                       ],
                     ),
                     if (statusText != null && statusText.isNotEmpty) ...[
                       const SizedBox(height: 3),
-                      _seminarExpandableText(
+                      SeminarSnapshotExpandableText(
                         statusText,
                         collapsedMaxLines: 3,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -12676,7 +12676,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     ),
                     if (allowedToolIds.isNotEmpty) ...[
                       const SizedBox(height: 8),
-                      _seminarSnapshotLabelText(
+                      SeminarSnapshotLabelText(
                         _localizedSeminarCardText(
                           zh: '允许工具',
                           en: 'Allowed tools',
@@ -12688,7 +12688,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         runSpacing: 6,
                         children: [
                           for (final toolId in allowedToolIds)
-                            _seminarSnapshotTinyChip(
+                            SeminarSnapshotTinyChip(
                               _seminarToolDisplayLabel(toolId),
                             ),
                         ],
@@ -12696,7 +12696,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     ],
                     if (inlineControlActionIds.isNotEmpty) ...[
                       const SizedBox(height: 8),
-                      _seminarSnapshotLabelText(
+                      SeminarSnapshotLabelText(
                         _localizedSeminarCardText(
                           zh: '历史控制',
                           en: 'Recorded controls',
@@ -12771,7 +12771,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       actionId: actionId,
       sessionId: sessionId,
     )) {
-      return _seminarSnapshotTinyChip(label);
+      return SeminarSnapshotTinyChip(label);
     }
     final executableAgentRunId = agentRunId!;
     final isSubmitting =
@@ -13564,21 +13564,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     }
   }
 
-  Widget _seminarExpandableText(
-    String text, {
-    int collapsedMaxLines = 3,
-    TextStyle? style,
-  }) =>
-      SeminarExpandableText(
-        text: text,
-        collapsedMaxLines: collapsedMaxLines,
-        expandLabel: _localizedSeminarCardText(zh: '展开全文', en: 'Expand'),
-        collapseLabel: _localizedSeminarCardText(zh: '收起', en: 'Collapse'),
-        evidenceLabelBuilder: (number) =>
-            _localizedSeminarCardText(zh: '证据$number', en: 'Evidence $number'),
-        style: style,
-      );
-
   Widget _seminarSnapshotTimelineTurn(
     AiSeminarRunCardRoleSummary role,
     int turnNumber, {
@@ -13625,7 +13610,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     ),
                     if (role.summary.trim().isNotEmpty) ...[
                       const SizedBox(height: 3),
-                      _seminarExpandableText(
+                      SeminarSnapshotExpandableText(
                         role.summary.trim(),
                         collapsedMaxLines: 4,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -13642,7 +13627,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       const SizedBox(height: 6),
                       _seminarEvidenceReferenceChips(evidenceRefs),
                       const SizedBox(height: 7),
-                      _seminarSnapshotDetailLabel(
+                      SeminarSnapshotDetailLabel(
                         _localizedSeminarCardText(
                           zh: '本轮证据',
                           en: 'Evidence used by this turn',
@@ -13684,7 +13669,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _seminarExpandableText(
+                    SeminarSnapshotExpandableText(
                       detail.text.trim(),
                       collapsedMaxLines: 3,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -13697,7 +13682,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         .where((roleId) => roleId.trim().isNotEmpty)
                         .isNotEmpty) ...[
                       const SizedBox(height: 7),
-                      _seminarSnapshotDetailLabel(
+                      SeminarSnapshotDetailLabel(
                         _localizedSeminarCardText(
                           zh: '关联角色',
                           en: 'Linked roles',
@@ -13718,7 +13703,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         .where((item) => !item.isEmpty)
                         .isNotEmpty) ...[
                       const SizedBox(height: 7),
-                      _seminarSnapshotDetailLabel(
+                      SeminarSnapshotDetailLabel(
                         _localizedSeminarCardText(
                           zh: '关联证据',
                           en: 'Linked evidence',
@@ -13806,7 +13791,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     ),
                     if (_seminarContradictionScanLabel(part.label) != null) ...[
                       const SizedBox(height: 7),
-                      _seminarSnapshotDetailLabel(
+                      SeminarSnapshotDetailLabel(
                         _localizedSeminarCardText(
                           zh: '扫描结论',
                           en: 'Scan result',
@@ -13826,7 +13811,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     ],
                     if (part.text?.trim().isNotEmpty == true) ...[
                       const SizedBox(height: 7),
-                      _seminarExpandableText(
+                      SeminarSnapshotExpandableText(
                         part.text!.trim(),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: ClaudePalette.fg(context),
@@ -13839,7 +13824,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         .where((roleId) => roleId.trim().isNotEmpty)
                         .isNotEmpty) ...[
                       const SizedBox(height: 7),
-                      _seminarSnapshotDetailLabel(
+                      SeminarSnapshotDetailLabel(
                         _localizedSeminarCardText(
                           zh: '关联角色',
                           en: 'Linked roles',
@@ -13860,7 +13845,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         .where((item) => !item.isEmpty)
                         .isNotEmpty) ...[
                       const SizedBox(height: 7),
-                      _seminarSnapshotDetailLabel(
+                      SeminarSnapshotDetailLabel(
                         _localizedSeminarCardText(
                           zh: '关联证据',
                           en: 'Linked evidence',
@@ -13877,7 +13862,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     ),
                     if (_seminarContradictionScanNeedsEvidence(part)) ...[
                       const SizedBox(height: 7),
-                      _seminarSnapshotDetailLabel(
+                      SeminarSnapshotDetailLabel(
                         _localizedSeminarCardText(
                           zh: '缺少可追踪证据',
                           en: 'Traceable evidence missing',
@@ -13944,7 +13929,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               spacing: 6,
               runSpacing: 6,
               children: [
-                _seminarSnapshotTinyChip(
+                SeminarSnapshotTinyChip(
                   _seminarCountLabel(
                     parts.length,
                     zhUnit: '条扫描',
@@ -13952,7 +13937,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     enPlural: 'scans',
                   ),
                 ),
-                _seminarSnapshotTinyChip(
+                SeminarSnapshotTinyChip(
                   _seminarCountLabel(
                     evidenceGapCount,
                     zhUnit: '条证据缺口',
@@ -13960,7 +13945,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     enPlural: 'evidence gaps',
                   ),
                 ),
-                _seminarSnapshotTinyChip(
+                SeminarSnapshotTinyChip(
                   _seminarCountLabel(
                     evidenceBackedCount,
                     zhUnit: '条已有证据',
@@ -14016,7 +14001,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         ),
                   ),
                 ),
-                _seminarSnapshotTinyChip(
+                SeminarSnapshotTinyChip(
                   _seminarCountLabel(
                     parts.length,
                     zhUnit: '条证据缺口',
@@ -14031,7 +14016,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               for (final text in previewTexts)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 3),
-                  child: _seminarExpandableText(
+                  child: SeminarSnapshotExpandableText(
                     text,
                     collapsedMaxLines: 2,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -14127,7 +14112,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     ),
                     if (part.roleId?.trim().isNotEmpty == true) ...[
                       const SizedBox(height: 7),
-                      _seminarSnapshotDetailLabel(
+                      SeminarSnapshotDetailLabel(
                         _localizedSeminarCardText(
                           zh: '角色',
                           en: 'Role',
@@ -14146,14 +14131,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     ],
                     if (part.label?.trim().isNotEmpty == true) ...[
                       const SizedBox(height: 7),
-                      _seminarSnapshotDetailLabel(
+                      SeminarSnapshotDetailLabel(
                         _localizedSeminarCardText(
                           zh: '目标分歧',
                           en: 'Target disagreement',
                         ),
                       ),
                       const SizedBox(height: 3),
-                      _seminarExpandableText(
+                      SeminarSnapshotExpandableText(
                         part.label!.trim(),
                         collapsedMaxLines: 3,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -14165,7 +14150,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     ],
                     if (part.text?.trim().isNotEmpty == true) ...[
                       const SizedBox(height: 7),
-                      _seminarExpandableText(
+                      SeminarSnapshotExpandableText(
                         part.text!.trim(),
                         collapsedMaxLines: 4,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -14178,7 +14163,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         .where((item) => !item.isEmpty)
                         .isNotEmpty) ...[
                       const SizedBox(height: 7),
-                      _seminarSnapshotDetailLabel(
+                      SeminarSnapshotDetailLabel(
                         _localizedSeminarCardText(
                           zh: '关联证据',
                           en: 'Linked evidence',
@@ -14199,18 +14184,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             ),
           ),
       ],
-    );
-  }
-
-  Widget _seminarSnapshotDetailLabel(String label) {
-    return Text(
-      label,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: ClaudePalette.secondary(context),
-            fontWeight: FontWeight.w700,
-          ),
     );
   }
 
@@ -14235,7 +14208,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _seminarSnapshotHeading(
+        SeminarSnapshotHeading(
           Icons.dashboard_customize_outlined,
           _localizedSeminarCardText(
             zh: '研讨白板',
@@ -14347,7 +14320,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _seminarSnapshotHeading(
+            SeminarSnapshotHeading(
               Icons.fact_check_outlined,
               _localizedSeminarCardText(
                 zh: '异常处理预览',
@@ -14364,14 +14337,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             ),
             if (summary.isNotEmpty) ...[
               const SizedBox(height: 8),
-              _seminarSnapshotDetailLabel(
+              SeminarSnapshotDetailLabel(
                 _localizedSeminarCardText(
                   zh: '综合总结',
                   en: 'Synthesis',
                 ),
               ),
               const SizedBox(height: 4),
-              _seminarExpandableText(
+              SeminarSnapshotExpandableText(
                 summary,
                 collapsedMaxLines: 5,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -14392,7 +14365,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             ),
             if (reviewReasons.isNotEmpty) ...[
               const SizedBox(height: 8),
-              _seminarSnapshotDetailLabel(
+              SeminarSnapshotDetailLabel(
                 _localizedSeminarCardText(
                   zh: '异常原因',
                   en: 'Review reasons',
@@ -14409,7 +14382,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             ],
             if (reviewSuggestions.isNotEmpty) ...[
               const SizedBox(height: 8),
-              _seminarSnapshotDetailLabel(
+              SeminarSnapshotDetailLabel(
                 _localizedSeminarCardText(
                   zh: 'AI 预审建议',
                   en: 'AI triage suggestion',
@@ -14426,7 +14399,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             ],
             if (reviewRiskLevels.isNotEmpty) ...[
               const SizedBox(height: 8),
-              _seminarSnapshotDetailLabel(
+              SeminarSnapshotDetailLabel(
                 _localizedSeminarCardText(
                   zh: 'AI 风险等级',
                   en: 'AI risk level',
@@ -14443,7 +14416,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             ],
             if (reviewSuggestedActions.isNotEmpty) ...[
               const SizedBox(height: 8),
-              _seminarSnapshotDetailLabel(
+              SeminarSnapshotDetailLabel(
                 _localizedSeminarCardText(
                   zh: '建议动作',
                   en: 'Suggested action',
@@ -14460,7 +14433,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             ],
             if (hasPreviewPayload) ...[
               const SizedBox(height: 8),
-              _seminarSnapshotDetailLabel(
+              SeminarSnapshotDetailLabel(
                 _localizedSeminarCardText(
                   zh: '异常送审内容',
                   en: 'Exception Review payload',
@@ -14771,7 +14744,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _seminarSnapshotDetailLabel(label),
+          SeminarSnapshotDetailLabel(label),
           const SizedBox(height: 3),
           for (final item in visibleItems)
             Padding(
@@ -14790,7 +14763,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       ),
                       const SizedBox(width: 6),
                       Expanded(
-                        child: _seminarExpandableText(
+                        child: SeminarSnapshotExpandableText(
                           item.text,
                           collapsedMaxLines: 2,
                           style:
@@ -14809,7 +14782,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _seminarSnapshotDetailLabel(
+                          SeminarSnapshotDetailLabel(
                             evidenceLabel,
                           ),
                           const SizedBox(height: 5),
@@ -14914,7 +14887,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       ),
                       const SizedBox(width: 6),
                       Expanded(
-                        child: _seminarExpandableText(
+                        child: SeminarSnapshotExpandableText(
                           item,
                           collapsedMaxLines: 3,
                           style:
@@ -14930,26 +14903,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _seminarSnapshotTinyChip(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        color: Theme.of(context)
-            .colorScheme
-            .secondaryContainer
-            .withValues(alpha: 0.62),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: ClaudePalette.fg(context),
-              fontWeight: FontWeight.w600,
-            ),
       ),
     );
   }
@@ -14992,100 +14945,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   }) {
     if (_isChineseLocale) return '$count $zhUnit';
     return count == 1 ? '1 $enSingular' : '$count $enPlural';
-  }
-
-  List<Widget> _seminarMetaChips(AiSeminarRunCardMeta card) {
-    final l10n = L10n.of(context);
-    final chips = <Widget>[
-      _seminarMetaChip(
-        Icons.flag_outlined,
-        _seminarStatusLabel(card.status, l10n),
-      ),
-      _seminarMetaChip(
-        Icons.groups_2_outlined,
-        _seminarRoleCountLabel(card.roleIds.length),
-      ),
-      _seminarMetaChip(
-        Icons.manage_search_outlined,
-        _seminarEvidenceScopeSummary(card.evidenceScopeIds, l10n),
-      ),
-    ];
-    if (card.sourceRefCount > 0) {
-      chips.add(
-        _seminarMetaChip(
-          Icons.link_outlined,
-          _seminarSourceCountLabel(card.sourceRefCount),
-        ),
-      );
-    }
-    if (card.writeRequiresApproval) {
-      chips.add(
-        _seminarMetaChip(
-          Icons.fact_check_outlined,
-          _localizedSeminarCardText(
-            zh: '写入需确认',
-            en: 'Approval before write',
-          ),
-        ),
-      );
-    }
-    if (card.allowWeb) {
-      chips.add(
-        _seminarMetaChip(
-          Icons.public_outlined,
-          _localizedSeminarCardText(
-            zh: '允许联网',
-            en: 'Web allowed',
-          ),
-        ),
-      );
-    }
-    if (card.maxRounds > 1) {
-      chips.add(
-        _seminarMetaChip(
-          Icons.repeat_outlined,
-          _localizedSeminarCardText(
-            zh: '最多 ${card.maxRounds} 轮',
-            en: 'Up to ${card.maxRounds} rounds',
-          ),
-        ),
-      );
-    }
-    return chips;
-  }
-
-  Widget _seminarMetaChip(IconData icon, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        color: ClaudePalette.accentTint(context),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 14,
-            color: ClaudePalette.accent(context),
-          ),
-          const SizedBox(width: 4),
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.sizeOf(context).width * 0.52,
-            ),
-            child: Text(
-              label,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: ClaudePalette.fg(context),
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   String _seminarStatusLabel(String status, L10n l10n) {
