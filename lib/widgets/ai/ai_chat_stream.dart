@@ -3453,10 +3453,12 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final events = state.roleAgentThinkingEvents.where(
       (event) =>
           event.type == AgentRunEventType.thinking &&
-          event.parentRunId?.trim() == sessionId,
+          event.parentRunId?.trim() == sessionId &&
+          (state.partialRoleText?.trim().isNotEmpty != true ||
+              state.activeRole == null ||
+              event.roleId != state.activeRole!.asString),
     );
     return seminarMessagePartsFromAgentRunEvents(events)
-        .where((part) => part.type.trim() == 'thinking')
         .where((part) => !part.isEmpty)
         .toList(growable: false);
   }
@@ -3705,10 +3707,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           en: 'Director is checking which disagreements need more evidence.',
         );
       case AiSeminarDirectorNextIntent.askUser:
-        return _localizedSeminarCardText(
-          zh: '研讨已结束,可直接在下方对话框继续追问本场结论',
-          en: 'The seminar is complete. Continue the discussion in the chat box below.',
-        );
+        return null;
       case AiSeminarDirectorNextIntent.synthesize:
         return _localizedSeminarCardText(
           zh: '正在整理总结…',
@@ -9445,8 +9444,15 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   List<AiSeminarRunCardMessagePart> _seminarSnapshotThinkingParts(
     AiSeminarRunCardSnapshot snapshot,
   ) {
+    final streamingRunIds = {
+      for (final part in snapshot.messageParts)
+        if (part.type.trim() == 'role_partial') part.agentRunId?.trim() ?? '',
+    }..remove('');
     return snapshot.messageParts
         .where((part) => part.type.trim() == 'thinking')
+        .where(
+          (part) => !streamingRunIds.contains(part.agentRunId?.trim() ?? ''),
+        )
         .where(_seminarSnapshotNativeTimelinePartHasContent)
         .toList(growable: false);
   }
@@ -9853,7 +9859,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     required int? bookId,
     required List<String> evidenceScopeIds,
   }) {
-    final explicitParts = snapshot.messageParts
+    final explicitParts = [
+      ...snapshot.messageParts.where((part) => part.type.trim() != 'thinking'),
+      ..._seminarSnapshotThinkingParts(snapshot),
+    ]
         .where(_seminarSnapshotNativeTimelinePartHasContent)
         .where(
           (part) => _seminarSnapshotMessagePartVisibleInContext(
@@ -10615,8 +10624,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       case 'role_partial':
         return _seminarSnapshotRolePartialTile(
           _seminarSnapshotRoleFromPart(part),
-          agentRunId: showTraceDetails ? part.agentRunId : null,
-          parentRunId: showTraceDetails ? part.parentRunId : null,
         );
       case 'director_state':
         return _seminarSnapshotDirectorCueTile(part, sessionId: sessionId);
@@ -12347,11 +12354,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     );
   }
 
-  Widget _seminarSnapshotRolePartialTile(
-    AiSeminarRunCardRoleSummary partial, {
-    String? agentRunId,
-    String? parentRunId,
-  }) {
+  Widget _seminarSnapshotRolePartialTile(AiSeminarRunCardRoleSummary partial) {
     final roleId = partial.roleId.trim();
     final label = partial.label.trim().isNotEmpty
         ? partial.label.trim()
@@ -12413,10 +12416,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                             ),
                       ),
                     ],
-                    ..._seminarSnapshotAgentTraceRows(
-                      agentRunId,
-                      parentRunId: parentRunId,
-                    ),
                   ],
                 ),
               ),
