@@ -5,8 +5,8 @@
 
 | 任务 | 内容 | 状态 | 下一步 | 验收/Brief |
 | --- | --- | --- | --- | --- |
-| P1 | AI Chat 原生研讨会(收口为"观看+追问"形态) | 待真机验收 | 8/13/10a 已过;F20/F21 已修,build 6533(commit 456d84f50)已上 TestFlight VALID,待真机确认;全过由用户标 done 后启动 R1 | `briefs/P1_ACCEPTANCE_zh.md`(v6) |
-| R1 | 拆分 ai_chat_stream.dart god file | backlog | P1 验收后立即开始,先做结构地图批次 | `briefs/R1_godfile_split_zh.md` |
+| P1 | AI Chat 原生研讨会(收口为"观看+追问"形态) | done | 真机 v6 全量通过(2026-06-17,build 6533),用户确认收口;详见验收记录 | `briefs/P1_ACCEPTANCE_zh.md`(v6) |
+| R1 | 拆分 ai_chat_stream.dart god file | in progress | 批次 0 结构地图进行中(grep _build → 按 Seminar 子视图分组 → 追加 brief 批次清单);Codex 执行 | `briefs/R1_godfile_split_zh.md` |
 | R2 | 事件流单一数据源,删 snapshot 双写与 fallback | backlog | R1 后;第一批产出删除清单 ADR | `briefs/R2_event_ssot_zh.md` |
 | R3 | Seminar 并入 sub-agent 平台(原 P1.5/S7) | backlog | R2 后;自由工具 loop、统一 streaming 组件、**读者参与重生(主输入框路由,P1 冻结移交)**在此实现 | `briefs/R3_agent_platform_merge_zh.md` |
 | P2 | Understand-Anything 式全书 AI 理解地图 | backlog | R1–R3 完成后,开工前重写 brief | 旧版 `priority_plans/P2_*.md` 仅作参考 |
@@ -32,3 +32,4 @@
 | 2026-06-12 | P1 四轮(v4 脚本) | 部分通过 | 滚动跳动/卡顿已清(F9 ✓);用户拍板:读者参与整体重构为"聊天即参与"(→F14);证据编号对不上(→F15);展开仍有四处漏(→F16);需快速滚动(→F17);角色控制漂移不可用(→F14) |
 | 2026-06-12 | P1 五轮(v5 脚本,build 6531) | 部分通过 | F15/F16/F17 可用;参与区发送无反应、跳转卡顿、双输入框别扭——参与层五轮未稳,判定结构性问题:冻结(→F19b),移交 R3;研讨上下文孤岛(→F19a 回流) |
 | 2026-06-15 | P1 六轮(v6 脚本,build 6532) | 部分通过 | 8 各 tab 展开、13 回底按钮、10a 追问引用结论、10 参与控件已清:均过。残留:角色"生成中"与"思考"标签重叠闪烁(→F20);结束后思考详情仍显示"主持人正在等你插话",自相矛盾(→F21)。另:13 用户提双击标题回顶(移交 R1 后) |
+| 2026-06-17 | P1 七轮(v6 脚本,build 6533) | 全量通过 | F20(标签不再叠闪)、F21(结束后无"等待插话")复测通过,完整研讨收尾正常、中途取消干净;用户确认 → P1 收口 done,启动 R1 |
