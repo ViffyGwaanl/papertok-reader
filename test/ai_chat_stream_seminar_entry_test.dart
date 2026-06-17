@@ -32,6 +32,11 @@ import 'package:papertok_reader/widgets/ai/ai_chat_stream.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+String _aiChatStreamSource() =>
+    File('lib/widgets/ai/ai_chat_stream.dart').readAsStringSync();
+String _aiChatStreamWithSetupSource() =>
+    '${_aiChatStreamSource()}\n${File('lib/widgets/ai/seminar/setup/seminar_run_setup_sheet.dart').readAsStringSync()}';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   sqfliteFfiInit();
@@ -40,8 +45,7 @@ void main() {
   test(
     'AiChatStream no longer carries an inline Seminar panel render path',
     () {
-      final source =
-          File('lib/widgets/ai/ai_chat_stream.dart').readAsStringSync();
+      final source = _aiChatStreamSource();
 
       expect(source, isNot(contains('_inlineSeminarVisible')));
       expect(source, isNot(contains('_buildInlineSeminarPanel')));
@@ -55,8 +59,7 @@ void main() {
   test(
     'Choose style picker does not carry a Seminar skill config branch',
     () {
-      final source =
-          File('lib/widgets/ai/ai_chat_stream.dart').readAsStringSync();
+      final source = _aiChatStreamSource();
 
       expect(source, isNot(contains("if (skill.id == 'seminar_mode')")));
     },
@@ -65,8 +68,7 @@ void main() {
   test(
     'Seminar chat run card does not jump to global Seminar settings',
     () {
-      final source =
-          File('lib/widgets/ai/ai_chat_stream.dart').readAsStringSync();
+      final source = _aiChatStreamSource();
 
       expect(source, isNot(contains('AiSeminarConfigPage')));
       expect(source, isNot(contains('ai_seminar_config.dart')));
@@ -76,8 +78,7 @@ void main() {
   test(
     'AI Chat skill localization does not expose the native Seminar marker',
     () {
-      final source =
-          File('lib/widgets/ai/ai_chat_stream.dart').readAsStringSync();
+      final source = _aiChatStreamSource();
 
       expect(source, isNot(contains('aiSkillSeminarModeName')));
       expect(source, isNot(contains('aiSkillSeminarModeDesc')));
@@ -87,8 +88,7 @@ void main() {
   test(
     'Seminar wait failure copy uses native wait wording',
     () {
-      final source =
-          File('lib/widgets/ai/ai_chat_stream.dart').readAsStringSync();
+      final source = _aiChatStreamSource();
 
       expect(source, contains("zh: '未能等待角色'"));
       expect(source, contains("en: 'Could not wait for role'"));
@@ -104,8 +104,7 @@ void main() {
   test(
     'Seminar setup sheet copy does not describe a card or panel',
     () {
-      final source =
-          File('lib/widgets/ai/ai_chat_stream.dart').readAsStringSync();
+      final source = _aiChatStreamWithSetupSource();
 
       expect(source, isNot(contains('即将插入的研讨卡')));
       expect(source, isNot(contains('next Seminar card')));
@@ -118,8 +117,7 @@ void main() {
   test(
     'ready Seminar settings copy describes the current run, not a card',
     () {
-      final source =
-          File('lib/widgets/ai/ai_chat_stream.dart').readAsStringSync();
+      final source = _aiChatStreamSource();
 
       expect(source, isNot(contains('只影响这张研讨卡')));
       expect(source, isNot(contains('Only this Seminar card changes')));
