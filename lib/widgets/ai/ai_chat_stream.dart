@@ -32,9 +32,9 @@ import 'package:papertok_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:papertok_reader/utils/ai_reasoning_parser.dart';
 import 'package:papertok_reader/widgets/ai/seminar/evidence/seminar_evidence_widgets.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_autoscroll_policy.dart';
-import 'package:papertok_reader/widgets/ai/seminar/seminar_run_trace_label.dart';
 import 'package:papertok_reader/widgets/ai/seminar/shared/seminar_snapshot_widgets.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_stable_width_section.dart';
+import 'package:papertok_reader/widgets/ai/seminar/tools/seminar_tool_widgets.dart';
 import 'package:papertok_reader/widgets/ai/seminar/start_seminar_tool_bridge.dart';
 import 'package:papertok_reader/widgets/ai/tool_step_tile.dart';
 import 'package:papertok_reader/widgets/ai/tool_tiles/apply_book_tags_step_tile.dart';
@@ -8798,7 +8798,41 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           ),
           const SizedBox(height: 6),
           for (final item in toolCalls)
-            _seminarSnapshotToolCallTile(item, sessionId: sessionId),
+            SeminarSnapshotToolCallTile(
+              toolCall: item,
+              label: _seminarToolCallLabel(item),
+              statusLabel: _seminarToolCallStatusLabel(item),
+              startedAtLabel: _seminarToolCallStartedAtLabel(item),
+              completedAtLabel: _seminarToolCallCompletedAtLabel(item),
+              durationLabel: _seminarToolCallDurationLabel(item),
+              visibleRoleLabels: _seminarToolCallVisibleRoleLabel(item),
+              outputLabel: _seminarToolCallOutputLabel(item),
+              zh: _isChineseLocale,
+              actionLabelBuilder: _seminarToolCallActionLabel,
+              actionIconBuilder: _seminarToolCallActionIcon,
+              actionEnabledBuilder: (actionId) =>
+                  _seminarToolCallActionIsExecutable(
+                item,
+                actionId: actionId,
+                sessionId: sessionId,
+              ),
+              actionPressedBuilder: (actionId) => _seminarToolCallActionPressed(
+                item,
+                actionId: actionId,
+                sessionId: sessionId,
+              ),
+              isSubmitting: _seminarCardSubmittingSessionIds.contains(
+                sessionId?.trim(),
+              ),
+              evidenceTileBuilder: (evidence) => SeminarSnapshotEvidenceTile(
+                evidence,
+                zh: _isChineseLocale,
+                missingSourceLabel: _seminarMissingSourceLabel,
+                sourceAction: _seminarSnapshotEvidenceSourceAction(
+                  evidence.sourceRef,
+                ),
+              ),
+            ),
         ],
         if (showEvidence && evidence.isNotEmpty) ...[
           if ((showToolCalls && toolCalls.isNotEmpty) || showReaderActivity)
@@ -10240,9 +10274,41 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       case 'seminar_run_setup':
         return _seminarSnapshotRunSetupPartTile(part);
       case 'tool_call':
-        return _seminarSnapshotToolCallTile(
-          _seminarSnapshotToolCallFromPart(part),
-          sessionId: sessionId,
+        final toolCall = _seminarSnapshotToolCallFromPart(part);
+        return SeminarSnapshotToolCallTile(
+          toolCall: toolCall,
+          label: _seminarToolCallLabel(toolCall),
+          statusLabel: _seminarToolCallStatusLabel(toolCall),
+          startedAtLabel: _seminarToolCallStartedAtLabel(toolCall),
+          completedAtLabel: _seminarToolCallCompletedAtLabel(toolCall),
+          durationLabel: _seminarToolCallDurationLabel(toolCall),
+          visibleRoleLabels: _seminarToolCallVisibleRoleLabel(toolCall),
+          outputLabel: _seminarToolCallOutputLabel(toolCall),
+          zh: _isChineseLocale,
+          actionLabelBuilder: _seminarToolCallActionLabel,
+          actionIconBuilder: _seminarToolCallActionIcon,
+          actionEnabledBuilder: (actionId) =>
+              _seminarToolCallActionIsExecutable(
+            toolCall,
+            actionId: actionId,
+            sessionId: sessionId,
+          ),
+          actionPressedBuilder: (actionId) => _seminarToolCallActionPressed(
+            toolCall,
+            actionId: actionId,
+            sessionId: sessionId,
+          ),
+          isSubmitting: _seminarCardSubmittingSessionIds.contains(
+            sessionId?.trim(),
+          ),
+          evidenceTileBuilder: (evidence) => SeminarSnapshotEvidenceTile(
+            evidence,
+            zh: _isChineseLocale,
+            missingSourceLabel: _seminarMissingSourceLabel,
+            sourceAction: _seminarSnapshotEvidenceSourceAction(
+              evidence.sourceRef,
+            ),
+          ),
         );
       case 'evidence':
       case 'evidence_bundle':
@@ -10503,9 +10569,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         ],
                       ),
                     ],
-                    ..._seminarSnapshotAgentTraceRows(
+                    SeminarSnapshotAgentTraceRows(
                       part.agentRunId,
                       parentRunId: part.parentRunId,
+                      zh: _isChineseLocale,
                     ),
                     SeminarSnapshotCompactEvidenceRows(
                       evidenceRefs: part.evidenceRefs,
@@ -10954,9 +11021,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         ],
                       ),
                     ],
-                    ..._seminarSnapshotAgentTraceRows(
+                    SeminarSnapshotAgentTraceRows(
                       agentRunId,
                       parentRunId: parentRunId,
+                      zh: _isChineseLocale,
                     ),
                     SeminarSnapshotCompactEvidenceRows(
                       evidenceRefs: evidenceRefs,
@@ -10983,257 +11051,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     return _localizedSeminarCardText(
       zh: '思考时间 $formatted',
       en: 'Thought at $formatted',
-    );
-  }
-
-  List<Widget> _seminarSnapshotAgentTraceRows(
-    String? agentRunId, {
-    String? parentRunId,
-  }) {
-    final normalizedRunId = agentRunId?.trim();
-    final normalizedParentRunId = parentRunId?.trim();
-    final hasAgentRunId = normalizedRunId != null && normalizedRunId.isNotEmpty;
-    final hasParentRunId =
-        normalizedParentRunId != null && normalizedParentRunId.isNotEmpty;
-    if (!hasAgentRunId && !hasParentRunId) {
-      return const <Widget>[];
-    }
-    return [
-      const SizedBox(height: 6),
-      SeminarSnapshotDetailLabel(
-        _localizedSeminarCardText(
-          zh: '运行追踪',
-          en: 'Agent trace',
-        ),
-      ),
-      if (hasAgentRunId) ...[
-        const SizedBox(height: 4),
-        Text(
-          seminarRunTraceLabel(normalizedRunId, zh: _isChineseLocale),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: ClaudePalette.secondary(context),
-                height: 1.32,
-              ),
-        ),
-      ],
-      if (hasParentRunId) ...[
-        const SizedBox(height: 4),
-        SeminarSnapshotDetailLabel(
-          _localizedSeminarCardText(
-            zh: '父运行',
-            en: 'Parent run',
-          ),
-        ),
-        const SizedBox(height: 3),
-        Text(
-          seminarRunTraceLabel(normalizedParentRunId, zh: _isChineseLocale),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: ClaudePalette.secondary(context),
-                height: 1.32,
-              ),
-        ),
-      ],
-    ];
-  }
-
-  Widget _seminarSnapshotToolCallTile(
-    AiSeminarRunCardToolCallSnapshot toolCall, {
-    String? sessionId,
-  }) {
-    final label = _seminarToolCallLabel(toolCall);
-    final query = toolCall.query.trim();
-    final evidenceRefs = toolCall.evidenceRefs
-        .where((item) => !item.isEmpty)
-        .toList(growable: false);
-    final visibleRoleLabels = _seminarToolCallVisibleRoleLabel(toolCall);
-    final statusLabel = _seminarToolCallStatusLabel(toolCall);
-    final startedAtLabel = _seminarToolCallStartedAtLabel(toolCall);
-    final completedAtLabel = _seminarToolCallCompletedAtLabel(toolCall);
-    final durationLabel = _seminarToolCallDurationLabel(toolCall);
-    final outputText = toolCall.text?.trim() ?? '';
-    final actionIds = toolCall.actionIds
-        .map((actionId) => actionId.trim())
-        .where(
-          (actionId) => _seminarToolCallActionLabel(actionId).isNotEmpty,
-        )
-        .toList(growable: false);
-    final hasExecutableAction = actionIds.any(
-      (actionId) => _seminarToolCallActionIsExecutable(
-        toolCall,
-        actionId: actionId,
-        sessionId: sessionId,
-      ),
-    );
-    final agentRunId = toolCall.agentRunId?.trim();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: ClaudePalette.elevated(context).withValues(alpha: 0.55),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: ClaudePalette.divider(context)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.search_outlined,
-                    size: 16,
-                    color: ClaudePalette.accent(context),
-                  ),
-                  const SizedBox(width: 7),
-                  Expanded(
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: ClaudePalette.fg(context),
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                  ),
-                  if (statusLabel != null ||
-                      startedAtLabel != null ||
-                      completedAtLabel != null ||
-                      durationLabel != null ||
-                      toolCall.resultCount > 0) ...[
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        alignment: WrapAlignment.end,
-                        children: [
-                          if (statusLabel != null)
-                            SeminarSnapshotTinyChip(statusLabel)
-                          else if (toolCall.resultCount > 0)
-                            SeminarSnapshotTinyChip(
-                              _seminarToolCallResultCountLabel(
-                                toolCall.resultCount,
-                              ),
-                            ),
-                          if (startedAtLabel != null)
-                            SeminarSnapshotTinyChip(startedAtLabel),
-                          if (completedAtLabel != null)
-                            SeminarSnapshotTinyChip(completedAtLabel),
-                          if (durationLabel != null)
-                            SeminarSnapshotTinyChip(durationLabel),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              if (query.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text(
-                  _localizedSeminarCardText(
-                    zh: '查询：$query',
-                    en: 'Query: $query',
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: ClaudePalette.secondary(context),
-                        height: 1.32,
-                      ),
-                ),
-              ],
-              if (visibleRoleLabels.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                SeminarSnapshotDetailLabel(
-                  _localizedSeminarCardText(
-                    zh: '可见角色',
-                    en: 'Visible roles',
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  visibleRoleLabels,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: ClaudePalette.secondary(context),
-                        height: 1.32,
-                      ),
-                ),
-              ],
-              if (outputText.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                SeminarSnapshotDetailLabel(
-                  _seminarToolCallOutputLabel(toolCall),
-                ),
-                const SizedBox(height: 4),
-                SeminarSnapshotExpandableText(
-                  outputText,
-                  collapsedMaxLines: 3,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: ClaudePalette.secondary(context),
-                        height: 1.32,
-                      ),
-                ),
-              ],
-              ..._seminarSnapshotAgentTraceRows(
-                agentRunId,
-                parentRunId: toolCall.parentRunId,
-              ),
-              if (actionIds.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                SeminarSnapshotDetailLabel(
-                  _localizedSeminarCardText(
-                    zh: hasExecutableAction ? '可用控制' : '历史控制',
-                    en: hasExecutableAction
-                        ? 'Available controls'
-                        : 'Recorded controls',
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    for (final actionId in actionIds)
-                      _seminarToolCallAction(
-                        toolCall,
-                        actionId: actionId,
-                        sessionId: sessionId,
-                      ),
-                  ],
-                ),
-              ],
-              if (evidenceRefs.isNotEmpty) ...[
-                const SizedBox(height: 7),
-                SeminarSnapshotDetailLabel(
-                  _localizedSeminarCardText(
-                    zh: '返回证据',
-                    en: 'Returned evidence',
-                  ),
-                ),
-                const SizedBox(height: 5),
-                for (final evidence in evidenceRefs)
-                  SeminarSnapshotEvidenceTile(
-                    evidence,
-                    zh: _isChineseLocale,
-                    missingSourceLabel: _seminarMissingSourceLabel,
-                    sourceAction: _seminarSnapshotEvidenceSourceAction(
-                      evidence.sourceRef,
-                    ),
-                  ),
-              ],
-            ],
-          ),
-        ),
-      ),
     );
   }
 
@@ -11528,68 +11345,34 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     }
   }
 
-  Widget _seminarToolCallAction(
+  VoidCallback? _seminarToolCallActionPressed(
     AiSeminarRunCardToolCallSnapshot toolCall, {
     required String actionId,
     required String? sessionId,
   }) {
-    final label = _seminarToolCallActionLabel(actionId);
-    if (label.isEmpty) return const SizedBox.shrink();
     final normalizedSessionId = sessionId?.trim();
     final agentRunId = toolCall.agentRunId?.trim();
     final toolCallId = toolCall.id?.trim();
-    if (!_seminarToolCallActionIsExecutable(
-      toolCall,
-      actionId: actionId,
-      sessionId: sessionId,
-    )) {
-      return SeminarSnapshotTinyChip(label);
+    if (normalizedSessionId?.isNotEmpty != true ||
+        agentRunId?.isNotEmpty != true ||
+        toolCallId?.isNotEmpty != true) {
+      return null;
     }
-    final isSubmitting =
-        _seminarCardSubmittingSessionIds.contains(normalizedSessionId);
-    return ActionChip(
-      key: ValueKey(
-        'seminar-chat-card-tool-action-$actionId-'
-        '${toolCallId?.isNotEmpty == true ? toolCallId : agentRunId}',
-      ),
-      avatar: Icon(
-        _seminarToolCallActionIcon(actionId),
-        size: 16,
-        color: isSubmitting
-            ? ClaudePalette.secondary(context)
-            : ClaudePalette.accent(context),
-      ),
-      label: Text(label),
-      onPressed: isSubmitting
-          ? null
-          : () {
-              if (actionId == 'wait-tool-call') {
-                unawaited(_waitSeminarToolCallControl(
-                  sessionId: normalizedSessionId!,
-                  agentRunId: agentRunId!,
-                  toolCallId: toolCallId!,
-                ));
-              } else if (actionId == 'cancel-tool-call') {
-                unawaited(_cancelSeminarToolCallControl(
-                  sessionId: normalizedSessionId!,
-                  agentRunId: agentRunId!,
-                  toolCallId: toolCallId!,
-                ));
-              }
-            },
-      labelStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: ClaudePalette.fg(context),
-            fontWeight: FontWeight.w700,
-          ),
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-      visualDensity: VisualDensity.compact,
-      backgroundColor:
-          Theme.of(context).colorScheme.secondaryContainer.withValues(
-                alpha: 0.72,
-              ),
-      side: BorderSide(color: ClaudePalette.divider(context)),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-    );
+    return () {
+      if (actionId == 'wait-tool-call') {
+        unawaited(_waitSeminarToolCallControl(
+          sessionId: normalizedSessionId!,
+          agentRunId: agentRunId!,
+          toolCallId: toolCallId!,
+        ));
+      } else if (actionId == 'cancel-tool-call') {
+        unawaited(_cancelSeminarToolCallControl(
+          sessionId: normalizedSessionId!,
+          agentRunId: agentRunId!,
+          toolCallId: toolCallId!,
+        ));
+      }
+    };
   }
 
   bool _seminarToolCallActionIsExecutable(
@@ -11642,11 +11425,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       labels.add(_seminarRoleFallbackLabel(roleId));
     }
     return labels.join(_isChineseLocale ? '、' : ', ');
-  }
-
-  String _seminarToolCallResultCountLabel(int count) {
-    if (_isChineseLocale) return '$count 个结果';
-    return count == 1 ? '1 result' : '$count results';
   }
 
   Widget? _seminarSnapshotEvidenceSourceAction(SourceRef? sourceRef) {
@@ -12051,9 +11829,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                         ],
                       ),
                     ],
-                    ..._seminarSnapshotAgentTraceRows(
+                    SeminarSnapshotAgentTraceRows(
                       part.agentRunId,
                       parentRunId: part.parentRunId,
+                      zh: _isChineseLocale,
                     ),
                   ],
                 ),
@@ -12174,9 +11953,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       ),
                 ),
               ],
-              ..._seminarSnapshotAgentTraceRows(
+              SeminarSnapshotAgentTraceRows(
                 part.agentRunId,
                 parentRunId: part.parentRunId,
+                zh: _isChineseLocale,
               ),
               if (defaultActionLabel != null || defaultRoleLabel != null) ...[
                 const SizedBox(height: 8),
@@ -12356,9 +12136,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                             ),
                       ),
                     ],
-                    ..._seminarSnapshotAgentTraceRows(
+                    SeminarSnapshotAgentTraceRows(
                       part.agentRunId,
                       parentRunId: part.parentRunId,
+                      zh: _isChineseLocale,
                     ),
                     if (inlineControlActionIds.isNotEmpty) ...[
                       const SizedBox(height: 8),
@@ -12491,9 +12272,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                             ),
                       ),
                     ],
-                    ..._seminarSnapshotAgentTraceRows(
+                    SeminarSnapshotAgentTraceRows(
                       part.agentRunId,
                       parentRunId: part.parentRunId,
+                      zh: _isChineseLocale,
                     ),
                     if (allowedToolIds.isNotEmpty) ...[
                       const SizedBox(height: 8),
@@ -13440,9 +13222,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                             ),
                       ),
                     ],
-                    ..._seminarSnapshotAgentTraceRows(
+                    SeminarSnapshotAgentTraceRows(
                       agentRunId,
                       parentRunId: parentRunId,
+                      zh: _isChineseLocale,
                     ),
                     if (evidenceRefs.isNotEmpty) ...[
                       const SizedBox(height: 6),
@@ -13551,9 +13334,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                           ),
                         ),
                     ],
-                    ..._seminarSnapshotAgentTraceRows(
+                    SeminarSnapshotAgentTraceRows(
                       detail.agentRunId,
                       parentRunId: detail.parentRunId,
+                      zh: _isChineseLocale,
                     ),
                   ],
                 ),
@@ -13700,9 +13484,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                           ),
                         ),
                     ],
-                    ..._seminarSnapshotAgentTraceRows(
+                    SeminarSnapshotAgentTraceRows(
                       part.agentRunId,
                       parentRunId: part.parentRunId,
+                      zh: _isChineseLocale,
                     ),
                     if (_seminarContradictionScanNeedsEvidence(part)) ...[
                       const SizedBox(height: 7),
@@ -14025,9 +13810,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                           ),
                         ),
                     ],
-                    ..._seminarSnapshotAgentTraceRows(
+                    SeminarSnapshotAgentTraceRows(
                       part.agentRunId,
                       parentRunId: part.parentRunId,
+                      zh: _isChineseLocale,
                     ),
                   ],
                 ),
