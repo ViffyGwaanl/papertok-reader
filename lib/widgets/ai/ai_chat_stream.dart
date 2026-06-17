@@ -37,6 +37,7 @@ import 'package:papertok_reader/widgets/ai/seminar/roles/seminar_role_widgets.da
 import 'package:papertok_reader/widgets/ai/seminar/shared/seminar_snapshot_widgets.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_stable_width_section.dart';
 import 'package:papertok_reader/widgets/ai/seminar/tools/seminar_tool_widgets.dart';
+import 'package:papertok_reader/widgets/ai/seminar/whiteboard/seminar_whiteboard_widgets.dart';
 import 'package:papertok_reader/widgets/ai/seminar/start_seminar_tool_bridge.dart';
 import 'package:papertok_reader/widgets/ai/tool_step_tile.dart';
 import 'package:papertok_reader/widgets/ai/tool_tiles/apply_book_tags_step_tile.dart';
@@ -9086,7 +9087,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               ),
             ),
           if (legacyOnlyDisagreements.isNotEmpty)
-            _seminarSnapshotWhiteboardGroup(
+            SeminarSnapshotWhiteboardGroup(
               icon: Icons.report_problem_outlined,
               label: _localizedSeminarCardText(
                 zh: '分歧',
@@ -9096,11 +9097,30 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             ),
         ],
         if (showReview) ...[
-          _seminarSnapshotReviewPreview(
+          SeminarSnapshotReviewPreview(
             synthesis: synthesis,
             evidenceCount: allEvidence.length,
             activeSynthesis: activeSynthesis,
             reviewTriageParts: reviewTriageParts,
+            zh: _isChineseLocale,
+            triageItemsBuilder: _seminarReviewTriageItems,
+            reasonTextsBuilder: _seminarReviewReasonTexts,
+            candidateCardItemsBuilder: _seminarReviewCandidateCardItems,
+            reviewQuestionItemsBuilder: _seminarReviewQuestionItems,
+            riskLevelBuilder: _seminarReviewRiskLevel,
+            riskLabelBuilder: _seminarReviewRiskLabel,
+            suggestedActionBuilder: _seminarReviewSuggestedAction,
+            suggestedActionLabelBuilder: _seminarReviewSuggestedActionLabel,
+            triageSuggestionTextBuilder: _seminarReviewTriageSuggestionText,
+            evidenceTileBuilder: (evidence) => SeminarSnapshotEvidenceTile(
+              evidence,
+              zh: _isChineseLocale,
+              missingSourceLabel: _seminarMissingSourceLabel,
+              sourceAction: _seminarSnapshotEvidenceSourceAction(
+                evidence.sourceRef,
+              ),
+              expandableSnippet: true,
+            ),
           ),
         ],
         if (showArtifacts && artifactActionParts.isNotEmpty) ...[
@@ -9123,9 +9143,10 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               (showRoles && roles.isNotEmpty) ||
               (showSummary && synthesis != null))
             const SizedBox(height: 10),
-          _seminarSnapshotWhiteboardSection(
+          SeminarSnapshotWhiteboardSection(
             disagreements: disagreementTexts,
             openQuestions: openQuestions,
+            zh: _isChineseLocale,
           ),
         ],
       ],
@@ -13008,318 +13029,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     return labels.join(_isChineseLocale ? '、' : ', ');
   }
 
-  Widget _seminarSnapshotWhiteboardSection({
-    required List<String> disagreements,
-    required List<String> openQuestions,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SeminarSnapshotHeading(
-          Icons.dashboard_customize_outlined,
-          _localizedSeminarCardText(
-            zh: '研讨白板',
-            en: 'Shared whiteboard',
-          ),
-        ),
-        const SizedBox(height: 6),
-        if (disagreements.isNotEmpty)
-          _seminarSnapshotWhiteboardGroup(
-            icon: Icons.report_problem_outlined,
-            label: _localizedSeminarCardText(
-              zh: '分歧',
-              en: 'Disagreements',
-            ),
-            items: disagreements,
-          ),
-        if (openQuestions.isNotEmpty)
-          _seminarSnapshotWhiteboardGroup(
-            icon: Icons.help_outline,
-            label: _localizedSeminarCardText(
-              zh: '开放问题',
-              en: 'Open questions',
-            ),
-            items: openQuestions,
-          ),
-      ],
-    );
-  }
-
-  Widget _seminarSnapshotReviewPreview({
-    required String? synthesis,
-    required int evidenceCount,
-    AiSeminarSynthesis? activeSynthesis,
-    List<AiSeminarRunCardMessagePart> reviewTriageParts =
-        const <AiSeminarRunCardMessagePart>[],
-  }) {
-    final summary = synthesis?.trim() ?? '';
-    final canPreviewHandoff = activeSynthesis != null &&
-        activeSynthesis.readyForReview &&
-        activeSynthesis.hasTraceableHandoff;
-    final triageCandidateCardItems = _seminarReviewTriageItems(
-      reviewTriageParts,
-      label: 'knowledge-card',
-    );
-    final triageReviewQuestions = _seminarReviewTriageItems(
-      reviewTriageParts,
-      label: 'spaced-review',
-    );
-    final triageReasons = reviewTriageParts
-        .where((part) => part.label?.trim() == 'reason')
-        .map((part) => part.text?.trim() ?? '')
-        .where((text) => text.isNotEmpty)
-        .toList(growable: false);
-    final triageSuggestions = reviewTriageParts
-        .where((part) => part.label?.trim() == 'ai-suggestion')
-        .map((part) => part.text?.trim() ?? '')
-        .where((text) => text.isNotEmpty)
-        .toList(growable: false);
-    final triageRiskLevels = reviewTriageParts
-        .where((part) => part.label?.trim() == 'risk')
-        .map((part) => _seminarReviewRiskLabel(part.text))
-        .where((text) => text.isNotEmpty)
-        .toList(growable: false);
-    final triageSuggestedActions = reviewTriageParts
-        .where((part) => part.label?.trim() == 'suggested-action')
-        .map((part) => _seminarReviewSuggestedActionLabel(part.text))
-        .where((text) => text.isNotEmpty)
-        .toList(growable: false);
-    final candidateCardItems = canPreviewHandoff
-        ? _seminarReviewCandidateCardItems(activeSynthesis)
-        : triageCandidateCardItems;
-    final reviewQuestions = canPreviewHandoff
-        ? _seminarReviewQuestionItems(activeSynthesis)
-        : triageReviewQuestions;
-    final reviewReasons = canPreviewHandoff
-        ? _seminarReviewReasonTexts(activeSynthesis)
-        : triageReasons;
-    final reviewSuggestions = canPreviewHandoff
-        ? [
-            if (_seminarReviewTriageSuggestionText(activeSynthesis)
-                case final suggestion?)
-              suggestion,
-          ]
-        : triageSuggestions;
-    final reviewRiskLevels = canPreviewHandoff
-        ? [_seminarReviewRiskLabel(_seminarReviewRiskLevel(activeSynthesis))]
-        : triageRiskLevels;
-    final reviewSuggestedActions = canPreviewHandoff
-        ? [
-            _seminarReviewSuggestedActionLabel(
-              _seminarReviewSuggestedAction(activeSynthesis),
-            ),
-          ]
-        : triageSuggestedActions;
-    final candidateCardCount = canPreviewHandoff
-        ? activeSynthesis.candidateCards.length
-        : candidateCardItems.length;
-    final flashcardCandidateCount = reviewQuestions.length;
-    final hasPreviewPayload = canPreviewHandoff ||
-        candidateCardItems.isNotEmpty ||
-        reviewQuestions.isNotEmpty;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: ClaudePalette.divider(context)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SeminarSnapshotHeading(
-              Icons.fact_check_outlined,
-              _localizedSeminarCardText(
-                zh: '异常处理预览',
-                en: 'Exception triage preview',
-              ),
-            ),
-            const SizedBox(height: 8),
-            _seminarSnapshotReviewLine(
-              Icons.outbox_outlined,
-              _localizedSeminarCardText(
-                zh: '只在低置信、冲突或来源异常时发送到 Review Inbox',
-                en: 'Send to Review Inbox only for low-confidence, conflict, or broken-source cases',
-              ),
-            ),
-            if (summary.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              SeminarSnapshotDetailLabel(
-                _localizedSeminarCardText(
-                  zh: '综合总结',
-                  en: 'Synthesis',
-                ),
-              ),
-              const SizedBox(height: 4),
-              SeminarSnapshotExpandableText(
-                summary,
-                collapsedMaxLines: 5,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: ClaudePalette.fg(context),
-                      height: 1.35,
-                    ),
-              ),
-            ],
-            const SizedBox(height: 8),
-            _seminarSnapshotReviewLine(
-              Icons.link_outlined,
-              _localizedSeminarCardText(
-                zh: '可追踪证据：$evidenceCount 条',
-                en: evidenceCount == 1
-                    ? 'Traceable evidence: 1 source'
-                    : 'Traceable evidence: $evidenceCount sources',
-              ),
-            ),
-            if (reviewReasons.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              SeminarSnapshotDetailLabel(
-                _localizedSeminarCardText(
-                  zh: '异常原因',
-                  en: 'Review reasons',
-                ),
-              ),
-              const SizedBox(height: 4),
-              for (final reason in reviewReasons) ...[
-                _seminarSnapshotReviewLine(
-                  Icons.warning_amber_outlined,
-                  reason,
-                ),
-                const SizedBox(height: 4),
-              ],
-            ],
-            if (reviewSuggestions.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              SeminarSnapshotDetailLabel(
-                _localizedSeminarCardText(
-                  zh: 'AI 预审建议',
-                  en: 'AI triage suggestion',
-                ),
-              ),
-              const SizedBox(height: 4),
-              for (final suggestion in reviewSuggestions) ...[
-                _seminarSnapshotReviewLine(
-                  Icons.rule_outlined,
-                  suggestion,
-                ),
-                const SizedBox(height: 4),
-              ],
-            ],
-            if (reviewRiskLevels.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              SeminarSnapshotDetailLabel(
-                _localizedSeminarCardText(
-                  zh: 'AI 风险等级',
-                  en: 'AI risk level',
-                ),
-              ),
-              const SizedBox(height: 4),
-              for (final risk in reviewRiskLevels) ...[
-                _seminarSnapshotReviewLine(
-                  Icons.shield_outlined,
-                  risk,
-                ),
-                const SizedBox(height: 4),
-              ],
-            ],
-            if (reviewSuggestedActions.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              SeminarSnapshotDetailLabel(
-                _localizedSeminarCardText(
-                  zh: '建议动作',
-                  en: 'Suggested action',
-                ),
-              ),
-              const SizedBox(height: 4),
-              for (final action in reviewSuggestedActions) ...[
-                _seminarSnapshotReviewLine(
-                  Icons.task_alt_outlined,
-                  action,
-                ),
-                const SizedBox(height: 4),
-              ],
-            ],
-            if (hasPreviewPayload) ...[
-              const SizedBox(height: 8),
-              SeminarSnapshotDetailLabel(
-                _localizedSeminarCardText(
-                  zh: '异常送审内容',
-                  en: 'Exception Review payload',
-                ),
-              ),
-              const SizedBox(height: 4),
-              _seminarSnapshotReviewLine(
-                Icons.summarize_outlined,
-                _localizedSeminarCardText(
-                  zh: '综合总结：1 项',
-                  en: 'Synthesis: 1 item',
-                ),
-              ),
-              const SizedBox(height: 4),
-              _seminarSnapshotReviewLine(
-                Icons.style_outlined,
-                _localizedSeminarCardText(
-                  zh: '知识卡候选：$candidateCardCount 项',
-                  en: candidateCardCount == 1
-                      ? 'KnowledgeCard candidates: 1 item'
-                      : 'KnowledgeCard candidates: $candidateCardCount items',
-                ),
-              ),
-              if (candidateCardItems.isNotEmpty) ...[
-                const SizedBox(height: 3),
-                _seminarSnapshotReviewItems(
-                  label: _localizedSeminarCardText(
-                    zh: '知识卡候选明细',
-                    en: 'KnowledgeCard candidate details',
-                  ),
-                  evidenceLabel: _localizedSeminarCardText(
-                    zh: '候选证据',
-                    en: 'Candidate evidence',
-                  ),
-                  items: candidateCardItems,
-                ),
-              ],
-              const SizedBox(height: 4),
-              _seminarSnapshotReviewLine(
-                Icons.quiz_outlined,
-                _localizedSeminarCardText(
-                  zh: '复习候选：$flashcardCandidateCount 项',
-                  en: flashcardCandidateCount == 1
-                      ? 'Spaced Review candidates: 1 item'
-                      : 'Spaced Review candidates: $flashcardCandidateCount items',
-                ),
-              ),
-              if (reviewQuestions.isNotEmpty) ...[
-                const SizedBox(height: 3),
-                _seminarSnapshotReviewItems(
-                  label: _localizedSeminarCardText(
-                    zh: '复习候选明细',
-                    en: 'Spaced Review candidate details',
-                  ),
-                  evidenceLabel: _localizedSeminarCardText(
-                    zh: '综合证据',
-                    en: 'Synthesis evidence',
-                  ),
-                  items: reviewQuestions,
-                ),
-              ],
-            ],
-            const SizedBox(height: 6),
-            Text(
-              _localizedSeminarCardText(
-                zh: '普通学习保存请优先使用知识卡、复习或我的图谱。',
-                en: 'For normal learning saves, use KnowledgeCard, Spaced Review, or My Graph first.',
-              ),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: ClaudePalette.secondary(context),
-                    height: 1.32,
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   List<String> _seminarReviewReasonTexts(AiSeminarSynthesis synthesis) {
     final disagreementCount = synthesis.disagreements
         .map((item) => item.trim())
@@ -13453,7 +13162,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     return null;
   }
 
-  List<_SeminarReviewPreviewItem> _seminarReviewCandidateCardItems(
+  List<SeminarReviewPreviewItem> _seminarReviewCandidateCardItems(
     AiSeminarSynthesis synthesis,
   ) {
     final evidenceById = <String, AiSeminarEvidence>{
@@ -13477,7 +13186,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               )
               .where((item) => !item.isEmpty)
               .toList(growable: false);
-          return _SeminarReviewPreviewItem(
+          return SeminarReviewPreviewItem(
             text: title,
             evidenceRefs: evidenceRefs,
           );
@@ -13486,14 +13195,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         .toList(growable: false);
   }
 
-  List<_SeminarReviewPreviewItem> _seminarReviewTriageItems(
+  List<SeminarReviewPreviewItem> _seminarReviewTriageItems(
     List<AiSeminarRunCardMessagePart> parts, {
     required String label,
   }) {
     return parts
         .where((part) => part.label?.trim() == label)
         .map(
-          (part) => _SeminarReviewPreviewItem(
+          (part) => SeminarReviewPreviewItem(
             text: part.text?.trim() ?? '',
             evidenceRefs: part.evidenceRefs,
           ),
@@ -13502,7 +13211,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         .toList(growable: false);
   }
 
-  List<_SeminarReviewPreviewItem> _seminarReviewQuestionItems(
+  List<SeminarReviewPreviewItem> _seminarReviewQuestionItems(
     AiSeminarSynthesis synthesis,
   ) {
     final evidenceById = <String, AiSeminarEvidence>{
@@ -13524,200 +13233,19 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         .where((item) => !item.isEmpty)
         .toList(growable: false);
     final seen = <String>{};
-    final items = <_SeminarReviewPreviewItem>[];
+    final items = <SeminarReviewPreviewItem>[];
     for (final raw in synthesis.candidateReviewQuestions) {
       final question = raw.trim();
       if (question.isEmpty) continue;
       if (!seen.add(question.toLowerCase())) continue;
       items.add(
-        _SeminarReviewPreviewItem(
+        SeminarReviewPreviewItem(
           text: question,
           evidenceRefs: synthesisEvidenceRefs,
         ),
       );
     }
     return items;
-  }
-
-  Widget _seminarSnapshotReviewItems({
-    required String label,
-    required String evidenceLabel,
-    required List<_SeminarReviewPreviewItem> items,
-  }) {
-    final visibleItems = items.toList(growable: false);
-    final remainingCount = items.length - visibleItems.length;
-    return Padding(
-      padding: const EdgeInsets.only(left: 21),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SeminarSnapshotDetailLabel(label),
-          const SizedBox(height: 3),
-          for (final item in visibleItems)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 3),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '•',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: ClaudePalette.secondary(context),
-                            ),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: SeminarSnapshotExpandableText(
-                          item.text,
-                          collapsedMaxLines: 2,
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: ClaudePalette.secondary(context),
-                                    height: 1.32,
-                                  ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (item.evidenceRefs.isNotEmpty) ...[
-                    const SizedBox(height: 5),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SeminarSnapshotDetailLabel(
-                            evidenceLabel,
-                          ),
-                          const SizedBox(height: 5),
-                          for (final evidence in item.evidenceRefs)
-                            SeminarSnapshotEvidenceTile(
-                              evidence,
-                              zh: _isChineseLocale,
-                              missingSourceLabel: _seminarMissingSourceLabel,
-                              sourceAction:
-                                  _seminarSnapshotEvidenceSourceAction(
-                                evidence.sourceRef,
-                              ),
-                              expandableSnippet: true,
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          if (remainingCount > 0)
-            Text(
-              _localizedSeminarCardText(
-                zh: '还有 $remainingCount 项',
-                en: remainingCount == 1
-                    ? '1 more item'
-                    : '$remainingCount more items',
-              ),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: ClaudePalette.secondary(context),
-                    height: 1.3,
-                  ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _seminarSnapshotReviewLine(IconData icon, String text) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 15, color: ClaudePalette.accent(context)),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            text,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: ClaudePalette.secondary(context),
-                  height: 1.32,
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _seminarSnapshotWhiteboardGroup({
-    required IconData icon,
-    required String label,
-    required List<String> items,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: ClaudePalette.divider(context)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(icon, size: 15, color: ClaudePalette.accent(context)),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: ClaudePalette.fg(context),
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 5),
-              for (final item in items)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '•',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: ClaudePalette.secondary(context),
-                            ),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: SeminarSnapshotExpandableText(
-                          item,
-                          collapsedMaxLines: 3,
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: ClaudePalette.secondary(context),
-                                    height: 1.32,
-                                  ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   IconData _seminarRoleIconById(String roleId) {
@@ -14799,18 +14327,6 @@ class _AssistantGroupChatItem extends _ChatItem {
   final int? userIndex;
 
   final List<AIChatMessage> variants;
-}
-
-class _SeminarReviewPreviewItem {
-  const _SeminarReviewPreviewItem({
-    required this.text,
-    this.evidenceRefs = const <AiSeminarRunCardEvidenceSnapshot>[],
-  });
-
-  final String text;
-  final List<AiSeminarRunCardEvidenceSnapshot> evidenceRefs;
-
-  bool get isEmpty => text.trim().isEmpty && evidenceRefs.isEmpty;
 }
 
 class _AiChatKnowledgeSourceStatus {
