@@ -5,7 +5,7 @@
 
 | 任务 | 内容 | 状态 | 下一步 | 验收/Brief |
 | --- | --- | --- | --- | --- |
-| P1 | AI Chat 原生研讨会(收口为"观看+追问"形态) | 待真机验收 | 8/13/10a 已过;F20/F21 已修(待真机确认);六轮残留修完后重测,全过由用户标 done 后再启动 R1 | `briefs/P1_ACCEPTANCE_zh.md`(v6) |
+| P1 | AI Chat 原生研讨会(收口为"观看+追问"形态) | 待真机验收 | 8/13/10a 已过;F20/F21 已修,build 6533(commit 456d84f50)已上 TestFlight VALID,待真机确认;全过由用户标 done 后启动 R1 | `briefs/P1_ACCEPTANCE_zh.md`(v6) |
 | R1 | 拆分 ai_chat_stream.dart god file | backlog | P1 验收后立即开始,先做结构地图批次 | `briefs/R1_godfile_split_zh.md` |
 | R2 | 事件流单一数据源,删 snapshot 双写与 fallback | backlog | R1 后;第一批产出删除清单 ADR | `briefs/R2_event_ssot_zh.md` |
 | R3 | Seminar 并入 sub-agent 平台(原 P1.5/S7) | backlog | R2 后;自由工具 loop、统一 streaming 组件、**读者参与重生(主输入框路由,P1 冻结移交)**在此实现 | `briefs/R3_agent_platform_merge_zh.md` |

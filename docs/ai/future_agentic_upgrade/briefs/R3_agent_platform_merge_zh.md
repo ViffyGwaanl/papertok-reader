@@ -10,6 +10,7 @@
 - **读者参与在此重生(P1 五轮失败后冻结移交)**:没有卡内第二输入框——研讨运行中,主对话输入框的消息直接路由给 Director,由其分配角色回应或调整讨论;参与反馈以普通研讨流块出现,无跳转。这是"聊天即参与"的最终形态,DoD 必含。
 - Director = parent agent run(调度、轮次、askUser、synthesis)。
 - 每个角色(critical/supportive/synthesizer/verifier)= 平台子 agent:profile + 本场 prompt + evidence scope + 只读工具白名单(`AiToolPermissionMatrix`)。
+- **角色 prompt 强化(P1 六轮记入,DoD 含)**:现状 `promptForRole`(`ai_seminar_orchestration_service.dart`)只传角色名 + 问题 + 证据 id + 前序角色名,分工全靠模型猜角色名,薄而不稳。R3 写厚每角色指令:综合者显式调和批判/支持两方、核验者逐条核对前序结论与证据、批判/支持各自明确立场;让四角色分工可靠可验。
 - evidence broker = 共享只读工具输入,作为平台工具暴露,不再是私有旁路。
 - 取消/等待/恢复/重试走平台统一控制(`wait/cancel/resume/retry`),UI 用统一 agent run 组件渲染,Seminar 不再有专用控制路径。
 
