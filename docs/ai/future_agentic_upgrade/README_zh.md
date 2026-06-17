@@ -23,7 +23,7 @@
 ## 当前优先级顺序
 
 1. **P1 收口**:用户按 `briefs/P1_ACCEPTANCE_zh.md` 真机验收,通过即标 done。
-2. **R1 → R2 → R3 架构清债**(见 `briefs/R*.md`):拆 god file、事件流单一数据源、Seminar 并入 sub-agent 平台。R3 完成 = 旧 P1.5(自由工具 loop、统一 streaming 组件)的地基就位。
+2. **R1 → P6 → R2 → R3 架构清债 + 对话树**(见 `briefs/*.md`):拆 god file;**R1 后插入 P6(AI Chat 多分支对话树状可视化,用户 2026-06-17 拍板前移)**;再做事件流单一数据源、Seminar 并入 sub-agent 平台。R3 完成 = 旧 P1.5(自由工具 loop、统一 streaming 组件)的地基就位。
 3. **P2 Understand-Anything 图谱**:R1–R3 完成后启动,开工前重写 brief。
 4. P3(ANN 底座)、P4(Review 异常中心)残余切片并入 R2/P2 顺带完成;P5(发布)按发布节奏走。
 

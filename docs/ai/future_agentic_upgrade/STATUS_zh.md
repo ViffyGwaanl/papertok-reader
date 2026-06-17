@@ -13,6 +13,7 @@
 | P3 | 智能索引/语义检索/ANN 底座 | backlog(暂停) | 生产级 ANN 打包、恢复式构建并入 R2 之后评估 | `priority_plans/P3_*.md` |
 | P4 | AI 辅助产物保存与 Review 异常中心 | backlog(暂停) | 内联保存已可用;AI 预审并入 P2 之后评估 | `priority_plans/P4_*.md` |
 | P5 | 同步/恢复/测试/发布 | in progress(按发布节奏) | 每次 release 跟随既有 SOP | `docs/SOP_RELEASE_AUTOMATION_zh.md` |
+| P6 | AI Chat 多分支对话树状可视化(呈现多分支对话结构,可点击切分支) | backlog | 用户 2026-06-17 拍板前移:R1 完成后立即开工、排在 R2 前(依赖 R1 拆出的聊天组件,做完整版);开工前写 ≤150 行 brief | 待建 `briefs/P6_*.md` |
 
 ## P1 已知缺口与砍掉项(2026-06-11 用户决策更新)
 
