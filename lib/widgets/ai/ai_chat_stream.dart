@@ -30,8 +30,8 @@ import 'package:papertok_reader/service/memory/memory_workflow_service.dart';
 import 'package:papertok_reader/utils/toast/common.dart';
 import 'package:papertok_reader/service/ai/tools/ai_tool_registry.dart';
 import 'package:papertok_reader/utils/ai_reasoning_parser.dart';
+import 'package:papertok_reader/widgets/ai/seminar/evidence/seminar_evidence_widgets.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_autoscroll_policy.dart';
-import 'package:papertok_reader/widgets/ai/seminar/seminar_evidence_numbering.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_run_trace_label.dart';
 import 'package:papertok_reader/widgets/ai/seminar/shared/seminar_snapshot_widgets.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_stable_width_section.dart';
@@ -8812,10 +8812,15 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           ),
           const SizedBox(height: 6),
           for (var index = 0; index < evidence.length; index++)
-            _seminarSnapshotEvidenceTile(
+            SeminarSnapshotEvidenceTile(
               evidence[index],
+              key: _seminarEvidenceTileKey(evidence[index]),
+              zh: _isChineseLocale,
+              missingSourceLabel: _seminarMissingSourceLabel,
+              sourceAction: _seminarSnapshotEvidenceSourceAction(
+                evidence[index].sourceRef,
+              ),
               fallbackIndex: index + 1,
-              anchorEvidence: true,
             ),
         ],
         if (showRoles && (roles.isNotEmpty || hasRolePartial)) ...[
@@ -8890,7 +8895,13 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                   height: 1.35,
                 ),
           ),
-          ..._seminarSnapshotCompactEvidenceRows(synthesisEvidenceRefs),
+          SeminarSnapshotCompactEvidenceRows(
+            evidenceRefs: synthesisEvidenceRefs,
+            linkedEvidenceLabel: _seminarLinkedEvidenceLabel,
+            missingSourceLabel: _seminarMissingSourceLabel,
+            sourceActionBuilder: (evidence) =>
+                _seminarSnapshotEvidenceSourceAction(evidence.sourceRef),
+          ),
         ],
         if (showDisagreements &&
             (disagreementTexts.isNotEmpty ||
@@ -10250,7 +10261,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             SeminarSnapshotHeading(Icons.fact_check_outlined, label),
             const SizedBox(height: 6),
             for (final evidence in evidenceRefs)
-              _seminarSnapshotEvidenceTile(evidence),
+              SeminarSnapshotEvidenceTile(
+                evidence,
+                zh: _isChineseLocale,
+                missingSourceLabel: _seminarMissingSourceLabel,
+                sourceAction: _seminarSnapshotEvidenceSourceAction(
+                  evidence.sourceRef,
+                ),
+              ),
           ],
         );
       case 'role_turn':
@@ -10489,8 +10507,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       part.agentRunId,
                       parentRunId: part.parentRunId,
                     ),
-                    ..._seminarSnapshotCompactEvidenceRows(
-                      part.evidenceRefs,
+                    SeminarSnapshotCompactEvidenceRows(
+                      evidenceRefs: part.evidenceRefs,
+                      linkedEvidenceLabel: _seminarLinkedEvidenceLabel,
+                      missingSourceLabel: _seminarMissingSourceLabel,
+                      sourceActionBuilder: (evidence) =>
+                          _seminarSnapshotEvidenceSourceAction(
+                        evidence.sourceRef,
+                      ),
                     ),
                     if (text.isNotEmpty) ...[
                       const SizedBox(height: 4),
@@ -10934,7 +10958,15 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       agentRunId,
                       parentRunId: parentRunId,
                     ),
-                    ..._seminarSnapshotCompactEvidenceRows(evidenceRefs),
+                    SeminarSnapshotCompactEvidenceRows(
+                      evidenceRefs: evidenceRefs,
+                      linkedEvidenceLabel: _seminarLinkedEvidenceLabel,
+                      missingSourceLabel: _seminarMissingSourceLabel,
+                      sourceActionBuilder: (evidence) =>
+                          _seminarSnapshotEvidenceSourceAction(
+                        evidence.sourceRef,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -10951,70 +10983,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     return _localizedSeminarCardText(
       zh: '思考时间 $formatted',
       en: 'Thought at $formatted',
-    );
-  }
-
-  List<Widget> _seminarSnapshotCompactEvidenceRows(
-    List<AiSeminarRunCardEvidenceSnapshot> evidenceRefs,
-  ) {
-    final visibleEvidenceRefs =
-        evidenceRefs.where((item) => !item.isEmpty).toList(growable: false);
-    if (visibleEvidenceRefs.isEmpty) return const <Widget>[];
-    return [
-      const SizedBox(height: 6),
-      SeminarSnapshotDetailLabel(
-        _localizedSeminarCardText(
-          zh: '关联证据',
-          en: 'Linked evidence',
-        ),
-      ),
-      const SizedBox(height: 3),
-      for (final evidence in visibleEvidenceRefs)
-        _seminarSnapshotCompactEvidenceRow(evidence),
-    ];
-  }
-
-  Widget _seminarSnapshotCompactEvidenceRow(
-    AiSeminarRunCardEvidenceSnapshot evidence,
-  ) {
-    final sourceAction = _seminarSnapshotEvidenceSourceAction(
-      evidence.sourceRef,
-    );
-    final missingSourceChip = sourceAction == null
-        ? SeminarSnapshotMissingSourceChip(
-            _localizedSeminarCardText(
-              zh: '来源缺失',
-              en: 'Source missing',
-            ),
-          )
-        : null;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Text(
-              evidence.snippet.trim().isNotEmpty
-                  ? evidence.snippet.trim()
-                  : evidence.title.trim(),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: ClaudePalette.secondary(context),
-                    height: 1.25,
-                  ),
-            ),
-          ),
-          if (sourceAction != null) ...[
-            const SizedBox(width: 6),
-            sourceAction,
-          ] else if (missingSourceChip != null) ...[
-            const SizedBox(width: 6),
-            missingSourceChip,
-          ],
-        ],
-      ),
     );
   }
 
@@ -11253,7 +11221,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                 ),
                 const SizedBox(height: 5),
                 for (final evidence in evidenceRefs)
-                  _seminarSnapshotEvidenceTile(evidence),
+                  SeminarSnapshotEvidenceTile(
+                    evidence,
+                    zh: _isChineseLocale,
+                    missingSourceLabel: _seminarMissingSourceLabel,
+                    sourceAction: _seminarSnapshotEvidenceSourceAction(
+                      evidence.sourceRef,
+                    ),
+                  ),
               ],
             ],
           ),
@@ -11674,164 +11649,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     return count == 1 ? '1 result' : '$count results';
   }
 
-  Widget _seminarSnapshotEvidenceTile(
-    AiSeminarRunCardEvidenceSnapshot evidence, {
-    int? fallbackIndex,
-    bool anchorEvidence = false,
-    bool expandableSnippet = false,
-  }) {
-    final title = evidence.title.trim();
-    final snippet = evidence.snippet.trim();
-    final numberChip = _seminarEvidenceNumberChip(
-      evidence,
-      fallbackIndex: fallbackIndex,
-    );
-    final sourceAction = _seminarSnapshotEvidenceSourceAction(
-      evidence.sourceRef,
-    );
-    final sourceStatus = sourceAction ??
-        SeminarSnapshotMissingSourceChip(
-          _localizedSeminarCardText(
-            zh: '来源缺失',
-            en: 'Source missing',
-          ),
-        );
-    return Padding(
-      key: anchorEvidence ? _seminarEvidenceTileKey(evidence) : null,
-      padding: const EdgeInsets.only(bottom: 6),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: ClaudePalette.divider(context)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (title.isNotEmpty || numberChip != null)
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    if (numberChip != null) ...[
-                      numberChip,
-                      const SizedBox(width: 6),
-                    ],
-                    if (title.isNotEmpty)
-                      Expanded(
-                        child: Text(
-                          title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style:
-                              Theme.of(context).textTheme.labelMedium?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: ClaudePalette.fg(context),
-                                  ),
-                        ),
-                      ),
-                    if (title.isEmpty) const Spacer(),
-                    const SizedBox(width: 6),
-                    sourceStatus,
-                  ],
-                ),
-              if (snippet.isNotEmpty) ...[
-                if (title.isNotEmpty || numberChip != null)
-                  const SizedBox(height: 3),
-                if (expandableSnippet)
-                  SeminarSnapshotExpandableText(
-                    snippet,
-                    collapsedMaxLines: 3,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: ClaudePalette.secondary(context),
-                          height: 1.32,
-                        ),
-                  )
-                else
-                  Text(
-                    snippet,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: ClaudePalette.secondary(context),
-                          height: 1.32,
-                        ),
-                  ),
-              ],
-              if (title.isEmpty) ...[
-                if (snippet.isNotEmpty) const SizedBox(height: 4),
-                if (numberChip == null)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: sourceStatus,
-                  ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget? _seminarEvidenceNumberChip(
-    AiSeminarRunCardEvidenceSnapshot evidence, {
-    int? fallbackIndex,
-  }) {
-    final label = seminarEvidenceLabel(
-      id: evidence.id,
-      fallbackIndex: fallbackIndex,
-      zh: _isChineseLocale,
-    );
-    if (label == null) return null;
-    return Chip(
-      key: ValueKey(
-        'seminar-evidence-number-${evidence.id ?? label}-$fallbackIndex',
-      ),
-      avatar: const Icon(Icons.format_list_numbered, size: 14),
-      label: Text(label),
-      visualDensity: VisualDensity.compact,
-      side: BorderSide(color: ClaudePalette.divider(context)),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-    );
-  }
-
-  Widget? _seminarEvidenceReferenceChip(
-    AiSeminarRunCardEvidenceSnapshot evidence, {
-    required int keyIndex,
-  }) {
-    final label = seminarEvidenceLabel(
-      id: evidence.id,
-      zh: _isChineseLocale,
-    );
-    if (label == null) return null;
-    final keyId =
-        evidence.id?.trim().isNotEmpty == true ? evidence.id!.trim() : label;
-    return ActionChip(
-      key: ValueKey('seminar-evidence-ref-$keyId-$keyIndex'),
-      avatar: const Icon(Icons.format_list_numbered, size: 14),
-      label: Text(label),
-      onPressed: () => _jumpToSeminarEvidenceRow(evidence),
-      visualDensity: VisualDensity.compact,
-      side: BorderSide(color: ClaudePalette.divider(context)),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-    );
-  }
-
-  Widget _seminarEvidenceReferenceChips(
-    List<AiSeminarRunCardEvidenceSnapshot> evidenceRefs,
-  ) {
-    final chips = <Widget>[];
-    for (var index = 0; index < evidenceRefs.length; index++) {
-      final chip = _seminarEvidenceReferenceChip(
-        evidenceRefs[index],
-        keyIndex: index,
-      );
-      if (chip != null) chips.add(chip);
-    }
-    if (chips.isEmpty) return const SizedBox.shrink();
-    return Wrap(spacing: 6, runSpacing: 6, children: chips);
-  }
-
   Widget? _seminarSnapshotEvidenceSourceAction(SourceRef? sourceRef) {
     if (sourceRef == null || !sourceRef.hasEvidence) return null;
     final sourceIntent = PaperReaderReaderIntent.fromSourceRef(sourceRef);
@@ -11928,7 +11745,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                   ),
                 if (evidenceRefs.isNotEmpty) ...[
                   const SizedBox(height: 5),
-                  _seminarEvidenceReferenceChips(evidenceRefs),
+                  SeminarEvidenceReferenceChips(
+                    evidenceRefs: evidenceRefs,
+                    zh: _isChineseLocale,
+                    onEvidencePressed: _jumpToSeminarEvidenceRow,
+                  ),
                 ],
               ],
             ),
@@ -13625,7 +13446,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                     ),
                     if (evidenceRefs.isNotEmpty) ...[
                       const SizedBox(height: 6),
-                      _seminarEvidenceReferenceChips(evidenceRefs),
+                      SeminarEvidenceReferenceChips(
+                        evidenceRefs: evidenceRefs,
+                        zh: _isChineseLocale,
+                        onEvidencePressed: _jumpToSeminarEvidenceRow,
+                      ),
                       const SizedBox(height: 7),
                       SeminarSnapshotDetailLabel(
                         _localizedSeminarCardText(
@@ -13635,8 +13460,13 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       ),
                       const SizedBox(height: 5),
                       for (var index = 0; index < evidenceRefs.length; index++)
-                        _seminarSnapshotEvidenceTile(
+                        SeminarSnapshotEvidenceTile(
                           evidenceRefs[index],
+                          zh: _isChineseLocale,
+                          missingSourceLabel: _seminarMissingSourceLabel,
+                          sourceAction: _seminarSnapshotEvidenceSourceAction(
+                            evidenceRefs[index].sourceRef,
+                          ),
                           fallbackIndex: index + 1,
                         ),
                     ],
@@ -13712,7 +13542,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       const SizedBox(height: 5),
                       for (final evidence
                           in detail.evidenceRefs.where((item) => !item.isEmpty))
-                        _seminarSnapshotEvidenceTile(evidence),
+                        SeminarSnapshotEvidenceTile(
+                          evidence,
+                          zh: _isChineseLocale,
+                          missingSourceLabel: _seminarMissingSourceLabel,
+                          sourceAction: _seminarSnapshotEvidenceSourceAction(
+                            evidence.sourceRef,
+                          ),
+                        ),
                     ],
                     ..._seminarSnapshotAgentTraceRows(
                       detail.agentRunId,
@@ -13854,7 +13691,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       const SizedBox(height: 5),
                       for (final evidence
                           in part.evidenceRefs.where((item) => !item.isEmpty))
-                        _seminarSnapshotEvidenceTile(evidence),
+                        SeminarSnapshotEvidenceTile(
+                          evidence,
+                          zh: _isChineseLocale,
+                          missingSourceLabel: _seminarMissingSourceLabel,
+                          sourceAction: _seminarSnapshotEvidenceSourceAction(
+                            evidence.sourceRef,
+                          ),
+                        ),
                     ],
                     ..._seminarSnapshotAgentTraceRows(
                       part.agentRunId,
@@ -14172,7 +14016,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                       const SizedBox(height: 5),
                       for (final evidence
                           in part.evidenceRefs.where((item) => !item.isEmpty))
-                        _seminarSnapshotEvidenceTile(evidence),
+                        SeminarSnapshotEvidenceTile(
+                          evidence,
+                          zh: _isChineseLocale,
+                          missingSourceLabel: _seminarMissingSourceLabel,
+                          sourceAction: _seminarSnapshotEvidenceSourceAction(
+                            evidence.sourceRef,
+                          ),
+                        ),
                     ],
                     ..._seminarSnapshotAgentTraceRows(
                       part.agentRunId,
@@ -14787,8 +14638,14 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
                           ),
                           const SizedBox(height: 5),
                           for (final evidence in item.evidenceRefs)
-                            _seminarSnapshotEvidenceTile(
+                            SeminarSnapshotEvidenceTile(
                               evidence,
+                              zh: _isChineseLocale,
+                              missingSourceLabel: _seminarMissingSourceLabel,
+                              sourceAction:
+                                  _seminarSnapshotEvidenceSourceAction(
+                                evidence.sourceRef,
+                              ),
                               expandableSnippet: true,
                             ),
                         ],
@@ -15027,6 +14884,16 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   }) {
     return _isChineseLocale ? zh : en;
   }
+
+  String get _seminarLinkedEvidenceLabel => _localizedSeminarCardText(
+        zh: '关联证据',
+        en: 'Linked evidence',
+      );
+
+  String get _seminarMissingSourceLabel => _localizedSeminarCardText(
+        zh: '来源缺失',
+        en: 'Source missing',
+      );
 
   bool get _isChineseLocale =>
       Localizations.localeOf(context).languageCode.toLowerCase() == 'zh';
