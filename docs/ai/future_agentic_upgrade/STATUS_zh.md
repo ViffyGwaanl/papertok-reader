@@ -6,7 +6,7 @@
 | 任务 | 内容 | 状态 | 下一步 | 验收/Brief |
 | --- | --- | --- | --- | --- |
 | P1 | AI Chat 原生研讨会(收口为"观看+追问"形态) | done | 真机 v6 全量通过(2026-06-17,build 6533),用户确认收口;详见验收记录 | `briefs/P1_ACCEPTANCE_zh.md`(v6) |
-| R1 | 拆分 ai_chat_stream.dart god file | in progress | 批次 1–9 已抽出(9 设置/控制/resume → setup/,god file 13453→12810);继续 10–11(快照编排器、卡骨架);抽完评估 ≤3000 DoD(非 Seminar 聊天 UI 或需后续批) | `briefs/R1_godfile_split_zh.md` |
+| R1 | 拆分 ai_chat_stream.dart god file | in progress | 批次 1–10 已抽出(10 快照编排器+tabs → snapshot/,god file 12810→12063);继续 11(卡骨架);抽完评估 ≤3000 DoD(非 Seminar 聊天 UI 或需后续批) | `briefs/R1_godfile_split_zh.md` |
 | R2 | 事件流单一数据源,删 snapshot 双写与 fallback | backlog | R1 后;第一批产出删除清单 ADR | `briefs/R2_event_ssot_zh.md` |
 | R3 | Seminar 并入 sub-agent 平台(原 P1.5/S7) | backlog | R2 后;自由工具 loop、统一 streaming 组件、**读者参与重生(主输入框路由,P1 冻结移交)**在此实现 | `briefs/R3_agent_platform_merge_zh.md` |
 | P2 | Understand-Anything 式全书 AI 理解地图 | backlog | R1–R3 完成后,开工前重写 brief | 旧版 `priority_plans/P2_*.md` 仅作参考 |
