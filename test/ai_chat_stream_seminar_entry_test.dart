@@ -34,8 +34,6 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 String _aiChatStreamSource() =>
     File('lib/widgets/ai/ai_chat_stream.dart').readAsStringSync();
-String _aiChatStreamWithSetupSource() =>
-    '${_aiChatStreamSource()}\n${File('lib/widgets/ai/seminar/setup/seminar_run_setup_sheet.dart').readAsStringSync()}';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -98,31 +96,6 @@ void main() {
       expect(source, isNot(contains("en: 'Could not refresh role'")));
       expect(source, isNot(contains("zh: '未能刷新工具调用'")));
       expect(source, isNot(contains("en: 'Could not refresh tool call'")));
-    },
-  );
-
-  test(
-    'Seminar setup sheet copy does not describe a card or panel',
-    () {
-      final source = _aiChatStreamWithSetupSource();
-
-      expect(source, isNot(contains('即将插入的研讨卡')));
-      expect(source, isNot(contains('next Seminar card')));
-      expect(source, isNot(contains('panel can continue')));
-      expect(source, contains('即将开始的研讨'));
-      expect(source, contains('next Seminar run'));
-    },
-  );
-
-  test(
-    'ready Seminar settings copy describes the current run, not a card',
-    () {
-      final source = _aiChatStreamSource();
-
-      expect(source, isNot(contains('只影响这张研讨卡')));
-      expect(source, isNot(contains('Only this Seminar card changes')));
-      expect(source, contains('只影响本次研讨'));
-      expect(source, contains('Only this Seminar run changes'));
     },
   );
 

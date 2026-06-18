@@ -35,6 +35,8 @@ import 'package:papertok_reader/widgets/ai/seminar/evidence/seminar_evidence_wid
 import 'package:papertok_reader/widgets/ai/seminar/participation/seminar_participation_widgets.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_autoscroll_policy.dart';
 import 'package:papertok_reader/widgets/ai/seminar/roles/seminar_role_widgets.dart';
+import 'package:papertok_reader/widgets/ai/seminar/setup/seminar_run_card_resume_widgets.dart';
+import 'package:papertok_reader/widgets/ai/seminar/setup/seminar_run_card_setup_widgets.dart';
 import 'package:papertok_reader/widgets/ai/seminar/shared/seminar_snapshot_widgets.dart';
 import 'package:papertok_reader/widgets/ai/seminar/seminar_stable_width_section.dart';
 import 'package:papertok_reader/widgets/ai/seminar/timeline/seminar_timeline_widgets.dart';
@@ -6019,10 +6021,18 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       card,
       runtimeState,
     );
-    final headerControls = _seminarRunCardHeaderControls(
-      card: card,
+    final headerControls = seminarRunCardHeaderControls(
+      sessionId: card.sessionId,
       snapshot: snapshot,
       canCancelFromCard: canCancelFromCard,
+      zh: _isChineseLocale,
+      cancelActionBuilder: () => _buildSeminarRunCardCancelActionView(card),
+      actionWidgetBuilder: (part, actionId) =>
+          _buildSeminarAgentControlActionView(
+        part,
+        actionId: actionId,
+        sessionId: card.sessionId?.trim() ?? '',
+      ),
     );
 
     final showRecoveryDetails = normalizedSessionId != null &&
@@ -6155,7 +6165,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               ],
               if (canStartFromCard) ...[
                 const SizedBox(height: 12),
-                SeminarFullWidthSection(child: _buildSeminarRunCardSetup(card)),
+                SeminarFullWidthSection(
+                  child: _buildSeminarRunCardSetupView(card),
+                ),
               ],
               if (shouldShowSnapshot) ...[
                 const SizedBox(height: 9),
@@ -6177,11 +6189,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
               ],
               if (canStartFromCard) ...[
                 const SizedBox(height: 12),
-                _buildSeminarRunCardStartAction(card),
+                _buildSeminarRunCardStartActionView(card),
               ],
-              if (_shouldShowSeminarCardResumeBanner(card, runtimeState)) ...[
+              if (shouldShowSeminarCardResumeBanner(card, runtimeState)) ...[
                 const SizedBox(height: 12),
-                _buildSeminarRunCardResumeBanner(
+                _buildSeminarRunCardResumeBannerView(
                   card,
                   runtimeState,
                   showDetails: showRecoveryDetails,
@@ -6377,12 +6389,11 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     );
   }
 
-  Widget _buildSeminarRunCardSetup(AiSeminarRunCardMeta card) {
+  Widget _buildSeminarRunCardSetupView(AiSeminarRunCardMeta card) {
     final l10n = L10n.of(context);
     final sessionId = card.sessionId?.trim();
     final isExpanded = sessionId != null &&
         _seminarCardSetupExpandedSessionIds.contains(sessionId);
-    final expandedSessionId = isExpanded ? sessionId : null;
     final evidenceSummary =
         _seminarEvidenceScopeSummary(card.evidenceScopeIds, l10n);
     final toolCount = card.roleProfiles
@@ -6399,224 +6410,55 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       en: 'Roles: ${_seminarRoleLabels(card.roleIds)}',
     );
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: ClaudePalette.divider(context)),
-        color: ClaudePalette.accentTint(context).withValues(alpha: 0.35),
+    return SeminarRunCardSetup(
+      card: card,
+      zh: _isChineseLocale,
+      isExpanded: isExpanded,
+      evidenceSummary: evidenceSummary,
+      toolSummary: toolSummary,
+      roleSummary: roleSummary,
+      roles: seminarCardSetupRoles(card),
+      evidenceScopeOptions: _nativeSeminarRunEvidenceScopeOptions,
+      toolIds: _seminarRoleToolIds,
+      roleLabelBuilder: (role) => _seminarRunRoleLabel(context, role),
+      evidenceScopeLabelBuilder: (scope) =>
+          _seminarEvidenceScopeLabel(scope.asString, l10n),
+      toolLabelBuilder: _seminarToolDisplayLabel,
+      questionController: sessionId != null && isExpanded
+          ? _seminarCardQuestionController(card, sessionId)
+          : null,
+      rolePromptControllerBuilder: (role) => _seminarCardRolePromptController(
+        card,
+        role,
+        sessionId ?? '',
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Icons.tune_outlined,
-                  size: 18,
-                  color: ClaudePalette.accent(context),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _localizedSeminarCardText(
-                          zh: '本次设置',
-                          en: 'Run setup',
-                        ),
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: ClaudePalette.fg(context),
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        '$roleSummary · $evidenceSummary · $toolSummary',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: ClaudePalette.secondary(context),
-                              height: 1.3,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (sessionId != null && sessionId.isNotEmpty)
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        if (isExpanded) {
-                          _seminarCardSetupExpandedSessionIds.remove(sessionId);
-                        } else {
-                          _seminarCardSetupExpandedSessionIds.add(sessionId);
-                        }
-                      });
-                    },
-                    child: Text(
-                      _localizedSeminarCardText(
-                        zh: isExpanded ? '收起设置' : '调整设置',
-                        en: isExpanded ? 'Hide setup' : 'Adjust setup',
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            if (expandedSessionId != null) ...[
-              const SizedBox(height: 8),
-              Divider(height: 1, color: ClaudePalette.divider(context)),
-              const SizedBox(height: 8),
-              _buildSeminarRunCardQuestionField(card, expandedSessionId),
-              const SizedBox(height: 8),
-              for (final role in _seminarCardSetupRoles(card)) ...[
-                SwitchListTile(
-                  key: ValueKey(
-                    'seminar-chat-card-role-${role.asString}-$expandedSessionId',
-                  ),
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                  secondary: Icon(
-                    role == AiSeminarRole.verifier
-                        ? Icons.verified_outlined
-                        : Icons.record_voice_over_outlined,
-                    size: 18,
-                  ),
-                  title: Text(_seminarRunRoleLabel(context, role)),
-                  subtitle: Text(
-                    _localizedSeminarCardText(
-                      zh: '只影响这场研讨',
-                      en: 'Only this seminar run',
-                    ),
-                  ),
-                  value: card.roleIds.contains(role.asString),
-                  onChanged: (_) => _toggleSeminarRunCardRole(card, role),
-                ),
-                if (card.roleIds.contains(role.asString))
-                  _buildSeminarRunCardRolePromptField(
-                    card,
-                    role,
-                    expandedSessionId,
-                  ),
-                if (card.roleIds.contains(role.asString))
-                  _buildSeminarRunCardRoleEvidenceScopeRow(
-                    card,
-                    role,
-                    expandedSessionId,
-                  ),
-                if (card.roleIds.contains(role.asString))
-                  _buildSeminarRunCardRoleToolRow(
-                    card,
-                    role,
-                    expandedSessionId,
-                  ),
-              ],
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      _localizedSeminarCardText(
-                        zh: '最多讨论轮次',
-                        en: 'Max discussion rounds',
-                      ),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: ClaudePalette.fg(context),
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                  ),
-                  IconButton(
-                    key: ValueKey(
-                      'seminar-chat-card-rounds-minus-$expandedSessionId',
-                    ),
-                    visualDensity: VisualDensity.compact,
-                    tooltip: _localizedSeminarCardText(
-                      zh: '减少轮次',
-                      en: 'Decrease rounds',
-                    ),
-                    icon: const Icon(Icons.remove_circle_outline, size: 20),
-                    onPressed: card.maxRounds <= 1
-                        ? null
-                        : () => _updateSeminarRunCardMaxRounds(
-                              card,
-                              card.maxRounds - 1,
-                            ),
-                  ),
-                  SizedBox(
-                    width: 32,
-                    child: Text(
-                      '${card.maxRounds}',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: ClaudePalette.fg(context),
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                  ),
-                  IconButton(
-                    key: ValueKey(
-                      'seminar-chat-card-rounds-plus-$expandedSessionId',
-                    ),
-                    visualDensity: VisualDensity.compact,
-                    tooltip: _localizedSeminarCardText(
-                      zh: '增加轮次',
-                      en: 'Increase rounds',
-                    ),
-                    icon: const Icon(Icons.add_circle_outline, size: 20),
-                    onPressed: card.maxRounds >= 10
-                        ? null
-                        : () => _updateSeminarRunCardMaxRounds(
-                              card,
-                              card.maxRounds + 1,
-                            ),
-                  ),
-                ],
-              ),
-              Text(
-                _localizedSeminarCardText(
-                  zh: '只影响本次研讨，不会写回全局 Settings。',
-                  en: 'Only this Seminar run changes. Global settings stay unchanged.',
-                ),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: ClaudePalette.secondary(context),
-                    ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSeminarRunCardQuestionField(
-    AiSeminarRunCardMeta card,
-    String sessionId,
-  ) {
-    final controller = _seminarCardQuestionController(card, sessionId);
-    return TextField(
-      key: ValueKey('seminar-chat-card-question-input-$sessionId'),
-      controller: controller,
-      minLines: 2,
-      maxLines: 4,
-      textInputAction: TextInputAction.newline,
-      decoration: InputDecoration(
-        isDense: true,
-        labelText: _localizedSeminarCardText(
-          zh: '本次研讨问题',
-          en: 'Seminar question',
-        ),
-        hintText: _localizedSeminarCardText(
-          zh: '只影响本次研讨，不写回全局 Settings。',
-          en: 'Only this Seminar run changes. Global settings stay unchanged.',
-        ),
-        border: const OutlineInputBorder(),
-      ),
-      onChanged: (value) {
+      roleEvidenceScopesBuilder: (role) =>
+          _seminarRunCardRoleEvidenceScopes(card, role),
+      roleAllowedToolIdsBuilder: (role) =>
+          _seminarRunCardRoleAllowedToolIds(card, role),
+      onToggleExpanded: () {
+        if (sessionId == null || sessionId.isEmpty) return;
+        setState(() {
+          if (isExpanded) {
+            _seminarCardSetupExpandedSessionIds.remove(sessionId);
+          } else {
+            _seminarCardSetupExpandedSessionIds.add(sessionId);
+          }
+        });
+      },
+      onQuestionChanged: (value) {
         unawaited(_updateSeminarRunCardQuestion(card, value));
+      },
+      onToggleRole: (role) => _toggleSeminarRunCardRole(card, role),
+      onRolePromptChanged: (role, value) {
+        unawaited(_updateSeminarRunCardRolePrompt(card, role, value));
+      },
+      onToggleRoleEvidenceScope: (role, scope) =>
+          _toggleSeminarRunCardRoleEvidenceScope(card, role, scope),
+      onToggleRoleTool: (role, toolId) =>
+          _toggleSeminarRunCardRoleTool(card, role, toolId),
+      onMaxRoundsChanged: (value) {
+        unawaited(_updateSeminarRunCardMaxRounds(card, value));
       },
     );
   }
@@ -6659,25 +6501,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             );
     if (!mounted || !updated) return;
     setState(() {});
-  }
-
-  List<AiSeminarRole> _seminarCardSetupRoles(AiSeminarRunCardMeta card) {
-    const order = <AiSeminarRole>[
-      AiSeminarRole.critical,
-      AiSeminarRole.supportive,
-      AiSeminarRole.verifier,
-      AiSeminarRole.synthesizer,
-    ];
-    final seen = <AiSeminarRole>{};
-    final roles = <AiSeminarRole>[];
-    for (final role in order) {
-      if (seen.add(role)) roles.add(role);
-    }
-    for (final roleId in card.roleIds) {
-      final role = AiSeminarRole.fromString(roleId);
-      if (role != null && seen.add(role)) roles.add(role);
-    }
-    return roles;
   }
 
   Future<void> _toggleSeminarRunCardRole(
@@ -6773,46 +6596,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     ];
   }
 
-  Widget _buildSeminarRunCardRolePromptField(
-    AiSeminarRunCardMeta card,
-    AiSeminarRole role,
-    String sessionId,
-  ) {
-    final label = _seminarRunRoleLabel(context, role);
-    final controller = _seminarCardRolePromptController(
-      card,
-      role,
-      sessionId,
-    );
-    return Padding(
-      padding: const EdgeInsetsDirectional.only(start: 46, bottom: 8),
-      child: TextField(
-        key: ValueKey(
-          'seminar-chat-card-role-${role.asString}-prompt-$sessionId',
-        ),
-        controller: controller,
-        minLines: 2,
-        maxLines: 4,
-        textInputAction: TextInputAction.newline,
-        decoration: InputDecoration(
-          isDense: true,
-          labelText: _localizedSeminarCardText(
-            zh: '$label本次提示词',
-            en: '$label run prompt',
-          ),
-          hintText: _localizedSeminarCardText(
-            zh: '只影响这场研讨，不写回全局 Settings。',
-            en: 'Only this seminar run. Global settings stay unchanged.',
-          ),
-          border: const OutlineInputBorder(),
-        ),
-        onChanged: (value) {
-          unawaited(_updateSeminarRunCardRolePrompt(card, role, value));
-        },
-      ),
-    );
-  }
-
   TextEditingController _seminarCardRolePromptController(
     AiSeminarRunCardMeta card,
     AiSeminarRole role,
@@ -6893,38 +6676,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     ];
   }
 
-  Widget _buildSeminarRunCardRoleEvidenceScopeRow(
-    AiSeminarRunCardMeta card,
-    AiSeminarRole role,
-    String sessionId,
-  ) {
-    final l10n = L10n.of(context);
-    final selectedScopes = _seminarRunCardRoleEvidenceScopes(card, role);
-    return Padding(
-      padding: const EdgeInsetsDirectional.only(start: 46, bottom: 8),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          for (final scope in _nativeSeminarRunEvidenceScopeOptions)
-            _SeminarRunEvidenceScopeChip(
-              key: ValueKey(
-                'seminar-chat-card-role-${role.asString}-scope-'
-                '${scope.asString}-$sessionId',
-              ),
-              label: _seminarEvidenceScopeLabel(scope.asString, l10n),
-              selected: selectedScopes.contains(scope),
-              onPressed: () => _toggleSeminarRunCardRoleEvidenceScope(
-                card,
-                role,
-                scope,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
   Set<AiSeminarEvidenceScope> _seminarRunCardRoleEvidenceScopes(
     AiSeminarRunCardMeta card,
     AiSeminarRole role,
@@ -7003,53 +6754,6 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       for (final role in order)
         if (byRole[role] != null) byRole[role]!,
     ];
-  }
-
-  Widget _buildSeminarRunCardRoleToolRow(
-    AiSeminarRunCardMeta card,
-    AiSeminarRole role,
-    String sessionId,
-  ) {
-    final selectedToolIds = _seminarRunCardRoleAllowedToolIds(card, role);
-    return Padding(
-      padding: const EdgeInsetsDirectional.only(start: 46, bottom: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            _localizedSeminarCardText(
-              zh: '本次只读工具',
-              en: 'Run read-only tools',
-            ),
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: ClaudePalette.fg(context),
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final toolId in _seminarRoleToolIds)
-                _SeminarRunEvidenceScopeChip(
-                  key: ValueKey(
-                    'seminar-chat-card-role-${role.asString}-tool-'
-                    '$toolId-$sessionId',
-                  ),
-                  label: _seminarToolDisplayLabel(toolId),
-                  selected: selectedToolIds.contains(toolId),
-                  onPressed: () => _toggleSeminarRunCardRoleTool(
-                    card,
-                    role,
-                    toolId,
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
   }
 
   Set<String> _seminarRunCardRoleAllowedToolIds(
@@ -7181,32 +6885,15 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         parts.every((part) => part.type.trim() == 'seminar_run_setup');
   }
 
-  Widget _buildSeminarRunCardStartAction(AiSeminarRunCardMeta card) {
+  Widget _buildSeminarRunCardStartActionView(AiSeminarRunCardMeta card) {
     final sessionId = card.sessionId?.trim();
     final isSubmitting = sessionId != null &&
         _seminarCardSubmittingSessionIds.contains(sessionId);
-    return Align(
-      alignment: AlignmentDirectional.centerStart,
-      child: FilledButton.icon(
-        key: sessionId == null
-            ? null
-            : ValueKey('seminar-chat-card-start-$sessionId'),
-        icon: isSubmitting
-            ? const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Icon(Icons.play_arrow_outlined, size: 18),
-        label: Text(
-          _localizedSeminarCardText(
-            zh: '开始研讨',
-            en: 'Start Seminar',
-          ),
-        ),
-        onPressed:
-            isSubmitting ? null : () => _startSeminarRunCardFromChat(card),
-      ),
+    return SeminarRunCardStartAction(
+      sessionId: sessionId,
+      isSubmitting: isSubmitting,
+      zh: _isChineseLocale,
+      onStart: () => _startSeminarRunCardFromChat(card),
     );
   }
 
@@ -7219,76 +6906,19 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     return runtimeState.session?.id == sessionId && runtimeState.canCancel;
   }
 
-  List<Widget> _seminarRunCardHeaderControls({
-    required AiSeminarRunCardMeta card,
-    required AiSeminarRunCardSnapshot? snapshot,
-    required bool canCancelFromCard,
-  }) {
+  Widget _buildSeminarRunCardCancelActionView(AiSeminarRunCardMeta card) {
     final sessionId = card.sessionId?.trim();
-    if (sessionId == null || sessionId.isEmpty) return const [];
-    final controls = <Widget>[
-      if (canCancelFromCard) _buildSeminarRunCardCancelAction(card),
-    ];
-    if (snapshot != null) {
-      for (final part in snapshot.messageParts) {
-        final actionIds = part.actionIds
-            .map((actionId) => actionId.trim())
-            .where((actionId) => seminarAgentControlActionLabel(
-                  actionId,
-                  zh: _isChineseLocale,
-                ).isNotEmpty)
-            .where((actionId) => seminarAgentControlActionIsExecutable(
-                  part,
-                  actionId: actionId,
-                  sessionId: sessionId,
-                ))
-            .toList(growable: false);
-        for (final actionId in actionIds) {
-          controls.add(
-            _buildSeminarAgentControlActionView(
-              part,
-              actionId: actionId,
-              sessionId: sessionId,
-            ),
-          );
-        }
-      }
-    }
-    return controls;
-  }
-
-  Widget _buildSeminarRunCardCancelAction(AiSeminarRunCardMeta card) {
-    final sessionId = card.sessionId?.trim();
-    if (sessionId == null || sessionId.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    return ActionChip(
-      key: ValueKey('seminar-chat-card-cancel-$sessionId'),
-      avatar: const Icon(Icons.stop_circle_outlined, size: 16),
-      label: Text(
-        _localizedSeminarCardText(
-          zh: '取消研讨',
-          en: 'Cancel seminar',
-        ),
-      ),
-      onPressed: () => _cancelActiveSeminarRunCard(sessionId),
-      visualDensity: VisualDensity.compact,
-      side: BorderSide(color: ClaudePalette.divider(context)),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    return SeminarRunCardCancelAction(
+      sessionId: sessionId,
+      zh: _isChineseLocale,
+      onCancel: () {
+        if (sessionId == null) return;
+        _cancelActiveSeminarRunCard(sessionId);
+      },
     );
   }
 
-  bool _shouldShowSeminarCardResumeBanner(
-    AiSeminarRunCardMeta card,
-    AiSeminarRuntimeState runtimeState,
-  ) {
-    final sessionId = card.sessionId?.trim();
-    if (sessionId == null || sessionId.isEmpty) return false;
-    return runtimeState.session?.id == sessionId &&
-        runtimeState.canResumeRestoredRunning;
-  }
-
-  Widget _buildSeminarRunCardResumeBanner(
+  Widget _buildSeminarRunCardResumeBannerView(
     AiSeminarRunCardMeta card,
     AiSeminarRuntimeState runtimeState, {
     required bool showDetails,
@@ -7296,290 +6926,17 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     required VoidCallback onContinue,
   }) {
     final sessionId = card.sessionId?.trim();
-    if (sessionId == null || sessionId.isEmpty) {
-      return const SizedBox.shrink();
-    }
     final isSubmitting = _seminarCardSubmittingSessionIds.contains(sessionId);
-    final completedRoleCount = runtimeState.turns
-        .where((turn) => turn.responseText.trim().isNotEmpty)
-        .length;
-    final provider = runtimeState.providerDiagnostics;
-    final providerLabel = provider == null || provider.modelId.trim().isEmpty
-        ? ''
-        : ' · ${provider.providerName} / ${provider.modelId}';
-    final detail = _localizedSeminarCardText(
-      zh: '已完成 $completedRoleCount 个角色，可直接继续缺失角色，也可展开断点详情$providerLabel。',
-      en: '$completedRoleCount roles completed. Continue missing roles directly, or expand checkpoint details$providerLabel.',
+    return SeminarRunCardResumeBanner(
+      card: card,
+      runtimeState: runtimeState,
+      showDetails: showDetails,
+      isSubmitting: isSubmitting,
+      zh: _isChineseLocale,
+      roleLabelBuilder: (role) => _seminarRunRoleLabel(context, role),
+      onOpen: onOpen,
+      onContinue: onContinue,
     );
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: ClaudePalette.divider(context)),
-        color: ClaudePalette.accentTint(context).withValues(alpha: 0.5),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Icons.restore_outlined,
-                  size: 18,
-                  color: ClaudePalette.accent(context),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _localizedSeminarCardText(
-                          zh: '可从中断处继续',
-                          en: 'Resumable checkpoint',
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: ClaudePalette.fg(context),
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        detail,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: ClaudePalette.secondary(context),
-                              height: 1.32,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                FilledButton.icon(
-                  key: ValueKey('seminar-chat-card-continue-$sessionId'),
-                  onPressed: isSubmitting ? null : onContinue,
-                  icon: isSubmitting
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.play_arrow_outlined, size: 18),
-                  label: Text(
-                    _localizedSeminarCardText(
-                      zh: '继续研讨',
-                      en: 'Continue seminar',
-                    ),
-                  ),
-                ),
-                OutlinedButton.icon(
-                  key: ValueKey('seminar-chat-card-resume-$sessionId'),
-                  onPressed: isSubmitting ? null : onOpen,
-                  icon: Icon(
-                    showDetails
-                        ? Icons.expand_less_outlined
-                        : Icons.expand_more_outlined,
-                    size: 18,
-                  ),
-                  label: Text(
-                    _localizedSeminarCardText(
-                      zh: showDetails ? '收起断点' : '断点详情',
-                      en: showDetails
-                          ? 'Hide checkpoint'
-                          : 'Checkpoint details',
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (showDetails) ...[
-              const SizedBox(height: 10),
-              Divider(height: 1, color: ClaudePalette.divider(context)),
-              const SizedBox(height: 10),
-              _buildSeminarRunCardResumeDetails(runtimeState),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSeminarRunCardResumeDetails(
-    AiSeminarRuntimeState runtimeState,
-  ) {
-    final completedRoles = _seminarResumeCompletedRoleLabels(runtimeState);
-    final completedRoleText = completedRoles.isEmpty
-        ? _localizedSeminarCardText(
-            zh: '暂无已完成角色',
-            en: 'No completed roles yet',
-          )
-        : completedRoles.join('、');
-    final evidenceCount = runtimeState.evidenceBundle?.evidence.length ?? 0;
-    final evidenceText = _localizedSeminarCardText(
-      zh: '$evidenceCount 条证据',
-      en: '$evidenceCount evidence items',
-    );
-    final providerText = _seminarResumeProviderLabel(runtimeState);
-    final nextStepText = _seminarResumeNextStepLabel(runtimeState);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          _localizedSeminarCardText(
-            zh: '断点详情',
-            en: 'Checkpoint details',
-          ),
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: ClaudePalette.fg(context),
-                fontWeight: FontWeight.w700,
-              ),
-        ),
-        const SizedBox(height: 8),
-        _buildSeminarRunCardResumeDetailRow(
-          icon: Icons.history_toggle_off_outlined,
-          label: _localizedSeminarCardText(
-            zh: '断点状态',
-            en: 'Checkpoint',
-          ),
-          value: _localizedSeminarCardText(
-            zh: '可继续 · 已完成：$completedRoleText',
-            en: 'Resumable · completed: $completedRoleText',
-          ),
-        ),
-        _buildSeminarRunCardResumeDetailRow(
-          icon: Icons.manage_search_outlined,
-          label: _localizedSeminarCardText(
-            zh: '已保存证据',
-            en: 'Saved evidence',
-          ),
-          value: evidenceText,
-        ),
-        _buildSeminarRunCardResumeDetailRow(
-          icon: Icons.route_outlined,
-          label: _localizedSeminarCardText(
-            zh: '下一步',
-            en: 'Next step',
-          ),
-          value: nextStepText,
-        ),
-        if (providerText.isNotEmpty)
-          _buildSeminarRunCardResumeDetailRow(
-            icon: Icons.memory_outlined,
-            label: _localizedSeminarCardText(
-              zh: '模型',
-              en: 'Model',
-            ),
-            value: providerText,
-          ),
-      ],
-    );
-  }
-
-  Widget _buildSeminarRunCardResumeDetailRow({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 7),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            icon,
-            size: 17,
-            color: ClaudePalette.fg(context).withValues(alpha: 0.62),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 78,
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: ClaudePalette.secondary(context),
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: ClaudePalette.fg(context),
-                    height: 1.32,
-                  ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  List<String> _seminarResumeCompletedRoleLabels(
-    AiSeminarRuntimeState runtimeState,
-  ) {
-    final seen = <AiSeminarRole>{};
-    final labels = <String>[];
-    for (final turn in runtimeState.turns) {
-      if (turn.responseText.trim().isEmpty || !seen.add(turn.role)) continue;
-      labels.add(_seminarRunRoleLabel(context, turn.role));
-    }
-    return labels;
-  }
-
-  String _seminarResumeNextStepLabel(AiSeminarRuntimeState runtimeState) {
-    final completed = runtimeState.turns
-        .where((turn) => turn.responseText.trim().isNotEmpty)
-        .map((turn) => turn.role)
-        .toSet();
-    final roles = runtimeState.session?.roles ?? AiSeminarRole.defaultRoles;
-    for (final role in roles) {
-      if (!completed.contains(role)) {
-        final label = _seminarRunRoleLabel(context, role);
-        return _localizedSeminarCardText(
-          zh: '继续 $label',
-          en: 'Continue $label',
-        );
-      }
-    }
-    return _localizedSeminarCardText(
-      zh: '出总结',
-      en: 'Synthesize',
-    );
-  }
-
-  String _seminarResumeProviderLabel(AiSeminarRuntimeState runtimeState) {
-    final diagnostics = runtimeState.providerDiagnostics;
-    final diagnosticsProvider = diagnostics?.providerName.trim() ?? '';
-    final diagnosticsModel = diagnostics?.modelId.trim() ?? '';
-    if (diagnosticsProvider.isNotEmpty || diagnosticsModel.isNotEmpty) {
-      return [
-        if (diagnosticsProvider.isNotEmpty) diagnosticsProvider,
-        if (diagnosticsModel.isNotEmpty) diagnosticsModel,
-      ].join(' / ');
-    }
-
-    final billing = runtimeState.session?.billingContext;
-    final providerName = billing?.providerName.trim() ?? '';
-    final modelId = billing?.modelId.trim() ?? '';
-    return [
-      if (providerName.isNotEmpty) providerName,
-      if (modelId.isNotEmpty) modelId,
-    ].join(' / ');
   }
 
   Future<void> _continueSeminarRunCardFromCheckpoint(
