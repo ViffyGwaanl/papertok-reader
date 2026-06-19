@@ -1,6 +1,7 @@
 # R1 Brief — 拆分 ai_chat_stream.dart
 
-> 前置:P1 真机验收通过。DoD:`ai_chat_stream.dart` ≤3000 行,Seminar UI 全部位于 `lib/widgets/ai/seminar/`,每文件 ≤1000 行;`flutter analyze` 0 error;Seminar 相关测试全绿且按视图拆分。
+> 前置:P1 真机验收通过。DoD(2026-06-17 修订,用户拍板收口):Seminar 渲染视图全部位于 `lib/widgets/ai/seminar/`、每文件 ≤1000 行、测试按视图独立拆分且全绿;god file 不再含 Seminar 重型渲染(仅余薄绑定);`flutter analyze` 无新增 error(既有 `langchain_openai` 测试依赖问题除外)。
+> **原 ≤3000 行目标作废**:经批次 1–11 实测,Seminar 视图全抽出后 god file 仍 11667 行,余量为聊天核心 State 逻辑(发送/流式/历史)+ 非 Seminar 聊天 UI + 绑定胶水,非视图抽取所能消;降到 3000 需深拆 State(大重构,与 R2 重叠),不在 R1。达成判定:done(2026-06-17)。
 > 最后更新:2026-06-11
 
 ## 现状(为什么难)

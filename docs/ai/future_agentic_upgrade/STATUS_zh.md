@@ -6,14 +6,14 @@
 | 任务 | 内容 | 状态 | 下一步 | 验收/Brief |
 | --- | --- | --- | --- | --- |
 | P1 | AI Chat 原生研讨会(收口为"观看+追问"形态) | done | 真机 v6 全量通过(2026-06-17,build 6533),用户确认收口;详见验收记录 | `briefs/P1_ACCEPTANCE_zh.md`(v6) |
-| R1 | 拆分 ai_chat_stream.dart god file | in progress | 批次 1–11 完成并审过:Seminar 渲染视图全部抽至 seminar/(各≤787、83 测试、纯机械未越界),god file 16618→11667。≤3000 DoD 达不到——余量是 State 核心逻辑+非 Seminar 聊天 UI+绑定胶水,非视图抽取所能消。待用户定方向:收口改 DoD / 加批次 12 拆非 Seminar UI / 深拆 State | `briefs/R1_godfile_split_zh.md` |
+| R1 | 拆分 ai_chat_stream.dart god file | done | Seminar 渲染视图全部抽至 seminar/(各≤787、83 测试、纯机械);god file 16618→11667。用户拍板收口(2026-06-17),原 ≤3000 目标作废、改为现实 DoD(见 brief);深拆 State 留作未来重构 | `briefs/R1_godfile_split_zh.md` |
 | R2 | 事件流单一数据源,删 snapshot 双写与 fallback | backlog | R1 后;第一批产出删除清单 ADR | `briefs/R2_event_ssot_zh.md` |
 | R3 | Seminar 并入 sub-agent 平台(原 P1.5/S7) | backlog | R2 后;自由工具 loop、统一 streaming 组件、**读者参与重生(主输入框路由,P1 冻结移交)**在此实现 | `briefs/R3_agent_platform_merge_zh.md` |
 | P2 | Understand-Anything 式全书 AI 理解地图 | backlog | R1–R3 完成后,开工前重写 brief | 旧版 `priority_plans/P2_*.md` 仅作参考 |
 | P3 | 智能索引/语义检索/ANN 底座 | backlog(暂停) | 生产级 ANN 打包、恢复式构建并入 R2 之后评估 | `priority_plans/P3_*.md` |
 | P4 | AI 辅助产物保存与 Review 异常中心 | backlog(暂停) | 内联保存已可用;AI 预审并入 P2 之后评估 | `priority_plans/P4_*.md` |
 | P5 | 同步/恢复/测试/发布 | in progress(按发布节奏) | 每次 release 跟随既有 SOP | `docs/SOP_RELEASE_AUTOMATION_zh.md` |
-| P6 | AI Chat 多分支对话树状可视化(呈现多分支对话结构,可点击切分支) | backlog | 用户 2026-06-17 拍板前移:R1 完成后立即开工、排在 R2 前(依赖 R1 拆出的聊天组件,做完整版);开工前写 ≤150 行 brief | 待建 `briefs/P6_*.md` |
+| P6 | AI Chat 多分支对话树状可视化(呈现多分支对话结构,可点击切分支) | in progress | R1 已收口,P6 启动;规划者撰写 brief 中(先与用户敲定形态:入口/节点内容/交互),定稿后发 Codex 首批 | 待建 `briefs/P6_*.md` |
 
 ## P1 已知缺口与砍掉项(2026-06-11 用户决策更新)
 
