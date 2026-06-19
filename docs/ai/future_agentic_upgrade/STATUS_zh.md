@@ -13,8 +13,8 @@
 | P3 | 智能索引/语义检索/ANN 底座 | backlog(暂停) | 生产级 ANN 打包、恢复式构建并入 R2 之后评估 | `priority_plans/P3_*.md` |
 | P4 | AI 辅助产物保存与 Review 异常中心 | backlog(暂停) | 内联保存已可用;AI 预审并入 P2 之后评估 | `priority_plans/P4_*.md` |
 | P5 | 同步/恢复/测试/发布 | in progress(按发布节奏) | 每次 release 跟随既有 SOP | `docs/SOP_RELEASE_AUTOMATION_zh.md` |
-| P6 | AI Chat 多分支对话树状可视化(呈现多分支对话结构,可点击切分支) | 待真机验收 | 批次 1–4 已完成(数据/provider/浮层/入口切换);批次 5 未启动,等用户审+真机看 | `briefs/P6_conversation_tree_zh.md` |
-| B1 | 阅读器选区扩展后高亮/AI 研讨仍只用首次选区(iOS 触屏拖手柄扩展不重发选区) | 待真机验收 | Apple 触屏 selectionchange 防抖兜底已补,鼠标 pointerup 直发保留;等用户真机验收三项 | chat 指令 / `assets/foliate-js/src/book.js` |
+| P6 | AI Chat 多分支对话树状可视化(呈现多分支对话结构,可点击切分支) | 待真机验收 | 批次 1–4 规划者审过(纯净:新码在 conversation_tree/、provider+5/god file+33、5 测试);待含 P6+B1 的新 build 真机验收(brief §验收 5 项),过后做批次 5 收尾 | `briefs/P6_conversation_tree_zh.md` |
+| B1 | 阅读器选区扩展后高亮/AI 研讨仍只用首次选区(iOS 触屏拖手柄扩展不重发选区) | 待真机验收 | 规划者审过(只动 book.js+测试,修法正确,index.html 确认走 src 无需重打包);待同一新 build 真机验收三项 | chat 指令 / `assets/foliate-js/src/book.js` |
 
 ## P1 已知缺口与砍掉项(2026-06-11 用户决策更新)
 
