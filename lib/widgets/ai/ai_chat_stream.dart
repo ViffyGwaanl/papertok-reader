@@ -43,6 +43,8 @@ import 'package:papertok_reader/widgets/ai/seminar/timeline/seminar_timeline_wid
 import 'package:papertok_reader/widgets/ai/seminar/tools/seminar_tool_widgets.dart';
 import 'package:papertok_reader/widgets/ai/seminar/whiteboard/seminar_whiteboard_widgets.dart';
 import 'package:papertok_reader/widgets/ai/seminar/start_seminar_tool_bridge.dart';
+import 'package:papertok_reader/widgets/ai/conversation_tree/conversation_tree_model.dart';
+import 'package:papertok_reader/widgets/ai/conversation_tree/conversation_tree_overlay.dart';
 import 'package:papertok_reader/widgets/ai/tool_step_tile.dart';
 import 'package:papertok_reader/widgets/ai/tool_tiles/apply_book_tags_step_tile.dart';
 import 'package:papertok_reader/widgets/ai/tool_tiles/mindmap_step_tile.dart';
@@ -1310,6 +1312,28 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         // Ignore (e.g. controller disposed/replaced while minimizing).
       }
     });
+  }
+
+  void _showConversationTreeOverlay() {
+    final notifier = ref.read(aiChatProvider.notifier);
+    final model = buildConversationTreeRenderModel(notifier.conversationTree);
+    unawaited(
+      showDialog<void>(
+        context: context,
+        barrierColor: Colors.black38,
+        builder: (dialogContext) => ConversationTreeOverlay(
+          model: model,
+          onClose: () => Navigator.of(dialogContext).pop(),
+          onNodeSelected: (nodeId) {
+            final switched = notifier.activatePathToNode(nodeId);
+            Navigator.of(dialogContext).pop();
+            if (switched) {
+              _scrollToBottom(force: true, clearNewContentIndicator: true);
+            }
+          },
+        ),
+      ),
+    );
   }
 
   Widget _buildHistoryDrawer(BuildContext context) {
@@ -5538,6 +5562,15 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           onPressed: () => _scaffoldKey.currentState?.openDrawer(),
         ),
         actions: [
+          IconButton(
+            icon: Icon(
+              Icons.account_tree_outlined,
+              size: 22,
+              color: ClaudePalette.fg(context),
+            ),
+            tooltip: L10n.of(context).conversationTreeOpen,
+            onPressed: _showConversationTreeOverlay,
+          ),
           IconButton(
             icon: Icon(
               Icons.text_fields,

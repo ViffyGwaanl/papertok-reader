@@ -1852,6 +1852,7 @@
     }
   },
   "conversationTreeTitle": "对话树",
+  "conversationTreeOpen": "打开对话树",
   "conversationTreeEmpty": "还没有对话分支。",
   "conversationTreeClose": "关闭",
   "conversationTreeSpeakerYou": "你",

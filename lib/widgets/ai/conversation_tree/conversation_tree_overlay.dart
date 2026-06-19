@@ -10,11 +10,13 @@ class ConversationTreeOverlay extends StatelessWidget {
   const ConversationTreeOverlay({
     required this.model,
     required this.onClose,
+    this.onNodeSelected,
     super.key,
   });
 
   final ConversationTreeRenderModel model;
   final VoidCallback onClose;
+  final ValueChanged<String>? onNodeSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +51,10 @@ class ConversationTreeOverlay extends StatelessWidget {
                               return _ConversationTreeNodeTile(
                                 node: model.nodes[index],
                                 l10n: l10n,
+                                onSelected: onNodeSelected == null
+                                    ? null
+                                    : () =>
+                                        onNodeSelected!(model.nodes[index].id),
                               );
                             },
                           ),
@@ -129,10 +135,12 @@ class _ConversationTreeNodeTile extends StatelessWidget {
   const _ConversationTreeNodeTile({
     required this.node,
     required this.l10n,
+    this.onSelected,
   });
 
   final ConversationTreeRenderNode node;
   final L10n l10n;
+  final VoidCallback? onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -143,70 +151,77 @@ class _ConversationTreeNodeTile extends StatelessWidget {
         : ClaudePalette.bg(context).withValues(alpha: 0.52);
     final borderColor =
         active ? ClaudePalette.accent(context) : ClaudePalette.divider(context);
+    final tile = DecoratedBox(
+      key: ValueKey(
+        active
+            ? 'conversation-tree-active-node-${node.id}'
+            : 'conversation-tree-node-${node.id}',
+      ),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: borderColor),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              margin: const EdgeInsets.only(top: 6),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: active
+                    ? ClaudePalette.accent(context)
+                    : ClaudePalette.secondary(context),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _speakerLabel(l10n, node.speaker),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: active
+                          ? ClaudePalette.accent(context)
+                          : ClaudePalette.secondary(context),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    node.summary,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: ClaudePalette.fg(context),
+                      height: 1.28,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
     return Padding(
       padding: EdgeInsetsDirectional.only(
         start: math.min(node.depth * 22.0, 132.0),
         bottom: 8,
       ),
-      child: DecoratedBox(
-        key: ValueKey(
-          active
-              ? 'conversation-tree-active-node-${node.id}'
-              : 'conversation-tree-node-${node.id}',
-        ),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: borderColor),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                margin: const EdgeInsets.only(top: 6),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: active
-                      ? ClaudePalette.accent(context)
-                      : ClaudePalette.secondary(context),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _speakerLabel(l10n, node.speaker),
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: active
-                            ? ClaudePalette.accent(context)
-                            : ClaudePalette.secondary(context),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      node.summary,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: ClaudePalette.fg(context),
-                        height: 1.28,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      child: onSelected == null
+          ? tile
+          : InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: onSelected,
+              child: tile,
+            ),
     );
   }
 }
