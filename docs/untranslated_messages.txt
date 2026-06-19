@@ -983,7 +983,16 @@
     "seminarEvidenceScopeConceptGraph",
     "customSkillsExampleName",
     "customSkillsExampleDescription",
-    "customSkillsExamplePrompt"
+    "customSkillsExamplePrompt",
+    "conversationTreeTitle",
+    "conversationTreeEmpty",
+    "conversationTreeClose",
+    "conversationTreeSpeakerYou",
+    "conversationTreeSpeakerAi",
+    "conversationTreeSpeakerSystem",
+    "conversationTreeSpeakerTool",
+    "conversationTreeSpeakerCustom",
+    "conversationTreeSpeakerUnknown"
   ],
 
   "de": [
@@ -1970,7 +1979,16 @@
     "seminarEvidenceScopeConceptGraph",
     "customSkillsExampleName",
     "customSkillsExampleDescription",
-    "customSkillsExamplePrompt"
+    "customSkillsExamplePrompt",
+    "conversationTreeTitle",
+    "conversationTreeEmpty",
+    "conversationTreeClose",
+    "conversationTreeSpeakerYou",
+    "conversationTreeSpeakerAi",
+    "conversationTreeSpeakerSystem",
+    "conversationTreeSpeakerTool",
+    "conversationTreeSpeakerCustom",
+    "conversationTreeSpeakerUnknown"
   ],
 
   "es": [
@@ -2957,7 +2975,16 @@
     "seminarEvidenceScopeConceptGraph",
     "customSkillsExampleName",
     "customSkillsExampleDescription",
-    "customSkillsExamplePrompt"
+    "customSkillsExamplePrompt",
+    "conversationTreeTitle",
+    "conversationTreeEmpty",
+    "conversationTreeClose",
+    "conversationTreeSpeakerYou",
+    "conversationTreeSpeakerAi",
+    "conversationTreeSpeakerSystem",
+    "conversationTreeSpeakerTool",
+    "conversationTreeSpeakerCustom",
+    "conversationTreeSpeakerUnknown"
   ],
 
   "fr": [
@@ -3944,7 +3971,16 @@
     "seminarEvidenceScopeConceptGraph",
     "customSkillsExampleName",
     "customSkillsExampleDescription",
-    "customSkillsExamplePrompt"
+    "customSkillsExamplePrompt",
+    "conversationTreeTitle",
+    "conversationTreeEmpty",
+    "conversationTreeClose",
+    "conversationTreeSpeakerYou",
+    "conversationTreeSpeakerAi",
+    "conversationTreeSpeakerSystem",
+    "conversationTreeSpeakerTool",
+    "conversationTreeSpeakerCustom",
+    "conversationTreeSpeakerUnknown"
   ],
 
   "it": [
@@ -4931,7 +4967,16 @@
     "seminarEvidenceScopeConceptGraph",
     "customSkillsExampleName",
     "customSkillsExampleDescription",
-    "customSkillsExamplePrompt"
+    "customSkillsExamplePrompt",
+    "conversationTreeTitle",
+    "conversationTreeEmpty",
+    "conversationTreeClose",
+    "conversationTreeSpeakerYou",
+    "conversationTreeSpeakerAi",
+    "conversationTreeSpeakerSystem",
+    "conversationTreeSpeakerTool",
+    "conversationTreeSpeakerCustom",
+    "conversationTreeSpeakerUnknown"
   ],
 
   "ja": [
@@ -5918,7 +5963,16 @@
     "seminarEvidenceScopeConceptGraph",
     "customSkillsExampleName",
     "customSkillsExampleDescription",
-    "customSkillsExamplePrompt"
+    "customSkillsExamplePrompt",
+    "conversationTreeTitle",
+    "conversationTreeEmpty",
+    "conversationTreeClose",
+    "conversationTreeSpeakerYou",
+    "conversationTreeSpeakerAi",
+    "conversationTreeSpeakerSystem",
+    "conversationTreeSpeakerTool",
+    "conversationTreeSpeakerCustom",
+    "conversationTreeSpeakerUnknown"
   ],
 
   "ko": [
@@ -6905,7 +6959,16 @@
     "seminarEvidenceScopeConceptGraph",
     "customSkillsExampleName",
     "customSkillsExampleDescription",
-    "customSkillsExamplePrompt"
+    "customSkillsExamplePrompt",
+    "conversationTreeTitle",
+    "conversationTreeEmpty",
+    "conversationTreeClose",
+    "conversationTreeSpeakerYou",
+    "conversationTreeSpeakerAi",
+    "conversationTreeSpeakerSystem",
+    "conversationTreeSpeakerTool",
+    "conversationTreeSpeakerCustom",
+    "conversationTreeSpeakerUnknown"
   ],
 
   "pt": [
@@ -7892,7 +7955,16 @@
     "seminarEvidenceScopeConceptGraph",
     "customSkillsExampleName",
     "customSkillsExampleDescription",
-    "customSkillsExamplePrompt"
+    "customSkillsExamplePrompt",
+    "conversationTreeTitle",
+    "conversationTreeEmpty",
+    "conversationTreeClose",
+    "conversationTreeSpeakerYou",
+    "conversationTreeSpeakerAi",
+    "conversationTreeSpeakerSystem",
+    "conversationTreeSpeakerTool",
+    "conversationTreeSpeakerCustom",
+    "conversationTreeSpeakerUnknown"
   ],
 
   "ro": [
@@ -8879,7 +8951,16 @@
     "seminarEvidenceScopeConceptGraph",
     "customSkillsExampleName",
     "customSkillsExampleDescription",
-    "customSkillsExamplePrompt"
+    "customSkillsExamplePrompt",
+    "conversationTreeTitle",
+    "conversationTreeEmpty",
+    "conversationTreeClose",
+    "conversationTreeSpeakerYou",
+    "conversationTreeSpeakerAi",
+    "conversationTreeSpeakerSystem",
+    "conversationTreeSpeakerTool",
+    "conversationTreeSpeakerCustom",
+    "conversationTreeSpeakerUnknown"
   ],
 
   "ru": [
@@ -9866,7 +9947,16 @@
     "seminarEvidenceScopeConceptGraph",
     "customSkillsExampleName",
     "customSkillsExampleDescription",
-    "customSkillsExamplePrompt"
+    "customSkillsExamplePrompt",
+    "conversationTreeTitle",
+    "conversationTreeEmpty",
+    "conversationTreeClose",
+    "conversationTreeSpeakerYou",
+    "conversationTreeSpeakerAi",
+    "conversationTreeSpeakerSystem",
+    "conversationTreeSpeakerTool",
+    "conversationTreeSpeakerCustom",
+    "conversationTreeSpeakerUnknown"
   ],
 
   "tr": [
@@ -10853,7 +10943,16 @@
     "seminarEvidenceScopeConceptGraph",
     "customSkillsExampleName",
     "customSkillsExampleDescription",
-    "customSkillsExamplePrompt"
+    "customSkillsExamplePrompt",
+    "conversationTreeTitle",
+    "conversationTreeEmpty",
+    "conversationTreeClose",
+    "conversationTreeSpeakerYou",
+    "conversationTreeSpeakerAi",
+    "conversationTreeSpeakerSystem",
+    "conversationTreeSpeakerTool",
+    "conversationTreeSpeakerCustom",
+    "conversationTreeSpeakerUnknown"
   ],
 
   "zh": [
@@ -11266,7 +11365,16 @@
     "aiModelsRefreshFailed",
     "aiTabNew",
     "aiTabClose",
-    "aiTabNewChat"
+    "aiTabNewChat",
+    "conversationTreeTitle",
+    "conversationTreeEmpty",
+    "conversationTreeClose",
+    "conversationTreeSpeakerYou",
+    "conversationTreeSpeakerAi",
+    "conversationTreeSpeakerSystem",
+    "conversationTreeSpeakerTool",
+    "conversationTreeSpeakerCustom",
+    "conversationTreeSpeakerUnknown"
   ],
 
   "zh_LZH": [
@@ -12215,7 +12323,16 @@
     "seminarEvidenceScopeConceptGraph",
     "customSkillsExampleName",
     "customSkillsExampleDescription",
-    "customSkillsExamplePrompt"
+    "customSkillsExamplePrompt",
+    "conversationTreeTitle",
+    "conversationTreeEmpty",
+    "conversationTreeClose",
+    "conversationTreeSpeakerYou",
+    "conversationTreeSpeakerAi",
+    "conversationTreeSpeakerSystem",
+    "conversationTreeSpeakerTool",
+    "conversationTreeSpeakerCustom",
+    "conversationTreeSpeakerUnknown"
   ],
 
   "zh_TW": [
@@ -13164,6 +13281,15 @@
     "seminarEvidenceScopeConceptGraph",
     "customSkillsExampleName",
     "customSkillsExampleDescription",
-    "customSkillsExamplePrompt"
+    "customSkillsExamplePrompt",
+    "conversationTreeTitle",
+    "conversationTreeEmpty",
+    "conversationTreeClose",
+    "conversationTreeSpeakerYou",
+    "conversationTreeSpeakerAi",
+    "conversationTreeSpeakerSystem",
+    "conversationTreeSpeakerTool",
+    "conversationTreeSpeakerCustom",
+    "conversationTreeSpeakerUnknown"
   ]
 }

@@ -2280,5 +2280,14 @@
   "seminarEvidenceScopeConceptGraph": "concept-graph",
   "customSkillsExampleName": "Slow Reader",
   "customSkillsExampleDescription": "Explain one passage with local evidence.",
-  "customSkillsExamplePrompt": "Move slowly. Use current-book evidence and name uncertainty before making a claim."
+  "customSkillsExamplePrompt": "Move slowly. Use current-book evidence and name uncertainty before making a claim.",
+  "conversationTreeTitle": "Conversation tree",
+  "conversationTreeEmpty": "No conversation branches yet.",
+  "conversationTreeClose": "Close",
+  "conversationTreeSpeakerYou": "You",
+  "conversationTreeSpeakerAi": "AI",
+  "conversationTreeSpeakerSystem": "System",
+  "conversationTreeSpeakerTool": "Tool",
+  "conversationTreeSpeakerCustom": "Custom",
+  "conversationTreeSpeakerUnknown": "Message"
 }

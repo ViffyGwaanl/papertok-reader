@@ -1850,5 +1850,14 @@
     "placeholders": {
       "message": {}
     }
-  }
+  },
+  "conversationTreeTitle": "对话树",
+  "conversationTreeEmpty": "还没有对话分支。",
+  "conversationTreeClose": "关闭",
+  "conversationTreeSpeakerYou": "你",
+  "conversationTreeSpeakerAi": "AI",
+  "conversationTreeSpeakerSystem": "系统",
+  "conversationTreeSpeakerTool": "工具",
+  "conversationTreeSpeakerCustom": "自定义",
+  "conversationTreeSpeakerUnknown": "消息"
 }
