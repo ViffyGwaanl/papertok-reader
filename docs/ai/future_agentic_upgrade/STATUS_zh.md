@@ -14,7 +14,7 @@
 | P4 | AI 辅助产物保存与 Review 异常中心 | backlog(暂停) | 内联保存已可用;AI 预审并入 P2 之后评估 | `priority_plans/P4_*.md` |
 | P5 | 同步/恢复/测试/发布 | in progress(按发布节奏) | 每次 release 跟随既有 SOP | `docs/SOP_RELEASE_AUTOMATION_zh.md` |
 | P6 | AI Chat 多分支对话树状可视化(呈现多分支对话结构,可点击切分支) | 待真机验收 | 批次 1–4 已完成(数据/provider/浮层/入口切换);批次 5 未启动,等用户审+真机看 | `briefs/P6_conversation_tree_zh.md` |
-| B1 | 阅读器选区扩展后高亮/AI 研讨仍只用首次选区(iOS 触屏拖手柄扩展不重发选区) | backlog | 根因:`book.js` Apple 触屏分支只在 pointerup 重发选区,拖手柄无 pointerup 且无 selectionchange 兜底(Win 触屏/鸿蒙都有);加防抖兜底重发最终选区。排 P6 当前轮返回后,用户可提前 | chat 指令 / `assets/foliate-js/src/book.js` |
+| B1 | 阅读器选区扩展后高亮/AI 研讨仍只用首次选区(iOS 触屏拖手柄扩展不重发选区) | 待真机验收 | Apple 触屏 selectionchange 防抖兜底已补,鼠标 pointerup 直发保留;等用户真机验收三项 | chat 指令 / `assets/foliate-js/src/book.js` |
 
 ## P1 已知缺口与砍掉项(2026-06-11 用户决策更新)
 

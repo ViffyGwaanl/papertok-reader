@@ -227,9 +227,34 @@ const setSelectionHandler = (view, doc, index) => {
     || navigator.platform.includes('iPhone')
     || navigator.platform.includes('iPad')
   ) {
-    doc.addEventListener('pointerup', () => {
+    let isMouseSelecting = false;
+    doc.addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      isMouseSelecting = true;
+    });
+    doc.addEventListener('pointerup', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      isMouseSelecting = false;
       if (shouldSkipPointerUp()) return;
       handleSelection(view, doc, index);
+    });
+    doc.addEventListener('pointercancel', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      isMouseSelecting = false;
+    });
+
+    let debounceTimerId = undefined;
+    doc.addEventListener('selectionchange', () => {
+      if (isMouseSelecting) return;
+
+      const selRange = getSelectionRange(doc.getSelection());
+      if (!selRange) return;
+
+      clearTimeout(debounceTimerId);
+      debounceTimerId = setTimeout(() => {
+        if (shouldSkipPointerUp()) return;
+        handleSelection(view, doc, index);
+      }, 550);
     });
   }
   else if (navigator.platform.includes('Win')) {
