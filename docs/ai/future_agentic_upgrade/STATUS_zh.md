@@ -1,13 +1,13 @@
 # 状态表(唯一)
 
 > 规则:每个切片只改本表对应行;状态只有 backlog / in progress / 待真机验收 / done;done 只能由用户标。
-> 最后更新:2026-06-11
+> 最后更新:2026-07-03(新增体验重建 E1/E2/E3,总控见 `EXPERIENCE_REBUILD_PLAN_zh.md`)
 
 | 任务 | 内容 | 状态 | 下一步 | 验收/Brief |
 | --- | --- | --- | --- | --- |
 | P1 | AI Chat 原生研讨会(收口为"观看+追问"形态) | done | 真机 v6 全量通过(2026-06-17,build 6533),用户确认收口;详见验收记录 | `briefs/P1_ACCEPTANCE_zh.md`(v6) |
 | R1 | 拆分 ai_chat_stream.dart god file | done | Seminar 渲染视图全部抽至 seminar/(各≤787、83 测试、纯机械);god file 16618→11667。用户拍板收口(2026-06-17),原 ≤3000 目标作废、改为现实 DoD(见 brief);深拆 State 留作未来重构 | `briefs/R1_godfile_split_zh.md` |
-| R2 | 事件流单一数据源,删 snapshot 双写与 fallback | backlog | R1 后;第一批产出删除清单 ADR | `briefs/R2_event_ssot_zh.md` |
+| R2 | 事件流单一数据源,删 snapshot 双写与 fallback | backlog | A 线第一步;第一批产出删除清单 ADR;旧研讨历史方向=放弃不迁移(2026-07-03 用户授权,开工时确认) | `briefs/R2_event_ssot_zh.md` |
 | R3 | Seminar 并入 sub-agent 平台(原 P1.5/S7) | backlog | R2 后;自由工具 loop、统一 streaming 组件、**读者参与重生(主输入框路由,P1 冻结移交)**在此实现 | `briefs/R3_agent_platform_merge_zh.md` |
 | P2 | Understand-Anything 式全书 AI 理解地图 | backlog | R1–R3 完成后,开工前重写 brief | 旧版 `priority_plans/P2_*.md` 仅作参考 |
 | P3 | 智能索引/语义检索/ANN 底座 | backlog(暂停) | 生产级 ANN 打包、恢复式构建并入 R2 之后评估 | `priority_plans/P3_*.md` |
@@ -15,6 +15,9 @@
 | P5 | 同步/恢复/测试/发布 | in progress(按发布节奏) | 每次 release 跟随既有 SOP | `docs/SOP_RELEASE_AUTOMATION_zh.md` |
 | P6 | AI Chat 多分支对话树状可视化(呈现多分支对话结构,可点击切分支) | 待真机验收 | 批次 1–4 规划者审过(纯净:新码在 conversation_tree/、provider+5/god file+33、5 测试);待含 P6+B1 的新 build 真机验收(brief §验收 5 项),过后做批次 5 收尾 | `briefs/P6_conversation_tree_zh.md` |
 | B1 | 阅读器选区扩展后高亮/AI 研讨仍只用首次选区(iOS 触屏拖手柄扩展不重发选区) | 待真机验收 | 规划者审过(只动 book.js+测试,修法正确,index.html 确认走 src 无需重打包);待同一新 build 真机验收三项 | chat 指令 / `assets/foliate-js/src/book.js` |
+| E1 | AI Chat 流式渲染局部化(消息级重建,根治生成期抖动) | backlog | R2 后、R3 前(A 线第二步);批次 1 先立 rebuild 探针靶子测试 | `briefs/E1_chat_render_locality_zh.md` |
+| E2 | 阅读翻译体验简化(自动重试、人话提示、收纳工程仪表) | backlog | 可与 A 线并行(文件不相交);批次 1 自动重试 | `briefs/E2_translate_ux_simplify_zh.md` |
+| E3 | 全局糙感清扫(zh 漏翻 372、裸错误文案 71 处、双击回顶、PaperTok 首屏) | 待真机验收 | 批次 1:zh 缺失已清零,待真机抽查;下一步批次 2 裸错误文案人话化;批次 5 等用户 E0 走查输入 | `briefs/E3_polish_sweep_zh.md` |
 
 ## P1 已知缺口与砍掉项(2026-06-11 用户决策更新)
 
