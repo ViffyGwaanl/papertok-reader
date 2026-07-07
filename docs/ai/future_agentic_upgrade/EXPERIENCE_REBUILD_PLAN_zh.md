@@ -11,6 +11,7 @@
 | A 线 | AI 对话重建:事件流单一数据源 → 渲染局部化 → 聊天即参与 | A1=R2(已有)、E1(新)、A2=R3(已有) | `briefs/R2_event_ssot_zh.md`、`briefs/E1_chat_render_locality_zh.md`、`briefs/R3_agent_platform_merge_zh.md` |
 | B 线 | 阅读翻译体验简化(去工程仪表盘、自动恢复、人话提示) | E2 | `briefs/E2_translate_ux_simplify_zh.md` |
 | C 线 | 全局糙感清扫(zh 漏翻、裸错误文案、双击回顶、PaperTok 首屏) | E3 | `briefs/E3_polish_sweep_zh.md` |
+| C 线 | 减法与聚焦(7 tab→4、设置树三段式、选区菜单≤5、AI 顶栏收纳、淘汰候选) | E4 | `briefs/E4_subtraction_focus_zh.md` |
 
 ## 顺序与并行规则
 

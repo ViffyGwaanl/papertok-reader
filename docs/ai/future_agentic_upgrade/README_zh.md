@@ -15,6 +15,7 @@
 | `PLANNER_LOOP_zh.md` | 规划者(Claude)角色契约:三方分工、每轮工作流、判断原则 |
 | `STATUS_zh.md` | 唯一状态表,P/R/B/E 各任务真实进度 |
 | `EXPERIENCE_REBUILD_PLAN_zh.md` | 体验重建期(2026-07)总控:A/B/C 三线映射、顺序、冻结规则 |
+| `GROWTH_PLAN_zh.md` | 增长计划(G 线,重建期后):传播/留存/获客六赌注与顺序 |
 | `briefs/<当前任务>_zh.md` | 当前任务的一页 brief |
 | `briefs/P1_ACCEPTANCE_zh.md` | P1 十步真机验收脚本 |
 | `priority_plans/P2..P5_*.md` | 后续优先级的简版计划(开工前按协议重写为 brief) |

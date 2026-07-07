@@ -18,6 +18,10 @@
 | E1 | AI Chat 流式渲染局部化(消息级重建,根治生成期抖动) | backlog | R2 后、R3 前(A 线第二步);批次 1 先立 rebuild 探针靶子测试 | `briefs/E1_chat_render_locality_zh.md` |
 | E2 | 阅读翻译体验简化(自动重试、人话提示、收纳工程仪表) | backlog | 可与 A 线并行(文件不相交);批次 1 自动重试 | `briefs/E2_translate_ux_simplify_zh.md` |
 | E3 | 全局糙感清扫(zh 漏翻 372、裸错误文案 71 处、双击回顶、PaperTok 首屏) | 待真机验收 | 批次 1:zh 缺失已清零,待真机抽查;下一步批次 2 裸错误文案人话化;批次 5 等用户 E0 走查输入 | `briefs/E3_polish_sweep_zh.md` |
+| E4 | 减法与聚焦(7 tab→4、设置树收纳、选区菜单 9→5) | in progress | 批次 1 done:决策清单已拍板(`briefs/E4_DECISION_LIST_zh.md`);下一步批次 2 首页 tab | `briefs/E4_subtraction_focus_zh.md` |
+| G1 | 分享资产三件套(书摘卡 2.0、研讨实录长图、读书报告) | backlog | 重建期收口后启动(G 线第一位);实录长图依赖 R2;开工前用户拍板水印/二维码 | `briefs/G1_share_artifacts_zh.md` |
+| G2 | 每日回顾循环(本地通知 + 记忆间隔重复回顾) | backlog | 重建期收口后,可与 G1 并行;通知权限时机开工前拍板 | `briefs/G2_daily_review_loop_zh.md` |
+| G0/G3–G5 | 零配置首航 / 研讨播客 / 跨书馆长 / PaperTok 日报 | backlog | 见 `GROWTH_PLAN_zh.md`;各自开工前重写为 brief | `GROWTH_PLAN_zh.md` |
 
 ## P1 已知缺口与砍掉项(2026-06-11 用户决策更新)
 
