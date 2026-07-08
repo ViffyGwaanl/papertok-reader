@@ -13,7 +13,9 @@
 | --- | --- |
 | `AGENT_PROTOCOL_zh.md` | 所有 agent 的工作契约(切片、状态、文档、验证规则) |
 | `PLANNER_LOOP_zh.md` | 规划者(Claude)角色契约:三方分工、每轮工作流、判断原则 |
-| `STATUS_zh.md` | 唯一状态表,P1–P5 + R1–R3 真实进度 |
+| `STATUS_zh.md` | 唯一状态表,P/R/B/E 各任务真实进度 |
+| `EXPERIENCE_REBUILD_PLAN_zh.md` | 体验重建期(2026-07)总控:A/B/C 三线映射、顺序、冻结规则 |
+| `GROWTH_PLAN_zh.md` | 增长计划(G 线,重建期后):传播/留存/获客六赌注与顺序 |
 | `briefs/<当前任务>_zh.md` | 当前任务的一页 brief |
 | `briefs/P1_ACCEPTANCE_zh.md` | P1 十步真机验收脚本 |
 | `priority_plans/P2..P5_*.md` | 后续优先级的简版计划(开工前按协议重写为 brief) |
@@ -23,7 +25,7 @@
 ## 当前优先级顺序
 
 1. **P1 收口**:用户按 `briefs/P1_ACCEPTANCE_zh.md` 真机验收,通过即标 done。
-2. **R1 → R2 → R3 架构清债**(见 `briefs/R*.md`):拆 god file、事件流单一数据源、Seminar 并入 sub-agent 平台。R3 完成 = 旧 P1.5(自由工具 loop、统一 streaming 组件)的地基就位。
+2. **R1 → P6 → R2 → R3 架构清债 + 对话树**(见 `briefs/*.md`):拆 god file;**R1 后插入 P6(AI Chat 多分支对话树状可视化,用户 2026-06-17 拍板前移)**;再做事件流单一数据源、Seminar 并入 sub-agent 平台。R3 完成 = 旧 P1.5(自由工具 loop、统一 streaming 组件)的地基就位。
 3. **P2 Understand-Anything 图谱**:R1–R3 完成后启动,开工前重写 brief。
 4. P3(ANN 底座)、P4(Review 异常中心)残余切片并入 R2/P2 顺带完成;P5(发布)按发布节奏走。
 

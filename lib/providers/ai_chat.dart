@@ -23,15 +23,14 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:langchain_core/chat_models.dart';
 
 part 'ai_chat.g.dart';
+part 'ai_chat_conversation_tree.dart';
 
 @Riverpod(keepAlive: true)
 class AiChatStreaming extends _$AiChatStreaming {
   @override
   bool build() => false;
 
-  void setStreaming(bool value) {
-    state = value;
-  }
+  void setStreaming(bool value) => state = value;
 }
 
 final aiChatContextNoticeProvider = StateProvider<String?>((ref) => null);
