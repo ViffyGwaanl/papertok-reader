@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/utils/get_path/get_cache_dir.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:langchain_core/chat_models.dart';
 
 class AiChatHistoryEntry {
@@ -182,8 +183,17 @@ class AiHistoryStore {
             .map(AiChatHistoryEntry.fromJson)
             .toList(growable: false);
       }
-    } catch (_) {
-      await file.delete();
+    } catch (e) {
+      // Never delete the user's entire conversation history over one bad
+      // write: quarantine the corrupt file so it stays recoverable.
+      AnxLog.severe('AiHistory: corrupt history file, quarantining', e);
+      try {
+        await file.rename(
+            '${file.path}.corrupt-${DateTime.now().millisecondsSinceEpoch}');
+      } catch (_) {
+        // Rename failed (e.g. permissions); keep the file in place rather
+        // than destroying it. Subsequent writes will overwrite it.
+      }
     }
     return <AiChatHistoryEntry>[];
   }
