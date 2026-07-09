@@ -77,7 +77,8 @@ CREATE TABLE tb_notes (
   type TEXT,
   color TEXT,
   create_time TEXT,
-  update_time TEXT
+  update_time TEXT,
+  reader_note TEXT
 )
 ''';
 
@@ -100,6 +101,11 @@ CREATE TABLE tb_groups (
   update_time TEXT,
   FOREIGN KEY (parent_id) REFERENCES tb_groups(id)
 )
+''';
+
+const insertRootGroupSQL = '''
+INSERT OR IGNORE INTO tb_groups (id, name, parent_id, create_time, update_time)
+VALUES (0, 'Root', NULL, datetime('now'), datetime('now'))
 ''';
 
 class DBHelper {
@@ -127,14 +133,16 @@ class DBHelper {
       case AnxPlatformEnum.ohos:
         final databasePath = await getAnxDataBasesPath();
         final path = join(databasePath, 'app_database.db');
-        return await openDatabase(
+        final db = await openDatabase(
           path,
           version: dbVersion,
           onCreate: (db, version) async {
-            onUpgradeDatabase(db, 0, version);
+            await onCreateDatabase(db, version);
           },
           onUpgrade: onUpgradeDatabase,
         );
+        await ensureCriticalSchema(db);
+        return db;
       case AnxPlatformEnum.ios:
       case AnxPlatformEnum.windows:
         sqfliteFfiInit();
@@ -144,16 +152,58 @@ class DBHelper {
         AnxLog.info('Database: database path: $databasePath');
         final path = join(databasePath, 'app_database.db');
 
-        return await databaseFactory.openDatabase(
+        final db = await databaseFactory.openDatabase(
           path,
           options: OpenDatabaseOptions(
             version: dbVersion,
             onCreate: (db, version) async {
-              onUpgradeDatabase(db, 0, version);
+              await onCreateDatabase(db, version);
             },
             onUpgrade: onUpgradeDatabase,
           ),
         );
+        await ensureCriticalSchema(db);
+        return db;
+    }
+  }
+
+  /// Creates the complete current-version schema for a fresh install.
+  ///
+  /// Fresh installs must NOT run the upgrade chain: createBookSQL already
+  /// bakes in columns (rating, group_id, ...) that the chain re-adds via
+  /// ALTER TABLE, which throws "duplicate column" and aborts everything
+  /// after it (tb_groups, reader_note) — leaving the install permanently
+  /// unable to save highlights, notes, or groups.
+  Future<void> onCreateDatabase(Database db, int version) async {
+    AnxLog.info('Database: create fresh database version $version');
+    await db.execute(createBookSQL);
+    await db.execute(createNoteSQL);
+    await db.execute(createThemeSQL);
+    await db.execute(createStyleSQL);
+    await db.execute(createReadingTimeSQL);
+    await db.execute(createGroupSQL);
+    await db.execute(primaryTheme1);
+    await db.execute(primaryTheme2);
+    await db.execute(insertRootGroupSQL);
+  }
+
+  /// Repairs databases created by builds where the fresh-install migration
+  /// chain aborted mid-way (missing tb_groups / tb_notes.reader_note).
+  /// Idempotent; a no-op on healthy databases.
+  Future<void> ensureCriticalSchema(Database db) async {
+    final groups = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'tb_groups'");
+    if (groups.isEmpty) {
+      AnxLog.warning('Database: repairing missing tb_groups table');
+      await db.execute(createGroupSQL);
+      await db.execute(insertRootGroupSQL);
+    }
+    final noteColumns = await db.rawQuery('PRAGMA table_info(tb_notes)');
+    final hasReaderNote =
+        noteColumns.any((column) => column['name'] == 'reader_note');
+    if (!hasReaderNote) {
+      AnxLog.warning('Database: repairing missing tb_notes.reader_note column');
+      await db.execute('ALTER TABLE tb_notes ADD COLUMN reader_note TEXT');
     }
   }
 
@@ -320,18 +370,13 @@ class DBHelper {
   Future<void> onUpgradeDatabase(
       Database db, int oldVersion, int newVersion) async {
     AnxLog.info('Database: upgrade database from $oldVersion to $newVersion');
+    if (oldVersion == 0) {
+      // Fresh installs go through onCreateDatabase; running the ALTER chain
+      // against the baked-in createBookSQL columns throws duplicate-column.
+      await onCreateDatabase(db, newVersion);
+      return;
+    }
     switch (oldVersion) {
-      case 0:
-        AnxLog.info('Database: create database version $newVersion');
-        await db.execute(createBookSQL);
-        await db.execute(createNoteSQL);
-        await db.execute(createThemeSQL);
-        await db.execute(createStyleSQL);
-        await db.execute(createReadingTimeSQL);
-        await db.execute(primaryTheme1);
-        await db.execute(primaryTheme2);
-        continue case1;
-      case1:
       case 1:
         // add a column (rating) to tb_books
         await db.execute('ALTER TABLE tb_books ADD COLUMN rating REAL');
