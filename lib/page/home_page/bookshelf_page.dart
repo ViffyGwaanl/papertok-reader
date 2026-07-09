@@ -43,6 +43,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:path/path.dart' as p;
 
+/// Grid column count for the bookshelf; clamped to at least 1 because
+/// SliverGridDelegateWithFixedCrossAxisCount asserts crossAxisCount > 0 and
+/// narrow windows (e.g. resized macOS) can make maxWidth < cover width.
+int bookshelfCrossAxisCount(double maxWidth, double coverWidth) =>
+    max(1, maxWidth ~/ coverWidth);
+
 class BookshelfPage extends ConsumerStatefulWidget {
   const BookshelfPage({super.key, this.controller});
   final ScrollController? controller;
@@ -510,8 +516,9 @@ class BookshelfPageState extends ConsumerState<BookshelfPage>
                                     const EdgeInsets.fromLTRB(20, 12, 20, 80),
                                 gridDelegate:
                                     SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: constraints.maxWidth ~/
-                                      Prefs().bookCoverWidth,
+                                  crossAxisCount: bookshelfCrossAxisCount(
+                                      constraints.maxWidth,
+                                      Prefs().bookCoverWidth),
                                   childAspectRatio: 1 / 2.1,
                                   mainAxisSpacing: 30,
                                   crossAxisSpacing: 20,

@@ -78,8 +78,28 @@ class TtsHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
     });
   }
 
+  /// Builds the lock-screen media item from the active reading page, or
+  /// returns null when no book is open (e.g. a headset play command or an
+  /// audio-interruption resume arriving after the book was closed).
+  static MediaItem? readerMediaItem() {
+    final reader = epubPlayerKey.currentState;
+    if (reader == null) return null;
+    return MediaItem(
+      id: reader.chapterTitle,
+      title: reader.chapterTitle,
+      album: reader.book.title,
+      artist: reader.book.author,
+      // Use -1 to tell system not to render a progress bar.
+      duration: const Duration(milliseconds: -1),
+      artUri: Uri.tryParse('file://${reader.book.coverFullPath}'),
+    );
+  }
+
   @override
   Future<void> play() async {
+    final item = readerMediaItem();
+    if (item == null) return;
+
     final session = await AudioSession.instance;
     if (await session.setActive(true)) {
       playbackState.add(playbackState.value.copyWith(
@@ -88,17 +108,6 @@ class TtsHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
         playing: true,
       ));
     }
-
-    final item = MediaItem(
-      id: epubPlayerKey.currentState!.chapterTitle,
-      title: epubPlayerKey.currentState!.chapterTitle,
-      album: epubPlayerKey.currentState!.book.title,
-      artist: epubPlayerKey.currentState!.book.author,
-      // Use -1 to tell system not to render a progress bar.
-      duration: const Duration(milliseconds: -1),
-      artUri: Uri.tryParse(
-          'file://${epubPlayerKey.currentState!.book.coverFullPath}'),
-    );
 
     // Ensure system receives queue + active index for control center metadata.
     queue.add([item]);
