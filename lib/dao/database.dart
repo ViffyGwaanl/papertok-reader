@@ -188,22 +188,37 @@ class DBHelper {
   }
 
   /// Repairs databases created by builds where the fresh-install migration
-  /// chain aborted mid-way (missing tb_groups / tb_notes.reader_note).
-  /// Idempotent; a no-op on healthy databases.
+  /// chain aborted mid-way (missing tb_notes / tb_groups / reader_note).
+  /// Idempotent; a no-op on healthy databases. Best-effort: a repair
+  /// failure must never block app startup.
   Future<void> ensureCriticalSchema(Database db) async {
-    final groups = await db.rawQuery(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'tb_groups'");
-    if (groups.isEmpty) {
-      AnxLog.warning('Database: repairing missing tb_groups table');
-      await db.execute(createGroupSQL);
+    try {
+      final notes = await db.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'tb_notes'");
+      if (notes.isEmpty) {
+        AnxLog.warning('Database: repairing missing tb_notes table');
+        await db.execute(createNoteSQL);
+      } else {
+        final noteColumns = await db.rawQuery('PRAGMA table_info(tb_notes)');
+        final hasReaderNote =
+            noteColumns.any((column) => column['name'] == 'reader_note');
+        if (!hasReaderNote) {
+          AnxLog.warning(
+              'Database: repairing missing tb_notes.reader_note column');
+          await db.execute('ALTER TABLE tb_notes ADD COLUMN reader_note TEXT');
+        }
+      }
+      final groups = await db.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'tb_groups'");
+      if (groups.isEmpty) {
+        AnxLog.warning('Database: repairing missing tb_groups table');
+        await db.execute(createGroupSQL);
+      }
+      // Always re-assert the root row: INSERT OR IGNORE is a no-op when it
+      // exists and covers a kill between table creation and seeding.
       await db.execute(insertRootGroupSQL);
-    }
-    final noteColumns = await db.rawQuery('PRAGMA table_info(tb_notes)');
-    final hasReaderNote =
-        noteColumns.any((column) => column['name'] == 'reader_note');
-    if (!hasReaderNote) {
-      AnxLog.warning('Database: repairing missing tb_notes.reader_note column');
-      await db.execute('ALTER TABLE tb_notes ADD COLUMN reader_note TEXT');
+    } catch (e, st) {
+      AnxLog.severe('Database: ensureCriticalSchema failed', e, st);
     }
   }
 
@@ -373,6 +388,8 @@ class DBHelper {
     if (oldVersion == 0) {
       // Fresh installs go through onCreateDatabase; running the ALTER chain
       // against the baked-in createBookSQL columns throws duplicate-column.
+      // Defensive-only: production initDB always supplies onCreate, so
+      // sqflite never routes version 0 here unless that wiring changes.
       await onCreateDatabase(db, newVersion);
       return;
     }

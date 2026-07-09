@@ -172,17 +172,22 @@ class AiHistoryStore {
     try {
       final content = await file.readAsString();
       final decoded = json.decode(content);
-      if (decoded is List) {
-        return decoded
-            .whereType<Map>()
-            .map((e) => Map<String, dynamic>.fromEntries(
-                  e.entries.map(
-                    (entry) => MapEntry(entry.key.toString(), entry.value),
-                  ),
-                ))
-            .map(AiChatHistoryEntry.fromJson)
-            .toList(growable: false);
+      if (decoded is! List) {
+        throw const FormatException('history root is not a list');
       }
+      return decoded
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.fromEntries(
+                e.entries.map(
+                  (entry) => MapEntry(entry.key.toString(), entry.value),
+                ),
+              ))
+          .map(AiChatHistoryEntry.fromJson)
+          .toList(growable: false);
+    } on FileSystemException catch (e) {
+      // Transient IO failure (locked/permissions): the content may be
+      // perfectly healthy, so leave the file untouched for this read.
+      AnxLog.warning('AiHistory: read failed, leaving file in place: $e');
     } catch (e) {
       // Never delete the user's entire conversation history over one bad
       // write: quarantine the corrupt file so it stays recoverable.
@@ -196,6 +201,14 @@ class AiHistoryStore {
       }
     }
     return <AiChatHistoryEntry>[];
+  }
+
+  /// Writes are atomic (temp file + rename) so a concurrent reader can
+  /// never observe a truncated/partial file and mis-quarantine it.
+  static Future<void> _writeAtomically(File file, String content) async {
+    final tmp = File('${file.path}.tmp');
+    await tmp.writeAsString(content, flush: true);
+    await tmp.rename(file.path);
   }
 
   static Future<void> upsertEntry(AiChatHistoryEntry entry) async {
@@ -215,7 +228,8 @@ class AiHistoryStore {
     final limit = maxCount <= 0 ? history.length : maxCount;
     final limited = history.take(limit).toList(growable: false);
 
-    await file.writeAsString(
+    await _writeAtomically(
+      file,
       json.encode(limited.map((e) => e.toJson()).toList(growable: false)),
     );
   }
@@ -225,7 +239,8 @@ class AiHistoryStore {
     final history = List<AiChatHistoryEntry>.from(await readHistory());
     final filtered =
         history.where((element) => element.id != id).toList(growable: false);
-    await file.writeAsString(
+    await _writeAtomically(
+      file,
       json.encode(filtered.map((e) => e.toJson()).toList(growable: false)),
     );
   }

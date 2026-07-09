@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/dao/database.dart';
@@ -132,5 +135,71 @@ CREATE TABLE tb_notes (
     root = await db.rawQuery('SELECT id FROM tb_groups WHERE id = 0');
     expect(root, hasLength(1));
     await db.close();
+  });
+
+  test('ensureCriticalSchema handles a db missing tb_notes entirely',
+      () async {
+    // A kill during the old unawaited onCreate could commit user_version=8
+    // with only tb_books created; the repair must heal it, not crash boot.
+    final db = await databaseFactory.openDatabase(inMemoryDatabasePath);
+    await db.execute(createBookSQL);
+
+    await DBHelper().ensureCriticalSchema(db);
+
+    expect(await hasTable(db, 'tb_notes'), isTrue);
+    expect(await hasColumn(db, 'tb_notes', 'reader_note'), isTrue);
+    expect(await hasTable(db, 'tb_groups'), isTrue);
+    await db.close();
+  });
+
+  test('ensureCriticalSchema restores a lost root group row', () async {
+    final db = await databaseFactory.openDatabase(inMemoryDatabasePath);
+    await db.execute(createBookSQL);
+    await db.execute(createNoteSQL);
+    await db.execute(createGroupSQL); // table exists, but no root row
+
+    await DBHelper().ensureCriticalSchema(db);
+
+    final root = await db.rawQuery('SELECT id FROM tb_groups WHERE id = 0');
+    expect(root, hasLength(1));
+    await db.close();
+  });
+
+  test('fresh install seeds the two default themes', () async {
+    final db = await databaseFactory.openDatabase(inMemoryDatabasePath);
+    await DBHelper().onCreateDatabase(db, currentDbVersion);
+    final themes = await db.rawQuery('SELECT id FROM tb_themes');
+    expect(themes, hasLength(2));
+    await db.close();
+  });
+
+  test('initDB opens a broken on-disk v8 db and repairs it (composition)',
+      () async {
+    final dir = await Directory.systemTemp.createTemp('db_migration_test');
+    addTearDown(() => dir.delete(recursive: true));
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.flutter.io/path_provider'),
+      (call) async => dir.path,
+    );
+
+    // Pre-place the broken-install shape at the real production path:
+    // user_version=8 with only tb_books, no tb_notes, no tb_groups.
+    final dbDir = Directory('${dir.path}/databases');
+    await dbDir.create(recursive: true);
+    final broken = await databaseFactory
+        .openDatabase('${dbDir.path}/app_database.db');
+    await broken.execute(createBookSQL);
+    await broken.execute('PRAGMA user_version = $currentDbVersion');
+    await broken.close();
+
+    final db = await DBHelper().initDB();
+    addTearDown(DBHelper.close);
+
+    expect(await hasTable(db, 'tb_notes'), isTrue);
+    expect(await hasColumn(db, 'tb_notes', 'reader_note'), isTrue);
+    expect(await hasTable(db, 'tb_groups'), isTrue);
+    final root = await db.rawQuery('SELECT id FROM tb_groups WHERE id = 0');
+    expect(root, hasLength(1));
   });
 }

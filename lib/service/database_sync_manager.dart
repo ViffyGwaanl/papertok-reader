@@ -192,6 +192,15 @@ class DatabaseSyncManager {
         final versionResult = await db.rawQuery('PRAGMA user_version');
         final dbVersion = versionResult.first.values.first as int;
 
+        if (dbVersion <= 0) {
+          // A version-0 file would be routed to onCreate on reopen, which
+          // hard-fails against existing tables and leaves the local db
+          // un-openable. Never accept such a file from the remote.
+          return DatabaseValidationResult.invalid(
+            'Database version ($dbVersion) is invalid',
+          );
+        }
+
         if (dbVersion > currentDbVersion) {
           return DatabaseValidationResult.invalid(
             'Database version ($dbVersion) is newer than current version ($currentDbVersion)',

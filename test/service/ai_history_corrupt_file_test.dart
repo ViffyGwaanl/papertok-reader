@@ -37,4 +37,27 @@ void main() {
     // Store keeps working after quarantine.
     expect(await AiHistoryStore.readHistory(), isEmpty);
   });
+
+  test('valid JSON that is not a list is quarantined too', () async {
+    final dir = await Directory.systemTemp.createTemp('ai_history_test');
+    addTearDown(() => dir.delete(recursive: true));
+
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.flutter.io/path_provider'),
+      (call) async => dir.path,
+    );
+
+    final file = File('${dir.path}/${AiHistoryStore.historyFileName}');
+    await file.writeAsString('{"oops": true}');
+
+    expect(await AiHistoryStore.readHistory(), isEmpty);
+    expect(await file.exists(), isFalse);
+    final quarantined = dir
+        .listSync()
+        .whereType<File>()
+        .where((f) => f.path.contains('.corrupt-'))
+        .toList();
+    expect(quarantined, hasLength(1));
+  });
 }
