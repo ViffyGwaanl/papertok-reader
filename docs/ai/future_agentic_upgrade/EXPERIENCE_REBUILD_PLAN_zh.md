@@ -19,7 +19,9 @@
 2. **A 线严格串行:R2 → E1 → R3**。R2 删双写/fallback 后,E1 的局部化才不用为兼容层做两套;R3 的统一 streaming 组件必须落在 E1 的按消息重建架构上。
 3. **E2 可与 A 线并行**,前提:不碰 A 线文件(E2 只动 `lib/widgets/reading_page/`、`lib/service/translate/`、ARB;A 线只动 `lib/widgets/ai/`、`lib/providers/ai_chat*.dart`、`lib/service/ai/`)。同一 PR/commit 不得跨线。
 4. **R2 批次 1 的用户拍板项已定**:放弃旧研讨运行历史,不做迁移批次(用户 2026-07-03 授权方向;正式生效前在 STATUS 行确认一次)。
-5. **冻结规则:重建期内不接受任何新功能切片**(P6 批次 5 收尾除外)。新想法一律记入 STATUS backlog,重建期后排。
+5. **冻结规则:重建期内不接受任何新功能切片**(P6 批次 5 收尾、S1/S2、G1a 除外)。新想法一律记入 STATUS backlog,重建期后排。
+   - S1(数据完整性/崩溃修复)、S2(核心能力缺口:PDF AI取证空内容、KnowledgeCard无主页)均来自 2026-07 审查,是"功能不存在",不是"体验不够好",不受冻结规则约束,brief 见 `briefs/S1_data_integrity_zh.md`、`briefs/S2_core_capability_gaps_zh.md`。
+   - G1a(书摘卡2.0、读书报告,原 G1 批次 2/4)2026-07-09 复核后拆出:不碰任何高风险文件、与 R2/R3 无技术依赖,继续跟 G1b(研讨实录长图,依赖R2)绑在一起排队属于不必要的调度耦合,予以拆分单独放行,brief 见 `briefs/G1_share_artifacts_zh.md`。
 
 ## 批次 0(全期只做一次,任何线开工前)
 

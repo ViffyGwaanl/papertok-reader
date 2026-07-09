@@ -1,15 +1,20 @@
 # 状态表(唯一)
 
 > 规则:每个切片只改本表对应行;状态只有 backlog / in progress / 待真机验收 / done;done 只能由用户标。
-> 最后更新:2026-07-03(新增体验重建 E1/E2/E3,总控见 `EXPERIENCE_REBUILD_PLAN_zh.md`)
+> 最后更新:2026-07-09(新增 S1 数据完整性线,冻结规则例外,见 `EXPERIENCE_REBUILD_PLAN_zh.md`)
 
 | 任务 | 内容 | 状态 | 下一步 | 验收/Brief |
 | --- | --- | --- | --- | --- |
+| S1 | 数据完整性与崩溃修复(全新安装无法存高亮/笔记、WebDAV 同步丢数据、TTS/书架崩溃、AI历史损坏即删库) | backlog | 批次1(DB migration)最高优先级;批次4(WebDAV)开工前需用户对合并策略拍板 | `briefs/S1_data_integrity_zh.md` |
+| S2 | 核心能力缺口(PDF对全部AI取证工具静默空内容、KnowledgeCard本体无主页存卡即消失) | backlog | 批次1(PDF)、批次2(KnowledgeCard列表页)均可直接开工,无需用户先拍板 | `briefs/S2_core_capability_gaps_zh.md` |
+| S3 | 信任快赢集(研讨成本显示、CBZ放行、隐私可见化、零配置查词) | backlog | 不单独出包,随 S1/S2/P6 验收 build 搭车;批次4入口位置服从 E4 决策清单 | `briefs/S3_trust_quick_wins_zh.md` |
+| P7 | Android 平台启用(系统性回归+Google Play/APK 发布;用户拍板不上大陆商店) | backlog | S1 批次1 落地后开工;批次1 按 ANDROID_QA_CHECKLIST 全量回归 | `briefs/P7_android_enablement_zh.md` |
+| E5 | 无障碍基线(Semantics 覆盖、VoiceOver 阅读面、图标 tooltip) | backlog | 重建期后;开工前写 brief(首片:选区菜单+图标按钮语义标签;阅读面 VoiceOver 模式单列) | 开工前写 brief |
 | P1 | AI Chat 原生研讨会(收口为"观看+追问"形态) | done | 真机 v6 全量通过(2026-06-17,build 6533),用户确认收口;详见验收记录 | `briefs/P1_ACCEPTANCE_zh.md`(v6) |
 | R1 | 拆分 ai_chat_stream.dart god file | done | Seminar 渲染视图全部抽至 seminar/(各≤787、83 测试、纯机械);god file 16618→11667。用户拍板收口(2026-06-17),原 ≤3000 目标作废、改为现实 DoD(见 brief);深拆 State 留作未来重构 | `briefs/R1_godfile_split_zh.md` |
 | R2 | 事件流单一数据源,删 snapshot 双写与 fallback | backlog | A 线第一步;第一批产出删除清单 ADR;旧研讨历史方向=放弃不迁移(2026-07-03 用户授权,开工时确认) | `briefs/R2_event_ssot_zh.md` |
 | R3 | Seminar 并入 sub-agent 平台(原 P1.5/S7) | backlog | R2 后;自由工具 loop、统一 streaming 组件、**读者参与重生(主输入框路由,P1 冻结移交)**在此实现 | `briefs/R3_agent_platform_merge_zh.md` |
-| P2 | Understand-Anything 式全书 AI 理解地图 | backlog | R1–R3 完成后,开工前重写 brief | 旧版 `priority_plans/P2_*.md` 仅作参考 |
+| P2 | Understand-Anything 式全书 AI 理解地图 | backlog | R1–R3 完成后,开工前重写 brief;重写时差异化叙事改打"跳回原书锚点+对抗式多角色"(引用溯源已被 NotebookLM 变为免费标配);前置补 S2 批次1(PDF 取文原语) | 旧版 `priority_plans/P2_*.md` 仅作参考 |
 | P3 | 智能索引/语义检索/ANN 底座 | backlog(暂停) | 生产级 ANN 打包、恢复式构建并入 R2 之后评估 | `priority_plans/P3_*.md` |
 | P4 | AI 辅助产物保存与 Review 异常中心 | backlog(暂停) | 内联保存已可用;AI 预审并入 P2 之后评估 | `priority_plans/P4_*.md` |
 | P5 | 同步/恢复/测试/发布 | in progress(按发布节奏) | 每次 release 跟随既有 SOP | `docs/SOP_RELEASE_AUTOMATION_zh.md` |
@@ -19,9 +24,12 @@
 | E2 | 阅读翻译体验简化(自动重试、人话提示、收纳工程仪表) | backlog | 可与 A 线并行(文件不相交);批次 1 自动重试 | `briefs/E2_translate_ux_simplify_zh.md` |
 | E3 | 全局糙感清扫(zh 漏翻 372、裸错误文案 71 处、双击回顶、PaperTok 首屏) | 待真机验收 | 批次 1:zh 缺失已清零,待真机抽查;下一步批次 2 裸错误文案人话化;批次 5 等用户 E0 走查输入 | `briefs/E3_polish_sweep_zh.md` |
 | E4 | 减法与聚焦(7 tab→4、设置树收纳、选区菜单 9→5) | in progress | 批次 1 done:决策清单已拍板(`briefs/E4_DECISION_LIST_zh.md`);下一步批次 2 首页 tab | `briefs/E4_subtraction_focus_zh.md` |
-| G1 | 分享资产三件套(书摘卡 2.0、研讨实录长图、读书报告) | backlog | 重建期收口后启动(G 线第一位);实录长图依赖 R2;开工前用户拍板水印/二维码 | `briefs/G1_share_artifacts_zh.md` |
+| G1a | 分享资产:书摘卡 2.0、读书报告(不含实录长图) | backlog | 不受冻结规则约束,可直接开工(2026-07-09 复核:不碰高风险文件、无R2/R3依赖);开工前用户拍板水印/二维码 | `briefs/G1_share_artifacts_zh.md` |
+| G1b | 分享资产:研讨会实录长图 | backlog | 依赖 R2 后干净事件流,维持原排期 | `briefs/G1_share_artifacts_zh.md` |
 | G2 | 每日回顾循环(本地通知 + 记忆间隔重复回顾) | backlog | 重建期收口后,可与 G1 并行;通知权限时机开工前拍板 | `briefs/G2_daily_review_loop_zh.md` |
-| G0/G3–G5 | 零配置首航 / 研讨播客 / 跨书馆长 / PaperTok 日报 | backlog | 见 `GROWTH_PLAN_zh.md`;各自开工前重写为 brief | `GROWTH_PLAN_zh.md` |
+| G0/G3/G5 | 零配置首航 / 研讨播客 / PaperTok 日报 | backlog | 见 `GROWTH_PLAN_zh.md`;G0 商业形状已拍板(免费额度代理,不做订阅);各自开工前重写为 brief | `GROWTH_PLAN_zh.md` |
+| G4a | 跨书馆长轻量 MVP(记忆正文戳书名 + prompt 引导 + 跨书引用角标) | backlog | 与 R3 正交,重建期后可与 G1b/G2 并行;开工前写 brief | `GROWTH_PLAN_zh.md` §排期修正 |
+| G4b | 跨书馆长完整形态 | backlog | R3 后 | `GROWTH_PLAN_zh.md` |
 
 ## P1 已知缺口与砍掉项(2026-06-11 用户决策更新)
 
