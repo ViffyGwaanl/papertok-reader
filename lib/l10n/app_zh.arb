@@ -1612,6 +1612,8 @@
   "aiSectionTools": "工具",
   "navBarPapers": "PaperTok",
   "navBarDiscover": "发现",
+  "papersFeedLoadFailed": "加载失败，请检查网络后重试。",
+  "papersShowLikedAction": "查看已收藏",
   "navBarMine": "我的",
   "settingsHomeNavigation": "首页导航",
   "settingsHomeNavigationSubtitle": "调整首页标签顺序，并设置显示/隐藏",

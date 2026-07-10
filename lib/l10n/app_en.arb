@@ -1777,6 +1777,8 @@
   "aiChatEndSessionAction": "End session",
   "navBarPapers": "PaperTok",
   "navBarDiscover": "Discover",
+  "papersFeedLoadFailed": "Couldn't load the feed. Check your network and retry.",
+  "papersShowLikedAction": "View liked papers",
   "navBarMine": "Me",
   "settingsHomeNavigation": "Home navigation",
   "settingsHomeNavigationSubtitle": "Reorder home tabs and toggle visibility",

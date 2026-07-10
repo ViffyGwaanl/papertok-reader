@@ -6,6 +6,7 @@ import 'package:papertok_reader/page/papers/paper_detail_page.dart';
 import 'package:papertok_reader/service/papertok/models.dart';
 import 'package:papertok_reader/service/papertok/papertok_api.dart';
 import 'package:papertok_reader/theme/morandi_palette.dart';
+import 'package:papertok_reader/utils/log/common.dart';
 import 'package:papertok_reader/utils/page_transitions.dart';
 import 'package:papertok_reader/widgets/common/pt_bottom_sheet.dart';
 import 'package:papertok_reader/widgets/common/pt_dialog.dart';
@@ -106,8 +107,9 @@ class _PapersPageState extends State<PapersPage> {
 
       // For 'latest', the upstream API treats the parameter as "today's
       // date" and may return empty when today has no papers. Resolve the
-      // most-recent day with content first by sampling 'all', then
-      // re-fetch targeted at that day.
+      // most-recent day with content by sampling 'all', and reuse those
+      // sampled cards directly so first paint normally costs one request.
+      var probeSameDay = const <PaperTokCard>[];
       if (effectiveDay == 'latest' && reset) {
         final probe = await PaperTokApi.instance.fetchRandomPapers(
           limit: 50,
@@ -121,13 +123,22 @@ class _PapersPageState extends State<PapersPage> {
           if (maxDay == null || d.compareTo(maxDay) > 0) maxDay = d;
         }
         effectiveDay = maxDay ?? 'all';
+        probeSameDay = maxDay == null
+            ? probe
+            : probe
+                .where((c) => (c.day ?? '').trim() == maxDay)
+                .toList(growable: false);
       }
 
-      var next = await PaperTokApi.instance.fetchRandomPapers(
-        limit: 20,
-        lang: _lang,
-        day: effectiveDay,
-      );
+      var next = probeSameDay;
+      if (next.length < 20) {
+        final fetched = await PaperTokApi.instance.fetchRandomPapers(
+          limit: 20,
+          lang: _lang,
+          day: effectiveDay,
+        );
+        next = [...next, ...fetched];
+      }
 
       if (reset && next.isEmpty && effectiveDay != 'all') {
         effectiveDay = 'all';
@@ -154,6 +165,7 @@ class _PapersPageState extends State<PapersPage> {
         }
       }
     } catch (e) {
+      AnxLog.warning('PaperTok: feed load failed: $e');
       _error = e.toString();
     } finally {
       if (mounted) {
@@ -497,24 +509,43 @@ class _PapersPageState extends State<PapersPage> {
     }
 
     if (_cards.isEmpty && _error != null) {
+      final hasLikedSnapshots = Prefs().paperTokLikedSnapshots.isNotEmpty;
       return Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
           scrolledUnderElevation: 0,
-          title: Text(L10n.of(context).navBarPapers),
+          title: Text(L10n.of(context).navBarDiscover),
         ),
         body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(_error!),
-              const SizedBox(height: 12),
-              FilledButton(
-                onPressed: () => _loadMore(reset: true),
-                child: Text(L10n.of(context).commonRetry),
-              ),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.wifi_off_outlined, size: 40),
+                const SizedBox(height: 12),
+                Text(
+                  L10n.of(context).papersFeedLoadFailed,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                FilledButton(
+                  onPressed: () => _loadMore(reset: true),
+                  child: Text(L10n.of(context).commonRetry),
+                ),
+                if (hasLikedSnapshots) ...[
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () => setState(() {
+                      _error = null;
+                      _likedOnly = true;
+                    }),
+                    child: Text(L10n.of(context).papersShowLikedAction),
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       );
