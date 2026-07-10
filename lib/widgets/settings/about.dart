@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:papertok_reader/page/settings_page/subpage/privacy_policy_page.dart';
 
 import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
@@ -146,6 +147,16 @@ Future<void> openAboutDialog() async {
                     launchUrl(
                       Uri.parse('https://github.com/ViffyGwaanl'),
                       mode: LaunchMode.externalApplication,
+                    );
+                  },
+                ),
+                ListTile(
+                  title: Text(L10n.of(context).aboutPrivacyPolicy),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const PrivacyPolicyPage(),
+                      ),
                     );
                   },
                 ),

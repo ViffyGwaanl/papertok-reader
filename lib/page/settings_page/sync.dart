@@ -62,6 +62,7 @@ class _SyncSettingState extends ConsumerState<SyncSetting> {
             SettingsTile.navigation(
               title: Text(L10n.of(context).settingsSyncWebdav),
               leading: const Icon(Icons.cloud),
+              description: Text(L10n.of(context).syncPrivacyNote),
               value: Text(
                 Prefs().getSyncInfo(SyncProtocol.webdav)['url'] ?? 'Not set',
               ),
