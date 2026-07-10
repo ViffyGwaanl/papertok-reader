@@ -23,7 +23,7 @@
 | E1 | AI Chat 流式渲染局部化(消息级重建,根治生成期抖动) | backlog | R2 后、R3 前(A 线第二步);批次 1 先立 rebuild 探针靶子测试 | `briefs/E1_chat_render_locality_zh.md` |
 | E2 | 阅读翻译体验简化(自动重试、人话提示、收纳工程仪表) | backlog | 可与 A 线并行(文件不相交);批次 1 自动重试 | `briefs/E2_translate_ux_simplify_zh.md` |
 | E3 | 全局糙感清扫(zh 漏翻 372、裸错误文案 71 处、双击回顶、PaperTok 首屏) | 待真机验收 | 批次 1:zh 缺失已清零,待真机抽查;下一步批次 2 裸错误文案人话化;批次 5 等用户 E0 走查输入 | `briefs/E3_polish_sweep_zh.md` |
-| E4 | 减法与聚焦(7 tab→4、设置树收纳、选区菜单 9→5) | in progress | 批次 2 已实现(4 tab 默认+我的聚合页,老用户配置不迁移;分支 claude/s1-batches);下一步批次 3 设置树 | `briefs/E4_subtraction_focus_zh.md` |
+| E4 | 减法与聚焦(7 tab→4、设置树收纳、选区菜单 9→5) | in progress | 批次 2/3 已实现(4 tab+我的;极客入口收进开发者选项,图片分析降入 AI 设置);下一步批次 4 选区菜单 | `briefs/E4_subtraction_focus_zh.md` |
 | G1a | 分享资产:书摘卡 2.0、读书报告(不含实录长图) | backlog | 不受冻结规则约束,可直接开工(2026-07-09 复核:不碰高风险文件、无R2/R3依赖);开工前用户拍板水印/二维码 | `briefs/G1_share_artifacts_zh.md` |
 | G1b | 分享资产:研讨会实录长图 | backlog | 依赖 R2 后干净事件流,维持原排期 | `briefs/G1_share_artifacts_zh.md` |
 | G2 | 每日回顾循环(本地通知 + 记忆间隔重复回顾) | backlog | 重建期收口后,可与 G1 并行;通知权限时机开工前拍板 | `briefs/G2_daily_review_loop_zh.md` |

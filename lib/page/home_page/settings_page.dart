@@ -2,9 +2,6 @@ import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/page/settings_page/ai.dart';
 import 'package:papertok_reader/page/settings_page/ai_provider_center/ai_provider_center_page.dart';
-import 'package:papertok_reader/page/settings_page/ai_image_analysis.dart';
-import 'package:papertok_reader/page/settings_page/ai_tools.dart';
-import 'package:papertok_reader/page/settings_page/ai_library_index_page.dart';
 import 'package:papertok_reader/page/settings_page/review_inbox.dart';
 import 'package:papertok_reader/page/settings_page/memory.dart';
 import 'package:papertok_reader/page/settings_page/advanced.dart';
@@ -68,6 +65,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ? (HomeBottomInsetScope.of(context) + 12)
             : (MediaQuery.of(context).padding.bottom + 12);
 
+        // E4 batch 3: geek-facing entries (tool management, library index,
+        // MCP, custom skills, quick prompts, seminar config, concept graph,
+        // knowledge export) live under Developer Options; image analysis
+        // moved inside the AI settings subpage. First level keeps three.
         final aiTiles = <Widget>[
           SettingsNavRow(
             icon: Icons.hub_outlined,
@@ -87,28 +88,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             tint: SettingsIconTints.memory,
             title: l10n.reviewInboxTitle,
             onTap: () => _push(context, const ReviewInboxPage()),
-          ),
-          SettingsNavRow(
-            icon: Icons.handyman_outlined,
-            tint: SettingsIconTints.tools,
-            title: l10n.settingsAiTools,
-            onTap: () => _pushSubpage(
-                context, l10n.settingsAiTools, const AiToolsSettingsPage()),
-          ),
-          SettingsNavRow(
-            icon: Icons.storage_outlined,
-            tint: SettingsIconTints.prompt,
-            title: l10n.settingsAiLibraryIndexTitle,
-            onTap: () => _push(context, const AiLibraryIndexPage()),
-          ),
-          SettingsNavRow(
-            icon: Icons.image_outlined,
-            tint: SettingsIconTints.prompt,
-            title: l10n.settingsAiImageAnalysisTitle,
-            onTap: () => _pushSubpage(
-                context,
-                l10n.settingsAiImageAnalysisTitle,
-                const AiImageAnalysisSettingsPage()),
           ),
         ];
 

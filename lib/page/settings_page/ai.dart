@@ -8,12 +8,8 @@ import 'package:papertok_reader/providers/user_prompts.dart';
 import 'package:papertok_reader/service/ai/ai_services.dart';
 import 'package:papertok_reader/service/ai/skills/ai_skill_registry.dart';
 import 'package:papertok_reader/page/settings_page/ai_provider_center/ai_provider_center_page.dart';
-import 'package:papertok_reader/page/settings_page/ai_seminar_config.dart';
+import 'package:papertok_reader/page/settings_page/ai_image_analysis.dart';
 import 'package:papertok_reader/page/settings_page/ai_title_generation.dart';
-import 'package:papertok_reader/page/settings_page/ai_tools.dart';
-import 'package:papertok_reader/page/settings_page/concept_graph_explorer.dart';
-import 'package:papertok_reader/page/settings_page/custom_skills.dart';
-import 'package:papertok_reader/page/settings_page/knowledge_asset_export.dart';
 import 'package:papertok_reader/page/settings_page/review_inbox.dart';
 import 'package:papertok_reader/page/settings_page/spaced_review.dart';
 import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
@@ -22,7 +18,6 @@ import 'package:papertok_reader/theme/morandi_palette.dart';
 import 'package:papertok_reader/widgets/common/anx_button.dart';
 import 'package:papertok_reader/widgets/common/pt_dialog.dart';
 import 'package:papertok_reader/widgets/delete_confirm.dart';
-import 'package:papertok_reader/page/settings_page/ai_quick_prompts_editor.dart';
 import 'package:papertok_reader/page/settings_page/subpage/log_page.dart';
 import 'package:papertok_reader/widgets/settings/settings_section.dart';
 import 'package:papertok_reader/widgets/settings/settings_tile.dart';
@@ -262,6 +257,20 @@ class _AISettingsState extends ConsumerState<AISettings> {
               );
             },
           ),
+          SettingsTile.navigation(
+            leading: const Icon(Icons.image_outlined),
+            title: Text(l10n.settingsAiImageAnalysisTitle),
+            onPressed: (context) {
+              Navigator.of(context).push(
+                CupertinoStyleRoute(
+                  page: SettingsSubpageScaffold(
+                    title: l10n.settingsAiImageAnalysisTitle,
+                    child: const AiImageAnalysisSettingsPage(),
+                  ),
+                ),
+              );
+            },
+          ),
           // SettingsTile.navigation(
           //   leading: const Icon(Icons.chat),
           //   title: Text(L10n.of(context).aiChat),
@@ -286,26 +295,6 @@ class _AISettingsState extends ConsumerState<AISettings> {
         title: Text(L10n.of(context).settingsAiUserPrompts),
         tiles: [
           userPromptsTile(),
-        ],
-      ),
-      SettingsSection(
-        title: Text(l10n.settingsAiTools),
-        tiles: [
-          SettingsTile.navigation(
-            title: Text(l10n.settingsAiTools),
-            trailing: const Icon(Icons.chevron_right),
-            onPressed: (context) {
-              Navigator.push(
-                context,
-                CupertinoStyleRoute(
-                  page: SettingsSubpageScaffold(
-                    title: l10n.settingsAiTools,
-                    child: const AiToolsSettingsPage(),
-                  ),
-                ),
-              );
-            },
-          ),
         ],
       ),
       // iPad-specific AI panel settings (only show on larger screens)
@@ -345,33 +334,8 @@ class _AISettingsState extends ConsumerState<AISettings> {
           ],
         ),
       SettingsSection(
-        title: Text(l10n.settingsAiQuickPrompts),
-        tiles: [
-          SettingsTile.navigation(
-            title: Text(l10n.settingsAiQuickPrompts),
-            description: Text(l10n.settingsAiQuickPromptsHint),
-            onPressed: (context) {
-              Navigator.push(
-                context,
-                CupertinoStyleRoute(page: const AiQuickPromptsEditor()),
-              );
-            },
-          ),
-        ],
-      ),
-      SettingsSection(
         title: Text(l10n.settingsAiFeatures),
         tiles: [
-          SettingsTile.navigation(
-            leading: const Icon(Icons.tune_outlined),
-            title: Text(l10n.seminarConfigTitle),
-            description: Text(l10n.seminarConfigEntryDesc),
-            onPressed: (context) {
-              Navigator.of(context).push(
-                CupertinoStyleRoute(page: const AiSeminarConfigPage()),
-              );
-            },
-          ),
           SettingsTile.navigation(
             leading: const Icon(Icons.auto_awesome),
             title: Text(l10n.settingsAiKairos),
@@ -400,32 +364,12 @@ class _AISettingsState extends ConsumerState<AISettings> {
             },
           ),
           SettingsTile.navigation(
-            leading: const Icon(Icons.account_tree_outlined),
-            title: Text(l10n.conceptGraphTitle),
-            description: Text(l10n.conceptGraphDescription),
-            onPressed: (context) {
-              Navigator.of(context).push(
-                CupertinoStyleRoute(page: const ConceptGraphExplorerPage()),
-              );
-            },
-          ),
-          SettingsTile.navigation(
             leading: const Icon(Icons.school_outlined),
             title: Text(l10n.spacedReviewTitle),
             description: Text(l10n.spacedReviewDescription),
             onPressed: (context) {
               Navigator.of(context).push(
                 CupertinoStyleRoute(page: const SpacedReviewPage()),
-              );
-            },
-          ),
-          SettingsTile.navigation(
-            leading: const Icon(Icons.ios_share_outlined),
-            title: Text(l10n.knowledgeExportTitle),
-            description: Text(l10n.knowledgeExportDescription),
-            onPressed: (context) {
-              Navigator.of(context).push(
-                CupertinoStyleRoute(page: const KnowledgeAssetExportPage()),
               );
             },
           ),
@@ -437,16 +381,6 @@ class _AISettingsState extends ConsumerState<AISettings> {
             ),
             onPressed: (context) {
               _showSkillPicker(context);
-            },
-          ),
-          SettingsTile.navigation(
-            leading: const Icon(Icons.extension_outlined),
-            title: Text(l10n.settingsAiCustomSkillsTitle),
-            description: Text(l10n.settingsAiCustomSkillsDesc),
-            onPressed: (context) {
-              Navigator.of(context).push(
-                CupertinoStyleRoute(page: const CustomSkillsPage()),
-              );
             },
           ),
           SettingsTile.navigation(

@@ -3,7 +3,6 @@ import 'package:papertok_reader/dao/book.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/models/md5_statistics.dart';
 import 'package:papertok_reader/page/settings_page/subpage/chapter_split_rules_page.dart';
-import 'package:papertok_reader/page/settings_page/subpage/log_page.dart';
 import 'package:papertok_reader/service/md5_service.dart';
 import 'package:papertok_reader/utils/toast/common.dart';
 import 'package:papertok_reader/widgets/settings/settings_section.dart';
@@ -70,10 +69,6 @@ class _AdvancedSettingState extends State<AdvancedSetting> {
                 setState(() {});
               },
             ),
-            SettingsTile.navigation(
-                leading: const Icon(Icons.bug_report),
-                title: Text(L10n.of(context).settingsAdvancedLog),
-                onPressed: onLogPressed),
           ],
         ),
         SettingsSection(
@@ -312,11 +307,3 @@ class _AdvancedSettingState extends State<AdvancedSetting> {
   }
 }
 
-void onLogPressed(BuildContext context) {
-  Navigator.push(
-    context,
-    CupertinoPageRoute(
-      builder: (context) => const LogPage(),
-    ),
-  );
-}

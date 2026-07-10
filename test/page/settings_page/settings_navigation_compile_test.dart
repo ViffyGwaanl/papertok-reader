@@ -15,6 +15,7 @@ import 'package:papertok_reader/page/settings_page/ai_library_index_page.dart';
 import 'package:papertok_reader/page/settings_page/ai_seminar_config.dart';
 import 'package:papertok_reader/page/settings_page/concept_graph_explorer.dart';
 import 'package:papertok_reader/page/settings_page/custom_skills.dart';
+import 'package:papertok_reader/page/settings_page/developer/developer_options_page.dart';
 import 'package:papertok_reader/page/settings_page/home_navigation.dart';
 import 'package:papertok_reader/page/settings_page/knowledge_asset_export.dart';
 import 'package:papertok_reader/page/settings_page/review_inbox.dart';
@@ -73,7 +74,12 @@ void main() {
       reason:
           'Seminar must run from native AI Chat cards, not a standalone page.',
     );
-    expect(find.text('Seminar settings'), findsOneWidget);
+    expect(
+      find.text('Seminar settings'),
+      findsNothing,
+      reason: 'E4 batch 3 stowed the Seminar config entry under '
+          'Developer Options.',
+    );
     expect(
       File('lib/page/settings_page/ai_seminar_runtime.dart').existsSync(),
       isFalse,
@@ -236,7 +242,8 @@ void main() {
     }
   });
 
-  testWidgets('AI settings opens Seminar settings entry', (tester) async {
+  testWidgets('Developer options opens Seminar settings entry',
+      (tester) async {
     await tester.binding.setSurfaceSize(const Size(900, 1400));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     SharedPreferences.setMockInitialValues({});
@@ -248,7 +255,7 @@ void main() {
           locale: Locale('en'),
           localizationsDelegates: L10n.localizationsDelegates,
           supportedLocales: L10n.supportedLocales,
-          home: AISettings(),
+          home: DeveloperOptionsPage(),
         ),
       ),
     );
@@ -353,7 +360,8 @@ void main() {
     );
   });
 
-  testWidgets('AI settings opens custom skills entry', (tester) async {
+  testWidgets('Developer options opens custom skills entry',
+      (tester) async {
     await tester.binding.setSurfaceSize(const Size(900, 1400));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     SharedPreferences.setMockInitialValues({});
@@ -365,7 +373,7 @@ void main() {
           locale: Locale('en'),
           localizationsDelegates: L10n.localizationsDelegates,
           supportedLocales: L10n.supportedLocales,
-          home: AISettings(),
+          home: DeveloperOptionsPage(),
         ),
       ),
     );
@@ -453,7 +461,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Seminar Mode'), findsNothing);
-    expect(find.text('Seminar settings'), findsOneWidget);
   });
 
   testWidgets('AI settings opens Review Inbox entry', (tester) async {
@@ -579,7 +586,8 @@ void main() {
     expect(find.text('Local Terms'), findsOneWidget);
   });
 
-  testWidgets('AI settings opens knowledge sync export entry', (tester) async {
+  testWidgets('Developer options opens knowledge sync export entry',
+      (tester) async {
     await tester.binding.setSurfaceSize(const Size(900, 1400));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     SharedPreferences.setMockInitialValues({});
@@ -595,7 +603,7 @@ void main() {
           locale: Locale('en'),
           localizationsDelegates: L10n.localizationsDelegates,
           supportedLocales: L10n.supportedLocales,
-          home: AISettings(),
+          home: DeveloperOptionsPage(),
         ),
       ),
     );
@@ -610,7 +618,8 @@ void main() {
     expect(find.text('No confirmed knowledge assets yet'), findsOneWidget);
   });
 
-  testWidgets('AI settings opens concept graph entry', (tester) async {
+  testWidgets('Developer options opens concept graph entry',
+      (tester) async {
     await tester.binding.setSurfaceSize(const Size(900, 1400));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     SharedPreferences.setMockInitialValues({});
@@ -631,7 +640,7 @@ void main() {
           locale: Locale('en'),
           localizationsDelegates: L10n.localizationsDelegates,
           supportedLocales: L10n.supportedLocales,
-          home: AISettings(),
+          home: DeveloperOptionsPage(),
         ),
       ),
     );
