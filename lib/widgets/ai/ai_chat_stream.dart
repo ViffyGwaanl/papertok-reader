@@ -43,6 +43,7 @@ import 'package:papertok_reader/widgets/ai/seminar/timeline/seminar_timeline_wid
 import 'package:papertok_reader/widgets/ai/seminar/tools/seminar_tool_widgets.dart';
 import 'package:papertok_reader/widgets/ai/seminar/whiteboard/seminar_whiteboard_widgets.dart';
 import 'package:papertok_reader/widgets/ai/seminar/start_seminar_tool_bridge.dart';
+import 'package:papertok_reader/widgets/ai/chat_scroll_to_top.dart';
 import 'package:papertok_reader/widgets/ai/conversation_tree/conversation_tree_model.dart';
 import 'package:papertok_reader/widgets/ai/conversation_tree/conversation_tree_overlay.dart';
 import 'package:papertok_reader/widgets/ai/tool_step_tile.dart';
@@ -5544,12 +5545,15 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: true,
-        title: Text(
-          L10n.of(context).aiChat,
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w600,
-            color: ClaudePalette.fg(context),
+        title: ChatScrollToTopTitle(
+          controller: _scrollController,
+          child: Text(
+            L10n.of(context).aiChat,
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              color: ClaudePalette.fg(context),
+            ),
           ),
         ),
         leading: IconButton(
