@@ -12,6 +12,9 @@ const List<String> kAllowBookExtensions = <String>[
   'fb2',
   'txt',
   'pdf',
+  // foliate-js ships a complete CBZ comic renderer (isCBZ/makeComicBook);
+  // the allowlist was the only thing blocking it.
+  'cbz',
 ];
 
 /// Returns `null` if the file looks valid for its extension.
@@ -31,6 +34,19 @@ Future<String?> validateBookMagicBytes(File file) async {
         header[3] == 0x04;
     if (!isZip) {
       return 'Invalid EPUB file: ZIP signature not found.';
+    }
+  }
+
+  if (ext == 'cbz') {
+    // CBZ is a ZIP archive of images — same signature as EPUB.
+    final header = await _readHeader(file, 4);
+    final isZip = header.length >= 4 &&
+        header[0] == 0x50 && // P
+        header[1] == 0x4B && // K
+        header[2] == 0x03 &&
+        header[3] == 0x04;
+    if (!isZip) {
+      return 'Invalid CBZ file: ZIP signature not found.';
     }
   }
 
