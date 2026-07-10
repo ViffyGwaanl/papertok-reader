@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
+import 'package:papertok_reader/page/knowledge/knowledge_card_list_page.dart';
 import 'package:papertok_reader/page/home_page/notes_page.dart';
 import 'package:papertok_reader/page/home_page/settings_page.dart';
 import 'package:papertok_reader/page/home_page/statistics_page.dart';
@@ -49,6 +50,12 @@ class MinePage extends StatelessWidget {
         // MemoryHomePage has its own Scaffold/AppBar (back button appears
         // automatically when pushed).
         onTap: () => _push(context, const MemoryHomePage()),
+      ),
+      _MineEntry(
+        icon: Icons.style_outlined,
+        label: l10n.knowledgeCardListTitle,
+        // Has its own SettingsSubpageScaffold.
+        onTap: () => _push(context, const KnowledgeCardListPage()),
       ),
       _MineEntry(
         icon: Icons.settings_outlined,

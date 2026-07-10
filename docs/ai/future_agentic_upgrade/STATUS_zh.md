@@ -6,7 +6,7 @@
 | 任务 | 内容 | 状态 | 下一步 | 验收/Brief |
 | --- | --- | --- | --- | --- |
 | S1 | 数据完整性与崩溃修复(全新安装无法存高亮/笔记、WebDAV 同步丢数据、TTS/书架崩溃、AI历史损坏即删库) | 待真机验收(批次1/2/3/5) | 批次1/2/3/5 已实现+测试(分支 claude/s1-batches);仅剩批次4(WebDAV)——开工前需用户对合并策略拍板 | `briefs/S1_data_integrity_zh.md` |
-| S2 | 核心能力缺口(PDF对全部AI取证工具静默空内容、KnowledgeCard本体无主页存卡即消失) | backlog | 批次1(PDF)、批次2(KnowledgeCard列表页)均可直接开工,无需用户先拍板 | `briefs/S2_core_capability_gaps_zh.md` |
+| S2 | 核心能力缺口(PDF对全部AI取证工具静默空内容、KnowledgeCard本体无主页存卡即消失) | 待真机验收(批次2) | 批次2 已实现(列表页在"我的",详情页补跳转来源/提交审核/删除);批次1(PDF)待做 | `briefs/S2_core_capability_gaps_zh.md` |
 | S3 | 信任快赢集(研讨成本显示、CBZ放行、隐私可见化、零配置查词) | backlog | 不单独出包,随 S1/S2/P6 验收 build 搭车;批次4入口位置服从 E4 决策清单 | `briefs/S3_trust_quick_wins_zh.md` |
 | P7 | Android 平台启用(系统性回归+Google Play/APK 发布;用户拍板不上大陆商店) | backlog | S1 批次1 落地后开工;批次1 按 ANDROID_QA_CHECKLIST 全量回归 | `briefs/P7_android_enablement_zh.md` |
 | E5 | 无障碍基线(Semantics 覆盖、VoiceOver 阅读面、图标 tooltip) | backlog | 重建期后;开工前写 brief(首片:选区菜单+图标按钮语义标签;阅读面 VoiceOver 模式单列) | 开工前写 brief |
