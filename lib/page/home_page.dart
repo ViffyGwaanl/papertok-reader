@@ -142,8 +142,17 @@ class _HomePageState extends ConsumerState<HomePage> {
     checkUpdate(false);
     InitializationCheck.check();
     if (Prefs().webdavStatus) {
-      await Sync().init();
-      await Sync().syncData(SyncDirection.both, ref, trigger: SyncTrigger.auto);
+      // Read through Riverpod so the notifier is attached before use (a raw
+      // Sync() call before any watcher throws LateInitializationError), and
+      // isolate failures so a broken sync can never block the rest of app
+      // init (font loading, share-intent registration).
+      try {
+        final sync = ref.read(syncProvider.notifier);
+        await sync.init();
+        await sync.syncData(SyncDirection.both, ref, trigger: SyncTrigger.auto);
+      } catch (e, st) {
+        AnxLog.severe('Home: startup auto-sync failed', e, st);
+      }
     }
     loadDefaultFont();
 

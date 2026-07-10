@@ -167,7 +167,8 @@ class ReadingPageState extends ConsumerState<ReadingPage>
 
   @override
   void dispose() {
-    Sync().syncData(SyncDirection.upload, ref, trigger: SyncTrigger.auto);
+    ref.read(syncProvider.notifier).syncData(SyncDirection.upload, ref,
+        trigger: SyncTrigger.auto);
     _readTimeWatch.stop();
     _kairos.stop();
     _awakeTimer?.cancel();

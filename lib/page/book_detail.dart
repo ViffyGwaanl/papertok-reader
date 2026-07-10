@@ -209,7 +209,8 @@ class _BookDetailState extends ConsumerState<BookDetail> {
                   setState(() {
                     widget.book.coverPath = newPath;
                     bookDao.updateBook(widget.book);
-                    Sync().syncData(SyncDirection.upload, ref,
+                    ref.read(syncProvider.notifier).syncData(
+                        SyncDirection.upload, ref,
                         trigger: SyncTrigger.auto);
                     ref.read(bookListProvider.notifier).refresh();
                   });
@@ -335,7 +336,8 @@ class _BookDetailState extends ConsumerState<BookDetail> {
                     setState(() {
                       isEditing = false;
                       bookDao.updateBook(widget.book);
-                      Sync().syncData(SyncDirection.upload, ref,
+                      ref.read(syncProvider.notifier).syncData(
+                          SyncDirection.upload, ref,
                           trigger: SyncTrigger.manual);
                       ref.read(bookListProvider.notifier).refresh();
                     });
