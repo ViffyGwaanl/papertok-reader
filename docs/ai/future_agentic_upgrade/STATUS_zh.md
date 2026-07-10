@@ -7,7 +7,7 @@
 | --- | --- | --- | --- | --- |
 | S1 | 数据完整性与崩溃修复(全新安装无法存高亮/笔记、WebDAV 同步丢数据、TTS/书架崩溃、AI历史损坏即删库) | 待真机验收(批次1/2/3/5) | 批次1/2/3/5 已实现+测试(分支 claude/s1-batches);仅剩批次4(WebDAV)——开工前需用户对合并策略拍板 | `briefs/S1_data_integrity_zh.md` |
 | S2 | 核心能力缺口(PDF对全部AI取证工具静默空内容、KnowledgeCard本体无主页存卡即消失) | 待真机验收(批次2) | 批次2 已实现(列表页在"我的",详情页补跳转来源/提交审核/删除);批次1(PDF)待做 | `briefs/S2_core_capability_gaps_zh.md` |
-| S3 | 信任快赢集(研讨成本显示、CBZ放行、隐私可见化、零配置查词) | backlog | 不单独出包,随 S1/S2/P6 验收 build 搭车;批次4入口位置服从 E4 决策清单 | `briefs/S3_trust_quick_wins_zh.md` |
+| S3 | 信任快赢集(研讨成本显示、CBZ放行、隐私可见化、零配置查词) | 待真机验收(批次1/2/3) | 批次1/2/3 已实现;批次4(零配置查词,iOS 系统词典通道)待做,入口位置服从 E4 决策清单 | `briefs/S3_trust_quick_wins_zh.md` |
 | P7 | Android 平台启用(系统性回归+Google Play/APK 发布;用户拍板不上大陆商店) | backlog | S1 批次1 落地后开工;批次1 按 ANDROID_QA_CHECKLIST 全量回归 | `briefs/P7_android_enablement_zh.md` |
 | E5 | 无障碍基线(Semantics 覆盖、VoiceOver 阅读面、图标 tooltip) | backlog | 重建期后;开工前写 brief(首片:选区菜单+图标按钮语义标签;阅读面 VoiceOver 模式单列) | 开工前写 brief |
 | P1 | AI Chat 原生研讨会(收口为"观看+追问"形态) | done | 真机 v6 全量通过(2026-06-17,build 6533),用户确认收口;详见验收记录 | `briefs/P1_ACCEPTANCE_zh.md`(v6) |
@@ -22,7 +22,7 @@
 | B1 | 阅读器选区扩展后高亮/AI 研讨仍只用首次选区(iOS 触屏拖手柄扩展不重发选区) | 待真机验收 | 规划者审过(只动 book.js+测试,修法正确,index.html 确认走 src 无需重打包);待同一新 build 真机验收三项 | chat 指令 / `assets/foliate-js/src/book.js` |
 | E1 | AI Chat 流式渲染局部化(消息级重建,根治生成期抖动) | backlog | R2 后、R3 前(A 线第二步);批次 1 先立 rebuild 探针靶子测试 | `briefs/E1_chat_render_locality_zh.md` |
 | E2 | 阅读翻译体验简化(自动重试、人话提示、收纳工程仪表) | backlog | 可与 A 线并行(文件不相交);批次 1 自动重试 | `briefs/E2_translate_ux_simplify_zh.md` |
-| E3 | 全局糙感清扫(zh 漏翻 372、裸错误文案 71 处、双击回顶、PaperTok 首屏) | 待真机验收 | 批次 1:zh 缺失已清零,待真机抽查;下一步批次 2 裸错误文案人话化;批次 5 等用户 E0 走查输入 | `briefs/E3_polish_sweep_zh.md` |
+| E3 | 全局糙感清扫(zh 漏翻 372、裸错误文案 71 处、双击回顶、PaperTok 首屏) | 待真机验收(批次1/3/4) | 批次 3(双击回顶)/4(PaperTok 首屏+错误态)已实现;剩批次 2 裸错误文案人话化;批次 5 等用户 E0 走查输入 | `briefs/E3_polish_sweep_zh.md` |
 | E4 | 减法与聚焦(7 tab→4、设置树收纳、选区菜单 9→5) | in progress | 批次 2/3 已实现(4 tab+我的;极客入口收进开发者选项,图片分析降入 AI 设置);下一步批次 4 选区菜单 | `briefs/E4_subtraction_focus_zh.md` |
 | G1a | 分享资产:书摘卡 2.0、读书报告(不含实录长图) | backlog | 不受冻结规则约束,可直接开工(2026-07-09 复核:不碰高风险文件、无R2/R3依赖);开工前用户拍板水印/二维码 | `briefs/G1_share_artifacts_zh.md` |
 | G1b | 分享资产:研讨会实录长图 | backlog | 依赖 R2 后干净事件流,维持原排期 | `briefs/G1_share_artifacts_zh.md` |
