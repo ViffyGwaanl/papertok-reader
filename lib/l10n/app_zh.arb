@@ -2233,6 +2233,12 @@
   "aiChatSeminarFeatureTitle": "AI 研讨会",
   "aiChatSeminarFeatureDesc": "开启批判者、支持者、综合者的多角色讨论。",
   "aiChatSeminarFeatureAction": "打开",
+  "aiSeminarEstimatedCost": "\u672c\u6b21\u7814\u8ba8\u4f30\u7b97\u6210\u672c \u2248 {cost}",
+  "@aiSeminarEstimatedCost": {
+    "placeholders": {
+      "cost": {}
+    }
+  },
   "aiSeminarReaderActionAskRole": "继续讨论",
   "aiSeminarReaderActionRefreshEvidence": "补充证据",
   "aiSeminarReaderActionSynthesize": "出总结",

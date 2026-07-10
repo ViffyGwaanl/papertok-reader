@@ -270,6 +270,11 @@ class SeminarRunCardView extends StatelessWidget {
               if (_shouldShowSeminarCardFollowUpHint(card, runtimeState)) ...[
                 const SizedBox(height: 12),
                 _buildSeminarRunCardFollowUpHint(context),
+                if (_seminarRunCardEstimatedCost() != null)
+                  _buildSeminarRunCardCostLine(
+                    context,
+                    _seminarRunCardEstimatedCost()!,
+                  ),
               ],
               if (hasIgnoredActions) ...[
                 const SizedBox(height: 12),
@@ -476,6 +481,34 @@ class SeminarRunCardView extends StatelessWidget {
     if (sessionId == null || sessionId.isEmpty) return false;
     return runtimeState.session?.id == sessionId &&
         runtimeState.status == AiSeminarRunStatus.completed;
+  }
+
+  /// Estimated USD cost of the completed run, when the active runtime
+  /// matches this card and pricing metadata produced a positive estimate.
+  /// BYOK users otherwise have no in-app visibility of what a run cost.
+  double? _seminarRunCardEstimatedCost() {
+    final sessionId = card.sessionId?.trim();
+    if (sessionId == null || sessionId.isEmpty) return null;
+    if (runtimeState.session?.id != sessionId) return null;
+    final cost = runtimeState.lastRun?.estimatedCostUsd;
+    if (cost == null || cost <= 0) return null;
+    return cost;
+  }
+
+  Widget _buildSeminarRunCardCostLine(BuildContext context, double cost) {
+    final theme = Theme.of(context);
+    final formatted = cost < 0.005
+        ? '<\$0.01'
+        : '\$${cost.toStringAsFixed(cost < 0.1 ? 3 : 2)}';
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, left: 22),
+      child: Text(
+        L10n.of(context).aiSeminarEstimatedCost(formatted),
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: theme.colorScheme.outline,
+        ),
+      ),
+    );
   }
 
   Widget _buildSeminarRunCardFollowUpHint(BuildContext context) {

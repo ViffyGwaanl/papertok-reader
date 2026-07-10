@@ -1699,6 +1699,12 @@
   "aiChatSeminarFeatureTitle": "AI Seminar",
   "aiChatSeminarFeatureDesc": "Start a multi-role discussion with critical, supportive, and synthesis views.",
   "aiChatSeminarFeatureAction": "Open",
+  "aiSeminarEstimatedCost": "Estimated cost of this run \u2248 {cost}",
+  "@aiSeminarEstimatedCost": {
+    "placeholders": {
+      "cost": {}
+    }
+  },
   "aiSeminarReaderActionAskRole": "Continue",
   "aiSeminarReaderActionRefreshEvidence": "Add evidence",
   "aiSeminarReaderActionSynthesize": "Summarize",
