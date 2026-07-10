@@ -1,4 +1,4 @@
-lib/config/shared_preference_provider.dart 4243
+lib/config/shared_preference_provider.dart 4030
 lib/models/ai_seminar.dart 1666
 lib/page/book_player/epub_player.dart 2117
 lib/page/settings_page/ai_library_index_page.dart 3241

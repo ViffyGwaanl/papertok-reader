@@ -1611,6 +1611,8 @@
   "aiSectionThinking": "思考",
   "aiSectionTools": "工具",
   "navBarPapers": "PaperTok",
+  "navBarDiscover": "发现",
+  "navBarMine": "我的",
   "settingsHomeNavigation": "首页导航",
   "settingsHomeNavigationSubtitle": "调整首页标签顺序，并设置显示/隐藏",
   "papersImportPdf": "导入书架（PDF）",

@@ -25,7 +25,7 @@ class _HomeNavigationSettingsPageState
         String titleOf(String id) {
           switch (id) {
             case Prefs.homeTabPapers:
-              return L10n.of(context).navBarPapers;
+              return L10n.of(context).navBarDiscover;
             case Prefs.homeTabBookshelf:
               return L10n.of(context).navBarBookshelf;
             case Prefs.homeTabStatistics:
@@ -36,6 +36,8 @@ class _HomeNavigationSettingsPageState
               return L10n.of(context).navBarNotes;
             case Prefs.homeTabMemory:
               return L10n.of(context).navBarMemory;
+            case Prefs.homeTabMine:
+              return L10n.of(context).navBarMine;
             case Prefs.homeTabSettings:
               return L10n.of(context).navBarSettings;
             default:
@@ -57,6 +59,8 @@ class _HomeNavigationSettingsPageState
               return Icons.note_outlined;
             case Prefs.homeTabMemory:
               return Icons.psychology_outlined;
+            case Prefs.homeTabMine:
+              return Icons.person_outline;
             case Prefs.homeTabSettings:
               return Icons.settings_outlined;
             default:
@@ -65,7 +69,7 @@ class _HomeNavigationSettingsPageState
         }
 
         bool isMandatory(String id) {
-          return id == Prefs.homeTabPapers || id == Prefs.homeTabSettings;
+          return id == Prefs.homeTabPapers;
         }
 
         return SettingsSubpageScaffold(

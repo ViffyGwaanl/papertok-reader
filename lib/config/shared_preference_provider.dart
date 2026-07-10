@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:core';
 
+import 'package:papertok_reader/config/home_tabs_config.dart';
+
 import 'package:papertok_reader/enums/ai_prompts.dart';
 import 'package:papertok_reader/enums/bgimg_alignment.dart';
 import 'package:papertok_reader/enums/bgimg_type.dart';
@@ -141,39 +143,21 @@ class Prefs extends ChangeNotifier {
 
   // Home tabs config (order + enable), backed by SharedPreferences.
   // papers + settings are mandatory and cannot be disabled.
-  static const int _homeTabsSchemaVersion = 2;
-  static const String _homeTabsSchemaVersionKey = 'homeTabsSchemaVersion';
-  static const String _homeTabsOrderKey = 'homeTabsOrder';
-  static const String _homeTabsEnabledKey = 'homeTabsEnabled';
-
-  static const String homeTabPapers = 'papers';
-  static const String homeTabBookshelf = 'bookshelf';
-  static const String homeTabStatistics = 'statistics';
-  static const String homeTabAI = 'ai';
-  static const String homeTabNotes = 'notes';
-  static const String homeTabMemory = 'memory';
-  static const String homeTabSettings = 'settings';
-
-  static const List<String> _homeTabAll = [
-    homeTabPapers,
-    homeTabBookshelf,
-    homeTabStatistics,
-    homeTabAI,
-    homeTabNotes,
-    homeTabMemory,
-    homeTabSettings,
-  ];
-
-  static const Set<String> _homeTabMandatory = {
-    homeTabPapers,
-    homeTabSettings,
-  };
+  // Home tab ids (config logic lives in home_tabs_config.dart).
+  static const String homeTabPapers = kHomeTabPapers;
+  static const String homeTabBookshelf = kHomeTabBookshelf;
+  static const String homeTabStatistics = kHomeTabStatistics;
+  static const String homeTabAI = kHomeTabAI;
+  static const String homeTabNotes = kHomeTabNotes;
+  static const String homeTabMemory = kHomeTabMemory;
+  static const String homeTabMine = kHomeTabMine;
+  static const String homeTabSettings = kHomeTabSettings;
 
   Future<void> initPrefs() async {
     prefs = await SharedPreferences.getInstance();
     saveBeginDate();
-    _migrateHomeTabsIfNeeded();
-    _normalizeAndPersistHomeTabsConfig();
+    migrateHomeTabsIfNeeded(prefs);
+    normalizeAndPersistHomeTabsConfig(prefs);
     _migrateLegacyAccentColorIfNeeded();
     notifyListeners();
   }
@@ -3171,219 +3155,22 @@ Requirements:
 
   // --- Home tabs config (order + enable) ---
 
-  void _migrateHomeTabsIfNeeded() {
-    final v = prefs.getInt(_homeTabsSchemaVersionKey);
-    final hasOrder = prefs.getStringList(_homeTabsOrderKey) != null;
-    final hasEnabled = prefs.getString(_homeTabsEnabledKey) != null;
+  List<String> get homeTabsOrder => readHomeTabsOrder(prefs);
 
-    if (v == _homeTabsSchemaVersion && hasOrder && hasEnabled) {
-      return;
-    }
-
-    // v1 → v2: append 'memory' to the stored order/enabled maps (disabled by
-    // default so existing users don't get a surprise new tab).
-    if (v == 1 && hasOrder && hasEnabled) {
-      final storedOrder =
-          prefs.getStringList(_homeTabsOrderKey) ?? const <String>[];
-      final order = List<String>.from(storedOrder);
-      if (!order.contains(homeTabMemory)) {
-        final settingsIdx = order.indexOf(homeTabSettings);
-        if (settingsIdx >= 0) {
-          order.insert(settingsIdx, homeTabMemory);
-        } else {
-          order.add(homeTabMemory);
-        }
-      }
-
-      final storedEnabledJson = prefs.getString(_homeTabsEnabledKey) ?? '{}';
-      final decoded = jsonDecode(storedEnabledJson);
-      final Map<String, dynamic> rawEnabled = decoded is Map
-          ? decoded as Map<String, dynamic>
-          : <String, dynamic>{};
-      final enabled = <String, bool>{
-        for (final entry in rawEnabled.entries)
-          entry.key: entry.value is bool ? entry.value as bool : true,
-      };
-      enabled.putIfAbsent(homeTabMemory, () => false);
-
-      prefs.setInt(_homeTabsSchemaVersionKey, _homeTabsSchemaVersion);
-      prefs.setStringList(_homeTabsOrderKey, order);
-      prefs.setString(_homeTabsEnabledKey, jsonEncode(enabled));
-      return;
-    }
-
-    // Migrate from legacy bottom navigator switches.
-    // New default UX: Statistics + Notes are hidden unless the user explicitly
-    // enabled them (legacy prefs present).
-    final legacyShowStatistics =
-        prefs.getBool('bottomNavigatorShowStatistics') ?? false;
-    final legacyShowAI = prefs.getBool('bottomNavigatorShowAI') ?? true;
-    final legacyShowNotes = prefs.getBool('bottomNavigatorShowNote') ?? false;
-
-    final defaultOrder = <String>[
-      homeTabPapers,
-      homeTabBookshelf,
-      homeTabStatistics,
-      homeTabAI,
-      homeTabNotes,
-      homeTabMemory,
-      homeTabSettings,
-    ];
-
-    final enabled = <String, bool>{
-      homeTabPapers: true,
-      homeTabBookshelf: true,
-      homeTabStatistics: legacyShowStatistics,
-      homeTabAI: legacyShowAI,
-      homeTabNotes: legacyShowNotes,
-      homeTabMemory: false,
-      homeTabSettings: true,
-    };
-
-    prefs.setInt(_homeTabsSchemaVersionKey, _homeTabsSchemaVersion);
-    prefs.setStringList(_homeTabsOrderKey, defaultOrder);
-    prefs.setString(_homeTabsEnabledKey, jsonEncode(enabled));
-  }
-
-  List<String> _normalizeHomeTabsOrder(List<String> raw) {
-    final out = <String>[];
-    final seen = <String>{};
-
-    for (final id in raw) {
-      if (!_homeTabAll.contains(id)) continue;
-      if (seen.contains(id)) continue;
-      seen.add(id);
-      out.add(id);
-    }
-
-    // Ensure mandatory tabs exist even if the config is corrupted.
-    if (!seen.contains(homeTabPapers)) {
-      out.insert(0, homeTabPapers);
-      seen.add(homeTabPapers);
-    }
-    if (!seen.contains(homeTabSettings)) {
-      out.add(homeTabSettings);
-      seen.add(homeTabSettings);
-    }
-
-    // Append any newly added tabs.
-    for (final id in _homeTabAll) {
-      if (!seen.contains(id)) out.add(id);
-    }
-
-    return out;
-  }
-
-  Map<String, bool> _normalizeHomeTabsEnabled(Map<String, bool> raw) {
-    final out = <String, bool>{};
-    for (final id in _homeTabAll) {
-      out[id] = raw[id] ?? true;
-    }
-    // Mandatory tabs cannot be disabled.
-    for (final id in _homeTabMandatory) {
-      out[id] = true;
-    }
-    return out;
-  }
-
-  void _normalizeAndPersistHomeTabsConfig() {
-    final order = _normalizeHomeTabsOrder(
-        prefs.getStringList(_homeTabsOrderKey) ?? const []);
-
-    Map<String, bool> enabled;
-    final enabledStr = prefs.getString(_homeTabsEnabledKey);
-    if (enabledStr == null || enabledStr.trim().isEmpty) {
-      enabled = <String, bool>{};
-    } else {
-      try {
-        final dynamic decoded = jsonDecode(enabledStr);
-        if (decoded is Map) {
-          enabled = decoded
-              .map((key, value) => MapEntry(key.toString(), value == true));
-        } else {
-          enabled = <String, bool>{};
-        }
-      } catch (_) {
-        enabled = <String, bool>{};
-      }
-    }
-
-    final enabledNormalized = _normalizeHomeTabsEnabled(enabled);
-
-    prefs.setInt(_homeTabsSchemaVersionKey, _homeTabsSchemaVersion);
-    prefs.setStringList(_homeTabsOrderKey, order);
-    prefs.setString(_homeTabsEnabledKey, jsonEncode(enabledNormalized));
-  }
-
-  List<String> get homeTabsOrder {
-    return _normalizeHomeTabsOrder(
-        prefs.getStringList(_homeTabsOrderKey) ?? const []);
-  }
-
-  Map<String, bool> get homeTabsEnabled {
-    final enabledStr = prefs.getString(_homeTabsEnabledKey);
-    Map<String, bool> enabled;
-    if (enabledStr == null || enabledStr.trim().isEmpty) {
-      enabled = <String, bool>{};
-    } else {
-      try {
-        final dynamic decoded = jsonDecode(enabledStr);
-        if (decoded is Map) {
-          enabled = decoded
-              .map((key, value) => MapEntry(key.toString(), value == true));
-        } else {
-          enabled = <String, bool>{};
-        }
-      } catch (_) {
-        enabled = <String, bool>{};
-      }
-    }
-    return _normalizeHomeTabsEnabled(enabled);
-  }
+  Map<String, bool> get homeTabsEnabled => readHomeTabsEnabled(prefs);
 
   void setHomeTabsOrder(List<String> order) {
-    final normalized = _normalizeHomeTabsOrder(order);
-    prefs.setStringList(_homeTabsOrderKey, normalized);
+    writeHomeTabsOrder(prefs, order);
     notifyListeners();
   }
 
   void setHomeTabEnabled(String tabId, bool enabled) {
-    final map0 = Map<String, bool>.from(homeTabsEnabled);
-    if (_homeTabMandatory.contains(tabId)) {
-      map0[tabId] = true;
-    } else {
-      map0[tabId] = enabled;
-    }
-    final normalized = _normalizeHomeTabsEnabled(map0);
-    prefs.setString(_homeTabsEnabledKey, jsonEncode(normalized));
+    writeHomeTabEnabled(prefs, tabId, enabled);
     notifyListeners();
   }
 
   void resetHomeTabsConfigToDefault() {
-    final defaultOrder = <String>[
-      homeTabPapers,
-      homeTabBookshelf,
-      homeTabStatistics,
-      homeTabAI,
-      homeTabNotes,
-      homeTabSettings,
-    ];
-
-    // Reset to the current *default* UX.
-    // Notes + Statistics are hidden by default.
-    final enabled = <String, bool>{
-      homeTabPapers: true,
-      homeTabBookshelf: true,
-      homeTabStatistics: false,
-      homeTabAI: true,
-      homeTabNotes: false,
-      homeTabSettings: true,
-    };
-
-    prefs.setInt(_homeTabsSchemaVersionKey, _homeTabsSchemaVersion);
-    prefs.setStringList(_homeTabsOrderKey, defaultOrder);
-    prefs.setString(
-        _homeTabsEnabledKey, jsonEncode(_normalizeHomeTabsEnabled(enabled)));
+    resetHomeTabsToDefault(prefs);
     notifyListeners();
   }
 

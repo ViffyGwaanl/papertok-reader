@@ -13,6 +13,7 @@ import 'package:papertok_reader/page/home_page/home_bottom_inset_scope.dart';
 import 'package:papertok_reader/service/initialization_check.dart';
 import 'package:papertok_reader/page/home_page/bookshelf_page.dart';
 import 'package:papertok_reader/page/home_page/papers_page.dart';
+import 'package:papertok_reader/page/home_page/mine_page.dart';
 import 'package:papertok_reader/page/home_page/notes_page.dart';
 import 'package:papertok_reader/page/memory/memory_home_page.dart';
 import 'package:papertok_reader/page/home_page/settings_page.dart';
@@ -72,9 +73,22 @@ class _HomePageState extends ConsumerState<HomePage> {
     });
   }
 
+  /// First enabled tab in the user's configured order (the default config
+  /// puts Bookshelf first); falls back to bookshelf on corrupt config.
+  String _initialTab() {
+    final enabled = Prefs().homeTabsEnabled;
+    for (final id in Prefs().homeTabsOrder) {
+      if (!(enabled[id] ?? false)) continue;
+      if (id == Prefs.homeTabAI && !EnvVar.enableAIFeature) continue;
+      return id;
+    }
+    return Prefs.homeTabBookshelf;
+  }
+
   @override
   void initState() {
     super.initState();
+    _currentTab = _initialTab();
     homeTabRequest.addListener(_handleHomeTabRequest);
     // Consume any request set before HomePage mounted (e.g. cold-start Shortcuts).
     _handleHomeTabRequest();
@@ -180,7 +194,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     final defs = <String, Map<String, dynamic>>{
       Prefs.homeTabPapers: {
         'icon': Icons.article_outlined,
-        'label': L10n.of(context).navBarPapers,
+        'label': L10n.of(context).navBarDiscover,
         'identifier': Prefs.homeTabPapers,
       },
       Prefs.homeTabBookshelf: {
@@ -208,6 +222,11 @@ class _HomePageState extends ConsumerState<HomePage> {
         'label': L10n.of(context).navBarMemory,
         'identifier': Prefs.homeTabMemory,
       },
+      Prefs.homeTabMine: {
+        'icon': Icons.person_outline,
+        'label': L10n.of(context).navBarMine,
+        'identifier': Prefs.homeTabMine,
+      },
       Prefs.homeTabSettings: {
         'icon': EvaIcons.settings_2,
         'label': L10n.of(context).navBarSettings,
@@ -226,15 +245,9 @@ class _HomePageState extends ConsumerState<HomePage> {
     int currentIndex = navBarItems.indexWhere(
       (element) => element['identifier'] == _currentTab,
     );
-    if (currentIndex == -1) {
-      _currentTab = Prefs.homeTabPapers;
-      currentIndex = navBarItems.indexWhere(
-        (element) => element['identifier'] == _currentTab,
-      );
-      if (currentIndex == -1 && navBarItems.isNotEmpty) {
-        currentIndex = 0;
-        _currentTab = navBarItems[0]['identifier'];
-      }
+    if (currentIndex == -1 && navBarItems.isNotEmpty) {
+      currentIndex = 0;
+      _currentTab = navBarItems[0]['identifier'];
     }
 
     Widget pageFor(String id, ScrollController? controller) {
@@ -251,6 +264,8 @@ class _HomePageState extends ConsumerState<HomePage> {
           return NotesPage(controller: controller);
         case Prefs.homeTabMemory:
           return const MemoryHomePage();
+        case Prefs.homeTabMine:
+          return const MinePage();
         case Prefs.homeTabSettings:
           return SettingsPage(controller: controller);
         default:

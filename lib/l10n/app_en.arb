@@ -1770,6 +1770,8 @@
   "aiChatEndSessionBodyAutoDaily": "This will keep the current chat in history, then generate up to 3 session memory candidates and auto-save them to today's daily note.",
   "aiChatEndSessionAction": "End session",
   "navBarPapers": "PaperTok",
+  "navBarDiscover": "Discover",
+  "navBarMine": "Me",
   "settingsHomeNavigation": "Home navigation",
   "settingsHomeNavigationSubtitle": "Reorder home tabs and toggle visibility",
   "papersImportPdf": "Import PDF",
