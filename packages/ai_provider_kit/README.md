@@ -144,14 +144,43 @@ Stable and documented, so you can migrate into or out of this package by hand:
 
 ## Secrets
 
-`api_key` and `api_keys` (`AiProviderCenter.secretConfigKeys`) live inside the `aiConfig_<id>` blob.
-Strip them with `AiProviderCenter.safeConfig` before syncing or backing up — the package does not do
-this for you on the storage path, because only the host app knows what leaves the device.
+`api_key` and `api_keys` (`AiProviderCenter.secretConfigKeys`) are the only values worth protecting.
 
-**They are stored wherever your `AiProviderStore` puts them.** Backed by `SharedPreferences` that
-means plain text in the app container — protected by the OS sandbox and device encryption, but not by
-the Keychain/Keystore. If your threat model needs more, implement `AiProviderStore` over secure
-storage and migrate the two secret keys across.
+By default they sit inside the `aiConfig_<id>` blob alongside everything else. Backed by
+`SharedPreferences` that means plain text in the app container — guarded by the OS sandbox and device
+encryption, but not by the Keychain/Keystore.
+
+**To store them properly, give the store a secret channel:**
+
+```dart
+class SecureStore extends PrefsStore {
+  SecureStore(super.prefs, this.secure);
+  final MySecureStorage secure;   // Keychain / Keystore / libsecret / DPAPI
+
+  @override bool get hasSecureSecretChannel => true;
+  @override String? readSecret(String key) => secure.read(key);
+  @override void writeSecret(String key, String value) => secure.write(key, value);
+  @override void removeSecret(String key) => secure.delete(key);
+}
+```
+
+`AiProviderCenter` then keeps secrets out of the plain entry entirely, writing them to
+`aiSecretV1_<id>` through the secret channel while `configOf` still returns one merged map — callers
+don't change.
+
+For an install that already has plaintext keys, call this once at startup:
+
+```dart
+center.migrateSecretsToSecureChannel();
+```
+
+It is idempotent, and it drops a plaintext copy **only after reading the secret back out of secure
+storage successfully** — a keystore that silently fails loses nothing. Without a secret channel it
+returns an empty list and changes nothing, so calling it unconditionally is safe.
+
+Independently of storage: strip secrets with `AiProviderCenter.safeConfig` before syncing or backing
+up. The package deliberately does not decide that for you, because only the host app knows what
+leaves the device.
 
 ## Testing
 

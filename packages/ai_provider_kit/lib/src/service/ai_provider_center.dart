@@ -47,7 +47,11 @@ class AiProviderCenter {
     };
   }
 
+  /// Where secrets live when the store offers a secure channel.
+  static const String secretKeyPrefix = 'aiSecretV1_';
+
   static String configKey(String identifier) => '$configKeyPrefix$identifier';
+  static String secretKey(String identifier) => '$secretKeyPrefix$identifier';
   static String modelsCacheKey(String id) => '$modelsCacheKeyPrefix$id';
   static String modelCapabilitiesCacheKey(String id) =>
       '$modelCapabilitiesCacheKeyPrefix$id';
@@ -144,28 +148,103 @@ class AiProviderCenter {
 
   // --- Per-provider configuration ---
 
+  /// Full configuration, secrets included.
   Map<String, String> configOf(String identifier) {
-    final raw = store.read(configKey(identifier));
+    final config = _decodeMap(
+      store.read(configKey(identifier)),
+      configKey(identifier),
+    );
+    if (!store.hasSecureSecretChannel) return config;
+    return {...config, ..._readSecrets(identifier)};
+  }
+
+  void saveConfig(String identifier, Map<String, String> config) {
+    if (!store.hasSecureSecretChannel) {
+      store.write(configKey(identifier), jsonEncode(config));
+      return;
+    }
+
+    store.write(configKey(identifier), jsonEncode(safeConfig(config)));
+    _writeSecrets(identifier, config);
+  }
+
+  /// Remove a provider's configuration, secrets and caches.
+  void deleteConfig(String identifier) {
+    store.remove(configKey(identifier));
+    if (store.hasSecureSecretChannel) {
+      store.removeSecret(secretKey(identifier));
+    }
+    store.remove(modelsCacheKey(identifier));
+    store.remove(modelCapabilitiesCacheKey(identifier));
+  }
+
+  Map<String, String> _readSecrets(String identifier) {
+    return _decodeMap(
+      store.readSecret(secretKey(identifier)),
+      secretKey(identifier),
+    );
+  }
+
+  void _writeSecrets(String identifier, Map<String, String> config) {
+    final secrets = <String, String>{
+      for (final key in secretConfigKeys)
+        if ((config[key] ?? '').isNotEmpty) key: config[key]!,
+    };
+    if (secrets.isEmpty) {
+      store.removeSecret(secretKey(identifier));
+      return;
+    }
+    store.writeSecret(secretKey(identifier), jsonEncode(secrets));
+  }
+
+  Map<String, String> _decodeMap(String? raw, String key) {
     if (raw == null) return {};
     try {
       final decoded = jsonDecode(raw);
       if (decoded is! Map) return {};
-      return decoded.map((key, value) => MapEntry('$key', '$value'));
+      return decoded.map((k, value) => MapEntry('$k', '$value'));
     } catch (e) {
-      onDecodeError?.call(e, configKey(identifier));
+      onDecodeError?.call(e, key);
       return {};
     }
   }
 
-  void saveConfig(String identifier, Map<String, String> config) {
-    store.write(configKey(identifier), jsonEncode(config));
-  }
+  /// Move inline secrets into the secure channel, once.
+  ///
+  /// Safe to call on every start: it only touches providers that still have a
+  /// secret sitting in their plain config entry, and it rewrites that entry
+  /// only after reading the secret back out of secure storage successfully. A
+  /// keystore that silently fails therefore loses nothing.
+  ///
+  /// Returns the provider ids that were migrated. Returns an empty list when
+  /// the store has no secure channel, so calling it unconditionally is fine.
+  List<String> migrateSecretsToSecureChannel() {
+    if (!store.hasSecureSecretChannel) return const [];
 
-  /// Remove a provider's configuration and its caches.
-  void deleteConfig(String identifier) {
-    store.remove(configKey(identifier));
-    store.remove(modelsCacheKey(identifier));
-    store.remove(modelCapabilitiesCacheKey(identifier));
+    final migrated = <String>[];
+    for (final provider in providers) {
+      final plain = _decodeMap(
+        store.read(configKey(provider.id)),
+        configKey(provider.id),
+      );
+      final inline = <String, String>{
+        for (final key in secretConfigKeys)
+          if ((plain[key] ?? '').isNotEmpty) key: plain[key]!,
+      };
+      if (inline.isEmpty) continue;
+
+      final existing = _readSecrets(provider.id);
+      _writeSecrets(provider.id, {...existing, ...inline});
+
+      // Only drop the plain copy once the secure copy reads back.
+      final verified = _readSecrets(provider.id);
+      final survived = inline.entries.every((e) => verified[e.key] == e.value);
+      if (!survived) continue;
+
+      store.write(configKey(provider.id), jsonEncode(safeConfig(plain)));
+      migrated.add(provider.id);
+    }
+    return migrated;
   }
 
   bool hasConfig(String identifier) => store.contains(configKey(identifier));
