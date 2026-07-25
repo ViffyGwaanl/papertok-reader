@@ -25,7 +25,7 @@
 | E3 | 全局糙感清扫(zh 漏翻 372、裸错误文案 71 处、双击回顶、PaperTok 首屏) | 待真机验收(批次1/3/4) | 批次 3(双击回顶)/4(PaperTok 首屏+错误态)已实现;剩批次 2 裸错误文案人话化;批次 5 等用户 E0 走查输入 | `briefs/E3_polish_sweep_zh.md` |
 | E4 | 减法与聚焦(7 tab→4、设置树收纳、选区菜单 9→5) | in progress | 批次 2/3 已实现(4 tab+我的;极客入口收进开发者选项,图片分析降入 AI 设置);下一步批次 4 选区菜单 | `briefs/E4_subtraction_focus_zh.md` |
 | K1 | 供应商中心抽包 ai_provider_kit(客户端栈无关,供其他 AI 项目复用) | 待真机验收(批次1-5) | 五批次已实现:包(仅依赖 dio,53 项自测)+ 18 条预置目录 + 连通性分类诊断 + 配置导入导出 + 密钥安全通道接缝(本 App 布局零变化);App 侧接 Keychain(flutter_secure_storage,动五平台构建面)待用户拍板;真机验收看 brief §验收 | `briefs/K1_provider_kit_zh.md` |
-| K2 | 网关级可靠性(融合 new-api/CLIProxyAPI:Key 轮换冷却提炼进 kit、供应商级自动回退、自托管网关预设) | in progress | 批次 1(kit 路由核心+网关预设,App 零变化)开工;批次 2 与 E2 批次1 合并;订阅 OAuth 包装明确拒绝(ToS 风险),以 CLIProxyAPI 预设替代 | `briefs/K2_gateway_reliability_zh.md` |
+| K2 | 网关级可靠性(融合 new-api/CLIProxyAPI:Key 轮换冷却提炼进 kit、供应商级自动回退、自托管网关预设) | in progress | 批次 1(kit 路由核心+网关预设)与 3a(嵌入循环迁移,含冷却清除修正)已实现;批次 2 撤销(翻译已继承轮换,归 E2);下一步 3b(聊天 index.dart 迁移)→ 4(回退 opt-in UI) | `briefs/K2_gateway_reliability_zh.md` |
 | G1a | 分享资产:书摘卡 2.0、读书报告(不含实录长图) | backlog | 不受冻结规则约束,可直接开工(2026-07-09 复核:不碰高风险文件、无R2/R3依赖);开工前用户拍板水印/二维码 | `briefs/G1_share_artifacts_zh.md` |
 | G1b | 分享资产:研讨会实录长图 | backlog | 依赖 R2 后干净事件流,维持原排期 | `briefs/G1_share_artifacts_zh.md` |
 | G2 | 每日回顾循环(本地通知 + 记忆间隔重复回顾) | backlog | 重建期收口后,可与 G1 并行;通知权限时机开工前拍板 | `briefs/G2_daily_review_loop_zh.md` |

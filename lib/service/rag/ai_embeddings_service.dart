@@ -103,68 +103,20 @@ class AiEmbeddingsService {
 
     final nowMs = DateTime.now().millisecondsSinceEpoch;
 
-    int parseInt(String key, int fallback) {
-      final v = (savedConfig[key] ?? '').trim();
-      if (v.isEmpty) return fallback;
-      return int.tryParse(v) ?? fallback;
-    }
-
-    final failureThreshold = parseInt(
-      'api_key_policy_failure_threshold',
-      3,
-    ).clamp(1, 10);
-
-    final authCooldownMs = Duration(
-      minutes: parseInt(
-        'api_key_policy_auth_cooldown_min',
-        60,
-      ).clamp(1, 24 * 60),
-    ).inMilliseconds;
-    final rateLimitCooldownMs = Duration(
-      minutes: parseInt(
-        'api_key_policy_rate_limit_cooldown_min',
-        5,
-      ).clamp(1, 24 * 60),
-    ).inMilliseconds;
-    final serviceCooldownMs = Duration(
-      minutes: parseInt(
-        'api_key_policy_service_cooldown_min',
-        1,
-      ).clamp(1, 24 * 60),
-    ).inMilliseconds;
-
-    bool isCoolingDown(AiApiKeyEntry e) {
-      final until = e.disabledUntil;
-      return until != null && until > nowMs;
-    }
-
-    final eligibleEntries = managedEntries
-        .where((e) => e.enabled && e.key.trim().isNotEmpty && !isCoolingDown(e))
-        .toList(growable: false);
-
-    final allEnabledEntries = managedEntries
-        .where((e) => e.enabled && e.key.trim().isNotEmpty)
-        .toList(growable: false);
-
-    final candidates = eligibleEntries.isNotEmpty
-        ? eligibleEntries
-        : (allEnabledEntries.toList(growable: true)
-          ..sort(
-            (a, b) => (a.disabledUntil ?? 0).compareTo(b.disabledUntil ?? 0),
-          ));
-
+    // Policy + attempt order come from ai_provider_kit; the semantics
+    // (thresholds, per-class cooldowns, all-cooling fallback, round-robin
+    // offset) are the ones this file used to hand-roll.
+    final policy = AiKeyRotationPolicy.fromRawConfig(savedConfig);
     final startIndex = apiKeyRoundRobin.startIndex(pid);
-    final attempts = candidates.isEmpty ? 1 : candidates.length;
-
-    List<AiApiKeyEntry> replaceEntry(
-      List<AiApiKeyEntry> list,
-      AiApiKeyEntry entry,
-    ) {
-      final idx = list.indexWhere((e) => e.id == entry.id);
-      if (idx < 0) return list;
-      final next = [...list];
-      next[idx] = entry;
-      return next;
+    final keyAttempts = planAiKeyAttempts(
+      entries: managedEntries,
+      fallbackApiKey: baseConfig.apiKey,
+      startIndex: startIndex,
+      nowMs: nowMs,
+    );
+    final attempts = keyAttempts.length;
+    if (attempts == 0) {
+      throw StateError('Missing API key for embeddings provider=$pid.');
     }
 
     void persistManagedKeys(
@@ -178,42 +130,10 @@ class AiEmbeddingsService {
       Prefs().saveAiConfig(pid, cfg);
     }
 
-    bool shouldRetry(Object error) {
-      final message = error.toString().toLowerCase();
-      return message.contains('401') ||
-          message.contains('unauthorized') ||
-          message.contains('invalid api key') ||
-          message.contains('429') ||
-          message.contains('rate limit') ||
-          message.contains('503') ||
-          message.contains('bad gateway');
-    }
-
-    int cooldownMsFor(Object error) {
-      final message = error.toString().toLowerCase();
-      if (message.contains('401') ||
-          message.contains('unauthorized') ||
-          message.contains('invalid api key')) {
-        return authCooldownMs;
-      }
-      if (message.contains('429') || message.contains('rate limit')) {
-        return rateLimitCooldownMs;
-      }
-      return serviceCooldownMs;
-    }
-
     for (var attempt = 0; attempt < attempts; attempt++) {
-      final attemptEntry = candidates.isEmpty
-          ? null
-          : candidates[(startIndex + attempt) % candidates.length];
-
-      final attemptKey = (attemptEntry?.key.trim().isNotEmpty ?? false)
-          ? attemptEntry!.key.trim()
-          : baseConfig.apiKey;
-
-      if (attemptKey.trim().isEmpty) {
-        throw StateError('Missing API key for embeddings provider=$pid.');
-      }
+      final keyAttempt = keyAttempts[attempt];
+      final attemptEntry = keyAttempt.entry;
+      final attemptKey = keyAttempt.apiKey;
 
       final headers = <String, String>{}..addAll(baseConfig.headers);
       headers.putIfAbsent('Content-Type', () => 'application/json');
@@ -253,21 +173,16 @@ class AiEmbeddingsService {
         }
 
         // Success: advance round-robin index and persist stats.
-        if (candidates.length > 1) {
+        if (keyAttempts.length > 1) {
           apiKeyRoundRobin.advance(pid, startIndex + attempt + 1);
         }
 
         if (attemptEntry != null && hasManagedList) {
-          final updated = attemptEntry.copyWith(
-            lastUsedAt: nowMs,
-            lastSuccessAt: nowMs,
-            successCount: (attemptEntry.successCount ?? 0) + 1,
-            consecutiveFailures: 0,
-            disabledUntil: null,
-            updatedAt: nowMs,
+          final updated = applyAiKeySuccess(attemptEntry, nowMs: nowMs);
+          persistManagedKeys(
+            upsertAiKeyEntry(managedEntries, updated),
+            activeKey: attemptKey,
           );
-          final next = replaceEntry(managedEntries, updated);
-          persistManagedKeys(next, activeKey: attemptKey);
         }
 
         return list;
@@ -277,29 +192,22 @@ class AiEmbeddingsService {
           'Embeddings: request failed provider=$pid attempt=${attempt + 1}/$attempts error=$mapped',
         );
 
+        final failure = classifyAiFailureText(e);
         if (attemptEntry != null && hasManagedList) {
-          final retryable = shouldRetry(e);
-          final nextConsecutive = (attemptEntry.consecutiveFailures ?? 0) + 1;
-
-          int? disabledUntil;
-          if (retryable && nextConsecutive >= failureThreshold) {
-            disabledUntil = nowMs + cooldownMsFor(e);
-          }
-
-          final updated = attemptEntry.copyWith(
-            lastUsedAt: nowMs,
-            lastFailureAt: nowMs,
-            failureCount: (attemptEntry.failureCount ?? 0) + 1,
-            consecutiveFailures: nextConsecutive,
-            disabledUntil: disabledUntil ?? attemptEntry.disabledUntil,
-            updatedAt: nowMs,
+          final updated = applyAiKeyFailure(
+            attemptEntry,
+            nowMs: nowMs,
+            policy: policy,
+            failure: failure,
           );
-
-          final next = replaceEntry(managedEntries, updated);
-          persistManagedKeys(next, activeKey: attemptKey);
+          persistManagedKeys(
+            upsertAiKeyEntry(managedEntries, updated),
+            activeKey: attemptKey,
+          );
         }
 
-        final canRetry = candidates.length > 1 && shouldRetry(e);
+        final canRetry =
+            keyAttempts.length > 1 && isAiKeyCooldownWorthy(failure);
         if (canRetry && attempt < attempts - 1) {
           continue;
         }

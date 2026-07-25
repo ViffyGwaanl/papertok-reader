@@ -28,11 +28,11 @@
 - 预设 +2:new-api、CLIProxyAPI(端口取自各自官方默认配置)。
 - 全部带包内测试;App 侧一行不改。
 
-### 批次 2 — 翻译接入路由层(与 E2 批次1 合并执行,勿做两套)
-- `lib/service/translate/ai.dart` / `ai_fulltext.dart` 改走 kit 尝试序列;失败提示用 K1 的分类文案。真机验收:断网/坏 Key/限流三种场景的行为与文案。
+### 批次 2 — 已撤销(2026-07-25 前提核实不成立)
+- 核实:两个翻译 Provider 均走 `aiGenerateStream`,请求级 Key 轮换已继承聊天循环;E2 红线也明确禁改 `ai.dart`/`ai_fulltext.dart`。条目级退避重试属 E2 批次1 领地,K2 不做两套。
 
-### 批次 3 — 聊天与嵌入两处手写循环迁移到 kit(纯去重)
-- `index.dart` 与 `ai_embeddings_service.dart` 的轮换/冷却段改为调 kit,行为逐字对齐(现有测试 + 新增对照测试守护)。god file 继续变短。
+### 批次 3 — 两处手写循环迁移到 kit(纯去重;3a 嵌入、3b 聊天)
+- 3a `ai_embeddings_service.dart`、3b `index.dart`:轮换/冷却段改为调 kit,行为逐字对齐;唯一声明例外 = 成功后冷却真正清除(修 `copyWith(disabledUntil: null)` 空操作 bug)。3b 单独一片做(聊天热路径,需完整上下文)。
 
 ### 批次 4 — 供应商级自动回退 opt-in + 路由透明度(UI,真机验收)
 - 设置加"备用供应商"开关(**默认关**:自动切供应商改变成本与隐私预期,必须用户点头);生效时在结果处可见"本次由 X 完成"。文案进 ARB en+zh。
