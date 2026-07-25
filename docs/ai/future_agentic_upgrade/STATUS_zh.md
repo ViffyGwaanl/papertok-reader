@@ -24,7 +24,7 @@
 | E2 | 阅读翻译体验简化(自动重试、人话提示、收纳工程仪表) | backlog | 可与 A 线并行(文件不相交);批次 1 自动重试 | `briefs/E2_translate_ux_simplify_zh.md` |
 | E3 | 全局糙感清扫(zh 漏翻 372、裸错误文案 71 处、双击回顶、PaperTok 首屏) | 待真机验收(批次1/3/4) | 批次 3(双击回顶)/4(PaperTok 首屏+错误态)已实现;剩批次 2 裸错误文案人话化;批次 5 等用户 E0 走查输入 | `briefs/E3_polish_sweep_zh.md` |
 | E4 | 减法与聚焦(7 tab→4、设置树收纳、选区菜单 9→5) | in progress | 批次 2/3 已实现(4 tab+我的;极客入口收进开发者选项,图片分析降入 AI 设置);下一步批次 4 选区菜单 | `briefs/E4_subtraction_focus_zh.md` |
-| K1 | 供应商中心抽包 ai_provider_kit(客户端栈无关,供其他 AI 项目复用) | in progress | 调研确认 Dart 生态无同类替代品;批次 1(包骨架+纯核心迁移)开工;阅读器行为零变化、不迁移数据 | `briefs/K1_provider_kit_zh.md` |
+| K1 | 供应商中心抽包 ai_provider_kit(客户端栈无关,供其他 AI 项目复用) | 待真机验收(批次1-4) | 四批次全部实现:包(2138 行,仅依赖 dio,45 项自测)+ 18 条预置目录 + 连通性分类诊断 + 配置导入导出;阅读器行为零变化、不迁移数据;真机验收看 brief §验收 | `briefs/K1_provider_kit_zh.md` |
 | G1a | 分享资产:书摘卡 2.0、读书报告(不含实录长图) | backlog | 不受冻结规则约束,可直接开工(2026-07-09 复核:不碰高风险文件、无R2/R3依赖);开工前用户拍板水印/二维码 | `briefs/G1_share_artifacts_zh.md` |
 | G1b | 分享资产:研讨会实录长图 | backlog | 依赖 R2 后干净事件流,维持原排期 | `briefs/G1_share_artifacts_zh.md` |
 | G2 | 每日回顾循环(本地通知 + 记忆间隔重复回顾) | backlog | 重建期收口后,可与 G1 并行;通知权限时机开工前拍板 | `briefs/G2_daily_review_loop_zh.md` |
