@@ -759,62 +759,96 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
   }
 
   Future<void> _testKey(AiApiKeyEntry entry) async {
-    final l10n = L10n.of(context);
-
     final now = DateTime.now().millisecondsSinceEpoch;
-    try {
-      final cfg = _buildConfigMap();
-      cfg.remove('api_keys');
-      cfg['api_key'] = entry.key.trim();
 
-      final models = await AiModelsService.fetchModels(
-        provider: _provider,
-        rawConfig: cfg,
-      );
+    final cfg = _buildConfigMap();
+    cfg.remove('api_keys');
+    cfg['api_key'] = entry.key.trim();
 
-      if (!mounted) return;
+    final result = await AiProviderTester.test(
+      provider: _provider,
+      config: cfg,
+    );
 
-      final msg = models.isEmpty
-          ? _text(zh: '成功', en: 'OK')
-          : _text(
-              zh: '成功（${models.length} 个模型）',
-              en: 'OK (${models.length} models)',
-            );
-      _setApiKeys(
-        _apiKeys
-            .map(
-              (e) => e.id == entry.id
-                  ? e.copyWith(
-                      lastTestAt: now,
-                      lastTestOk: true,
-                      lastTestMessage: msg,
-                      updatedAt: now,
-                    )
-                  : e,
+    if (!mounted) return;
+
+    final message = result.ok ? _describeTestSuccess(result) : _describeTestFailure(result);
+
+    _setApiKeys(
+      _apiKeys
+          .map(
+            (e) => e.id == entry.id
+                ? e.copyWith(
+                    lastTestAt: now,
+                    lastTestOk: result.ok,
+                    lastTestMessage: message,
+                    updatedAt: now,
+                  )
+                : e,
+          )
+          .toList(growable: false),
+    );
+
+    AnxToast.show(
+      result.ok
+          ? _text(
+              zh: '测试成功：${entry.name}',
+              en: 'Test success: ${entry.name}',
             )
-            .toList(growable: false),
-      );
+          : '${entry.name}: $message',
+    );
+  }
 
-      AnxToast.show(
-        _text(zh: '测试成功：${entry.name}', en: 'Test success: ${entry.name}'),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      _setApiKeys(
-        _apiKeys
-            .map(
-              (k) => k.id == entry.id
-                  ? k.copyWith(
-                      lastTestAt: now,
-                      lastTestOk: false,
-                      lastTestMessage: e.toString(),
-                      updatedAt: now,
-                    )
-                  : k,
-            )
-            .toList(growable: false),
-      );
-      AnxToast.show('${l10n.commonFailed}: $e');
+  String _describeTestSuccess(AiProviderTestResult result) {
+    final ms = result.latency.inMilliseconds;
+    if (result.modelCount == 0) {
+      return _text(zh: '成功（$ms ms）', en: 'OK ($ms ms)');
+    }
+    return _text(
+      zh: '成功（${result.modelCount} 个模型，$ms ms）',
+      en: 'OK (${result.modelCount} models, $ms ms)',
+    );
+  }
+
+  /// Say which thing is wrong, because the fix differs per case: a rejected key
+  /// needs a new key, a 404 needs a corrected API URL.
+  String _describeTestFailure(AiProviderTestResult result) {
+    switch (result.failure) {
+      case AiProviderTestFailure.unauthorized:
+        return _text(
+          zh: 'API Key 无效或没有权限',
+          en: 'API key rejected or lacks permission',
+        );
+      case AiProviderTestFailure.notFound:
+        return _text(
+          zh: '接口不存在，请检查 API 地址',
+          en: 'Endpoint not found — check the API URL',
+        );
+      case AiProviderTestFailure.rateLimited:
+        return _text(
+          zh: '请求过于频繁或额度已用尽',
+          en: 'Rate limited or out of quota',
+        );
+      case AiProviderTestFailure.serverError:
+        return _text(
+          zh: '服务商暂时故障，稍后再试',
+          en: 'Provider error, try again later',
+        );
+      case AiProviderTestFailure.network:
+        return _text(
+          zh: '连接不上，请检查网络或 API 地址',
+          en: 'Cannot reach the server — check network or URL',
+        );
+      case AiProviderTestFailure.timeout:
+        return _text(zh: '连接超时', en: 'Timed out');
+      case AiProviderTestFailure.badResponse:
+        return _text(
+          zh: '返回内容无法识别，可能不是兼容接口',
+          en: 'Unrecognized response — endpoint may not be compatible',
+        );
+      case AiProviderTestFailure.unknown:
+      case null:
+        return result.message ?? _text(zh: '未知错误', en: 'Unknown error');
     }
   }
 

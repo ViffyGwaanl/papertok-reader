@@ -15,4 +15,6 @@ export 'src/models/ai_provider_meta.dart';
 export 'src/models/ai_thinking_mode.dart';
 export 'src/service/ai_models_service.dart';
 export 'src/service/ai_provider_center.dart';
+export 'src/service/ai_provider_portfolio.dart';
+export 'src/service/ai_provider_tester.dart';
 export 'src/store/ai_provider_store.dart';
