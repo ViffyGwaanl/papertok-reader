@@ -1,8 +1,7 @@
 import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/enums/lang_list.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
-import 'package:papertok_reader/models/ai_provider_meta.dart';
-import 'package:papertok_reader/service/ai/ai_models_service.dart';
+import 'package:ai_provider_kit/ai_provider_kit.dart';
 // Inline full-text translation status is shown in Reading Settings.
 import 'package:papertok_reader/utils/toast/common.dart';
 import 'package:papertok_reader/widgets/common/pt_bottom_sheet.dart';

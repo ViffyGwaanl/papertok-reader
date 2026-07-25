@@ -1,4 +1,4 @@
-import 'package:papertok_reader/models/ai_provider_meta.dart';
+import 'package:ai_provider_kit/ai_provider_kit.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

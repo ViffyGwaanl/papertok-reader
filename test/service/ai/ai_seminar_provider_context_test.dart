@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:papertok_reader/config/shared_preference_provider.dart';
-import 'package:papertok_reader/models/ai_model_capability.dart';
-import 'package:papertok_reader/models/ai_provider_meta.dart';
+import 'package:ai_provider_kit/ai_provider_kit.dart';
 import 'package:papertok_reader/service/ai/ai_seminar_provider_context.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

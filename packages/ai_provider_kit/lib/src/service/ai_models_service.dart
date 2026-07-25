@@ -1,25 +1,16 @@
 import 'dart:convert';
 
-import 'package:papertok_reader/models/ai_model_capability.dart';
-import 'package:papertok_reader/models/ai_provider_meta.dart';
-import 'package:papertok_reader/service/ai/langchain_ai_config.dart';
 import 'package:dio/dio.dart';
+
+import '../config/ai_endpoint_config.dart';
+import '../models/ai_model_capability.dart';
+import '../models/ai_provider_meta.dart';
 
 class AiModelsService {
   static final Dio _dio = Dio();
 
-  static String registryIdentifierFor(AiProviderMeta provider) {
-    switch (provider.type) {
-      case AiProviderType.anthropic:
-        return 'claude';
-      case AiProviderType.gemini:
-        return 'gemini';
-      case AiProviderType.openaiResponses:
-        return 'openai-responses';
-      case AiProviderType.openaiCompatible:
-        return 'openai';
-    }
-  }
+  static String registryIdentifierFor(AiProviderMeta provider) =>
+      registryIdentifierForAiProvider(provider);
 
   /// Fetch structured model capabilities for the provider.
   ///
@@ -31,7 +22,7 @@ class AiModelsService {
     required Map<String, String> rawConfig,
   }) async {
     final registryId = registryIdentifierFor(provider);
-    final config = LangchainAiConfig.fromPrefs(registryId, rawConfig);
+    final config = AiEndpointConfig.fromRawConfig(registryId, rawConfig);
 
     switch (provider.type) {
       case AiProviderType.openaiCompatible:
@@ -57,7 +48,7 @@ class AiModelsService {
   }
 
   static Future<List<AiModelCapability>> _fetchOpenAICompatible(
-    LangchainAiConfig config,
+    AiEndpointConfig config,
   ) async {
     final baseUrl = config.baseUrl ?? 'https://api.openai.com/v1';
     final url = _join(baseUrl, 'models');
@@ -92,7 +83,7 @@ class AiModelsService {
   }
 
   static Future<List<AiModelCapability>> _fetchAnthropic(
-    LangchainAiConfig config,
+    AiEndpointConfig config,
   ) async {
     final baseUrl = config.baseUrl ?? 'https://api.anthropic.com/v1';
     final url = _join(baseUrl, 'models');
@@ -136,7 +127,7 @@ class AiModelsService {
   }
 
   static Future<List<AiModelCapability>> _fetchGemini(
-    LangchainAiConfig config,
+    AiEndpointConfig config,
   ) async {
     final rawBase =
         config.baseUrl ?? 'https://generativelanguage.googleapis.com';

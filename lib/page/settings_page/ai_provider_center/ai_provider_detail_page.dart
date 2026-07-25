@@ -3,11 +3,8 @@ import 'dart:convert';
 
 import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
-import 'package:papertok_reader/models/ai_model_capability.dart';
-import 'package:papertok_reader/models/ai_api_key_entry.dart';
-import 'package:papertok_reader/models/ai_provider_meta.dart';
+import 'package:ai_provider_kit/ai_provider_kit.dart';
 import 'package:papertok_reader/page/settings_page/subpage/settings_subpage_scaffold.dart';
-import 'package:papertok_reader/service/ai/ai_models_service.dart';
 import 'package:papertok_reader/service/ai/ai_services.dart';
 import 'package:papertok_reader/service/ai/langchain_ai_config.dart';
 import 'package:papertok_reader/theme/claude_palette.dart';

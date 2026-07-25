@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:papertok_reader/config/shared_preference_provider.dart';
-import 'package:papertok_reader/models/ai_model_capability.dart';
+import 'package:ai_provider_kit/ai_provider_kit.dart';
 import 'package:langchain_core/chat_models.dart';
 
 class PromptBudgetResult {

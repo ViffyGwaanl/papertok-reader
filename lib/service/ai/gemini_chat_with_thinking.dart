@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:papertok_reader/enums/ai_thinking_mode.dart';
+import 'package:ai_provider_kit/ai_provider_kit.dart';
 import 'package:googleai_dart/googleai_dart.dart' as g;
 import 'package:http/http.dart' as http;
 import 'package:langchain_core/chat_models.dart';

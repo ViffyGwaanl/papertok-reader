@@ -1,3 +1,4 @@
+import 'package:ai_provider_kit/ai_provider_kit.dart';
 import 'package:papertok_reader/utils/env_var.dart';
 
 class AiServiceOption {
@@ -18,65 +19,52 @@ class AiServiceOption {
   final String defaultModel;
 }
 
+const String _placeholderApiKey = 'YOUR_API_KEY';
+
+/// Bundled artwork, keyed by [AiProviderPreset.logoKey].
+const Map<String, String> _logoAssets = {
+  'openai': 'assets/images/openai.png',
+  'claude': 'assets/images/claude.png',
+  'gemini': 'assets/images/gemini.png',
+  'deepseek': 'assets/images/deepseek.png',
+  'openrouter': 'assets/images/openrouter.png',
+};
+
+AiServiceOption _fromPreset(AiProviderPreset preset) {
+  return AiServiceOption(
+    identifier: preset.id,
+    title: preset.name,
+    logo: _logoAssets[preset.logoKey] ?? 'assets/images/commonAi.png',
+    defaultUrl: preset.defaultUrl,
+    defaultApiKey: _placeholderApiKey,
+    defaultModel: preset.defaultModel ?? '',
+  );
+}
+
+/// The provider list shown as built-ins in this app.
+///
+/// Endpoint data comes from `ai_provider_kit`'s catalog; the catalog is wider
+/// than this list on purpose — adding an entry here also needs artwork and a
+/// product decision.
 List<AiServiceOption> buildDefaultAiServices() {
   return [
-    !EnvVar.enableOpenAiConfig
-        ? AiServiceOption(
-            identifier: 'openai',
-            title: '通用',
-            logo: 'assets/images/commonAi.png',
-            defaultUrl:
-                'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-            defaultApiKey: 'YOUR_API_KEY',
-            defaultModel: 'qwen-long',
-          )
-        : AiServiceOption(
-            identifier: 'openai',
-            title: 'OpenAI',
-            logo: 'assets/images/openai.png',
-            defaultUrl: 'https://api.openai.com/v1/chat/completions',
-            defaultApiKey: 'YOUR_API_KEY',
-            defaultModel: 'gpt-4o-mini',
-          ),
-    AiServiceOption(
-      identifier: 'openai-responses',
-      title: 'OpenAI Responses',
-      logo: 'assets/images/openai.png',
-      defaultUrl: 'https://api.openai.com/v1/responses',
-      defaultApiKey: 'YOUR_API_KEY',
-      defaultModel: 'gpt-5-mini',
-    ),
-    AiServiceOption(
-      identifier: 'claude',
-      title: 'Claude',
-      logo: 'assets/images/claude.png',
-      defaultUrl: 'https://api.anthropic.com/v1/messages',
-      defaultApiKey: 'YOUR_API_KEY',
-      defaultModel: 'claude-3-5-sonnet-20240620',
-    ),
-    AiServiceOption(
-      identifier: 'gemini',
-      title: 'Gemini',
-      logo: 'assets/images/gemini.png',
-      defaultUrl: 'https://generativelanguage.googleapis.com',
-      defaultApiKey: 'YOUR_API_KEY',
-      defaultModel: 'gemini-2.5-flash',
-    ),
-    AiServiceOption(
-      identifier: 'deepseek',
-      title: 'DeepSeek',
-      logo: 'assets/images/deepseek.png',
-      defaultUrl: 'https://api.deepseek.com/v1/chat/completions',
-      defaultApiKey: 'YOUR_API_KEY',
-      defaultModel: 'deepseek-chat',
-    ),
-    AiServiceOption(
-      identifier: 'openrouter',
-      title: 'OpenRouter',
-      logo: 'assets/images/openrouter.png',
-      defaultUrl: 'https://openrouter.ai/api/v1/chat/completions',
-      defaultApiKey: 'YOUR_API_KEY',
-      defaultModel: 'gpt-4o-mini',
-    ),
+    if (!EnvVar.enableOpenAiConfig)
+      // Legacy generic slot: keeps the `openai` identifier while pointing at an
+      // OpenAI-compatible gateway instead of OpenAI itself.
+      AiServiceOption(
+        identifier: 'openai',
+        title: '通用',
+        logo: 'assets/images/commonAi.png',
+        defaultUrl: AiProviderPresets.dashscope.defaultUrl,
+        defaultApiKey: _placeholderApiKey,
+        defaultModel: 'qwen-long',
+      )
+    else
+      _fromPreset(AiProviderPresets.openai),
+    _fromPreset(AiProviderPresets.openaiResponses),
+    _fromPreset(AiProviderPresets.claude),
+    _fromPreset(AiProviderPresets.gemini),
+    _fromPreset(AiProviderPresets.deepseek),
+    _fromPreset(AiProviderPresets.openrouter),
   ];
 }

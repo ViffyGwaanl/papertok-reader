@@ -11,7 +11,7 @@ import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/main.dart';
 import 'package:papertok_reader/models/ai_conversation_tree.dart';
-import 'package:papertok_reader/models/ai_provider_meta.dart';
+import 'package:ai_provider_kit/ai_provider_kit.dart';
 import 'package:papertok_reader/models/ai_seminar.dart';
 import 'package:papertok_reader/models/concept_graph.dart';
 import 'package:papertok_reader/models/knowledge_card.dart';

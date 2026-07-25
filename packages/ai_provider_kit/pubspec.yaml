@@ -1,0 +1,17 @@
+name: ai_provider_kit
+description: >-
+  Client-stack agnostic AI provider management for Dart/Flutter apps: provider
+  registry, multi API key rotation, model catalog fetching and per-feature model
+  routing. Knows nothing about chat, streaming or tool calling.
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.5.2 <4.0.0'
+
+dependencies:
+  dio: ^5.4.3
+
+dev_dependencies:
+  lints: ^4.0.0
+  test: ^1.25.0
