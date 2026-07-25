@@ -20,9 +20,11 @@ void main() {
     }
   });
 
-  test('remote presets link to where a key is obtained', () {
+  test('remote presets that need a key link to where it is obtained', () {
     for (final preset in AiProviderPresets.all) {
       if (!preset.requiresApiKey) continue;
+      // Self-hosted gateways issue their own tokens — no signup URL exists.
+      if (preset.region == AiProviderRegion.local) continue;
       expect(
         preset.apiKeyUrl,
         isNotNull,
@@ -31,13 +33,14 @@ void main() {
     }
   });
 
-  test('local presets need no key and point at localhost', () {
+  test('local presets point at localhost; local runtimes need no key', () {
     final local = AiProviderPresets.inRegion(AiProviderRegion.local);
     expect(local, isNotEmpty);
     for (final preset in local) {
-      expect(preset.requiresApiKey, isFalse);
       expect(Uri.parse(preset.defaultUrl).host, 'localhost');
     }
+    expect(AiProviderPresets.ollama.requiresApiKey, isFalse);
+    expect(AiProviderPresets.lmStudio.requiresApiKey, isFalse);
   });
 
   // These six ids are already persisted in installed apps; changing their

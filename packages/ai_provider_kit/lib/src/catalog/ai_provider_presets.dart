@@ -257,6 +257,31 @@ abstract final class AiProviderPresets {
     region: AiProviderRegion.china,
   );
 
+
+  /// Self-hosted new-api gateway (43k-star aggregation hub). One token in the
+  /// reader fans out to every channel configured server-side.
+  static const newApi = AiProviderPreset(
+    id: 'newapi',
+    name: 'New API (self-hosted)',
+    type: AiProviderType.openaiCompatible,
+    defaultUrl: 'http://localhost:3000/v1/chat/completions',
+    docsUrl: 'https://docs.newapi.pro',
+    region: AiProviderRegion.local,
+  );
+
+  /// Self-hosted CLIProxyAPI: exposes CLI subscriptions (Claude Code, Codex,
+  /// Gemini CLI…) as an OpenAI-compatible endpoint. The sanctioned way to use
+  /// subscription quota from this app — OAuth wrapping stays on the user's own
+  /// machine, not inside a mobile client.
+  static const cliProxyApi = AiProviderPreset(
+    id: 'cliproxyapi',
+    name: 'CLIProxyAPI (self-hosted)',
+    type: AiProviderType.openaiCompatible,
+    defaultUrl: 'http://localhost:8317/v1/chat/completions',
+    docsUrl: 'https://github.com/router-for-me/CLIProxyAPI',
+    region: AiProviderRegion.local,
+  );
+
   static const ollama = AiProviderPreset(
     id: 'ollama',
     name: 'Ollama',
@@ -295,6 +320,8 @@ abstract final class AiProviderPresets {
     moonshot,
     zhipu,
     volcengineArk,
+    newApi,
+    cliProxyApi,
     ollama,
     lmStudio,
   ];

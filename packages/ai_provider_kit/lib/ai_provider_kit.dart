@@ -13,6 +13,8 @@ export 'src/models/ai_api_key_entry.dart';
 export 'src/models/ai_model_capability.dart';
 export 'src/models/ai_provider_meta.dart';
 export 'src/models/ai_thinking_mode.dart';
+export 'src/routing/ai_key_attempts.dart';
+export 'src/routing/ai_provider_failover.dart';
 export 'src/service/ai_models_service.dart';
 export 'src/service/ai_provider_center.dart';
 export 'src/service/ai_provider_portfolio.dart';
