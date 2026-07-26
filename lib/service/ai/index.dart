@@ -233,81 +233,15 @@ Stream<String> _generateStream({
   final hasManagedList = (savedConfig['api_keys'] ?? '').trim().isNotEmpty;
   final nowMs = DateTime.now().millisecondsSinceEpoch;
 
-  int parseInt(String key, int fallback) {
-    final v = (rawMergedConfig[key] ?? '').trim();
-    if (v.isEmpty) return fallback;
-    return int.tryParse(v) ?? fallback;
-  }
-
-  final failureThreshold =
-      parseInt('api_key_policy_failure_threshold', 3).clamp(1, 10);
-  final authCooldownMs = Duration(
-    minutes: parseInt('api_key_policy_auth_cooldown_min', 60).clamp(1, 24 * 60),
-  ).inMilliseconds;
-  final rateLimitCooldownMs = Duration(
-    minutes:
-        parseInt('api_key_policy_rate_limit_cooldown_min', 5).clamp(1, 24 * 60),
-  ).inMilliseconds;
-  final serviceCooldownMs = Duration(
-    minutes:
-        parseInt('api_key_policy_service_cooldown_min', 1).clamp(1, 24 * 60),
-  ).inMilliseconds;
-
-  bool isCoolingDown(AiApiKeyEntry e) {
-    final until = e.disabledUntil;
-    return until != null && until > nowMs;
-  }
-
-  final eligibleEntries = managedEntries
-      .where((e) => e.enabled && e.key.trim().isNotEmpty && !isCoolingDown(e))
-      .toList(growable: false);
+  // Policy + attempt order come from ai_provider_kit; semantics (thresholds,
+  // per-class cooldowns, all-cooling fallback, round-robin offset) are the
+  // ones this loop used to hand-roll — kept in lockstep with the embeddings
+  // call site.
+  final policy = AiKeyRotationPolicy.fromRawConfig(rawMergedConfig);
 
   AnxLog.info(
     'aiGenerateStream: $selectedProviderId($registryIdentifier), model: ${config.model}, baseUrl: ${config.baseUrl}',
   );
-
-  bool shouldRetry(Object error) {
-    final message = error.toString().toLowerCase();
-    if (message.contains('401') ||
-        message.contains('unauthorized') ||
-        message.contains('invalid api key')) {
-      return true;
-    }
-    if (message.contains('429') || message.contains('rate limit')) {
-      return true;
-    }
-    if (message.contains('503') || message.contains('bad gateway')) {
-      return true;
-    }
-    return false;
-  }
-
-  int cooldownMsFor(Object error) {
-    final message = error.toString().toLowerCase();
-    if (message.contains('401') ||
-        message.contains('unauthorized') ||
-        message.contains('invalid api key')) {
-      return authCooldownMs;
-    }
-    if (message.contains('429') || message.contains('rate limit')) {
-      return rateLimitCooldownMs;
-    }
-    if (message.contains('503') || message.contains('bad gateway')) {
-      return serviceCooldownMs;
-    }
-    return serviceCooldownMs;
-  }
-
-  List<AiApiKeyEntry> replaceEntry(
-    List<AiApiKeyEntry> list,
-    AiApiKeyEntry entry,
-  ) {
-    final idx = list.indexWhere((e) => e.id == entry.id);
-    if (idx < 0) return list;
-    final next = [...list];
-    next[idx] = entry;
-    return next;
-  }
 
   void persistManagedKeys(
     List<AiApiKeyEntry> entries, {
@@ -320,38 +254,27 @@ Stream<String> _generateStream({
     Prefs().saveAiConfig(selectedProviderId, cfg);
   }
 
-  // Rotation candidates:
-  // - Prefer keys not in cooldown.
-  // - If all enabled keys are cooling down, still attempt the one whose
-  //   cooldown expires earliest (avoid total outage).
-  final allEnabledEntries = managedEntries
-      .where((e) => e.enabled && e.key.trim().isNotEmpty)
-      .toList(growable: false);
-
-  final candidates = eligibleEntries.isNotEmpty
-      ? eligibleEntries
-      : (allEnabledEntries.toList(growable: true)
-        ..sort(
-          (a, b) => (a.disabledUntil ?? 0).compareTo(b.disabledUntil ?? 0),
-        ));
-
   final startIndex = apiKeyRoundRobin.startIndex(selectedProviderId);
-  final attempts = candidates.isEmpty ? 1 : candidates.length;
+  final keyAttempts = planAiKeyAttempts(
+    entries: managedEntries,
+    fallbackApiKey: config.apiKey,
+    startIndex: startIndex,
+    nowMs: nowMs,
+  );
+  // With nothing configured, still fire one bare attempt — the provider's own
+  // auth error is more useful to the user than a local refusal.
+  final attempts = keyAttempts.isEmpty ? 1 : keyAttempts.length;
 
   for (var attempt = 0; attempt < attempts; attempt++) {
-    final attemptEntry = candidates.isEmpty
-        ? null
-        : candidates[(startIndex + attempt) % candidates.length];
-
-    final attemptKey = (attemptEntry?.key.trim().isNotEmpty ?? false)
-        ? attemptEntry!.key.trim()
-        : config.apiKey;
+    final keyAttempt = keyAttempts.isEmpty ? null : keyAttempts[attempt];
+    final attemptEntry = keyAttempt?.entry;
+    final attemptKey = keyAttempt?.apiKey ?? config.apiKey;
 
     final attemptConfig = config.copyWith(apiKey: attemptKey);
 
-    if (candidates.length > 1) {
+    if (keyAttempts.length > 1) {
       AnxLog.info(
-        'aiGenerateStream: apiKey rotation provider=$selectedProviderId keys=${candidates.length} attempt=${attempt + 1}/$attempts',
+        'aiGenerateStream: apiKey rotation provider=$selectedProviderId keys=${keyAttempts.length} attempt=${attempt + 1}/$attempts',
       );
     }
 
@@ -464,21 +387,16 @@ Stream<String> _generateStream({
       }
 
       // Success: advance round-robin index for next request and persist stats.
-      if (candidates.length > 1) {
+      if (keyAttempts.length > 1) {
         apiKeyRoundRobin.advance(selectedProviderId, startIndex + attempt + 1);
       }
 
       if (attemptEntry != null && hasManagedList) {
-        final updated = attemptEntry.copyWith(
-          lastUsedAt: nowMs,
-          lastSuccessAt: nowMs,
-          successCount: (attemptEntry.successCount ?? 0) + 1,
-          consecutiveFailures: 0,
-          disabledUntil: null,
-          updatedAt: nowMs,
+        final updated = applyAiKeySuccess(attemptEntry, nowMs: nowMs);
+        persistManagedKeys(
+          upsertAiKeyEntry(managedEntries, updated),
+          activeKey: attemptKey,
         );
-        final next = replaceEntry(managedEntries, updated);
-        persistManagedKeys(next, activeKey: attemptKey);
       }
 
       return;
@@ -489,34 +407,27 @@ Stream<String> _generateStream({
       // - managed list is enabled
       // - the request failed before producing any streamed output
       // - the error looks retryable (auth / rate limit / gateway)
+      final failure = classifyAiFailureText(error);
       if (attemptEntry != null && hasManagedList && buffer.isEmpty) {
-        final retryable = shouldRetry(error);
-        final nextConsecutive = (attemptEntry.consecutiveFailures ?? 0) + 1;
-
-        int? disabledUntil;
-        if (retryable && nextConsecutive >= failureThreshold) {
-          disabledUntil = nowMs + cooldownMsFor(error);
-        }
-
-        final updated = attemptEntry.copyWith(
-          lastUsedAt: nowMs,
-          lastFailureAt: nowMs,
-          failureCount: (attemptEntry.failureCount ?? 0) + 1,
-          consecutiveFailures: nextConsecutive,
-          disabledUntil: disabledUntil ?? attemptEntry.disabledUntil,
-          updatedAt: nowMs,
+        final updated = applyAiKeyFailure(
+          attemptEntry,
+          nowMs: nowMs,
+          policy: policy,
+          failure: failure,
         );
-
-        final next = replaceEntry(managedEntries, updated);
-        persistManagedKeys(next, activeKey: attemptKey);
+        persistManagedKeys(
+          upsertAiKeyEntry(managedEntries, updated),
+          activeKey: attemptKey,
+        );
       }
 
       // Retry only if:
       // - multi-key enabled
       // - no partial output yet
       // - error looks retryable
-      final canRetry =
-          candidates.length > 1 && buffer.isEmpty && shouldRetry(error);
+      final canRetry = keyAttempts.length > 1 &&
+          buffer.isEmpty &&
+          isAiKeyCooldownWorthy(failure);
       if (canRetry && attempt < attempts - 1) {
         AnxLog.info(
           'aiGenerateStream: retry with next apiKey provider=$selectedProviderId attempt=${attempt + 1}/$attempts error=$mapped',

@@ -722,16 +722,12 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
 
   void _clearCooldownForKey(AiApiKeyEntry entry) {
     final now = DateTime.now().millisecondsSinceEpoch;
+    // clearAiKeyCooldown, not copyWith(disabledUntil: null): copyWith's `??`
+    // semantics silently keep the old value, which left this button a no-op.
     _setApiKeys(
       _apiKeys
           .map(
-            (e) => e.id == entry.id
-                ? e.copyWith(
-                    consecutiveFailures: 0,
-                    disabledUntil: null,
-                    updatedAt: now,
-                  )
-                : e,
+            (e) => e.id == entry.id ? clearAiKeyCooldown(e, nowMs: now) : e,
           )
           .toList(growable: false),
     );
@@ -744,12 +740,9 @@ class _AiProviderDetailPageState extends State<AiProviderDetailPage> {
       _apiKeys
           .map(
             (e) => e.id == entry.id
-                ? e.copyWith(
-                    successCount: 0,
-                    failureCount: 0,
-                    consecutiveFailures: 0,
-                    disabledUntil: null,
-                    updatedAt: now,
+                ? clearAiKeyCooldown(
+                    e.copyWith(successCount: 0, failureCount: 0),
+                    nowMs: now,
                   )
                 : e,
           )

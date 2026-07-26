@@ -194,6 +194,17 @@ void main() {
       expect(entry.disabledUntil, isNull);
     });
 
+    test('clearAiKeyCooldown wipes streak+cooldown but not counters', () {
+      final entry = key('a', disabledUntil: now + 999, consecutiveFailures: 4)
+          .copyWith(failureCount: 7, successCount: 2);
+      final cleared = clearAiKeyCooldown(entry, nowMs: now);
+      expect(cleared.consecutiveFailures, 0);
+      expect(cleared.disabledUntil, isNull);
+      expect(cleared.failureCount, 7);
+      expect(cleared.successCount, 2);
+      expect(cleared.updatedAt, now);
+    });
+
     test('upsertAiKeyEntry replaces by id and ignores strangers', () {
       final list = [key('a'), key('b')];
       final updated = upsertAiKeyEntry(list, key('b', consecutiveFailures: 7));

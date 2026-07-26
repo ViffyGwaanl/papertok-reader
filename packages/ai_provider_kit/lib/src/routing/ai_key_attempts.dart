@@ -194,6 +194,16 @@ AiApiKeyEntry applyAiKeyFailure(
   );
 }
 
+/// Entry with its failure streak and cooldown wiped; counters untouched.
+///
+/// For explicit user actions ("reset stats", "I replaced the key") — unlike
+/// [applyAiKeySuccess] it records no synthetic success.
+AiApiKeyEntry clearAiKeyCooldown(AiApiKeyEntry entry, {required int nowMs}) {
+  return entry
+      .copyWith(consecutiveFailures: 0, updatedAt: nowMs)
+      .withDisabledUntil(null);
+}
+
 /// Replace the matching entry (by id) in [entries].
 List<AiApiKeyEntry> upsertAiKeyEntry(
   List<AiApiKeyEntry> entries,
@@ -206,7 +216,7 @@ List<AiApiKeyEntry> upsertAiKeyEntry(
   return next;
 }
 
-extension on AiApiKeyEntry {
+extension _AiApiKeyEntryCooldown on AiApiKeyEntry {
   /// `copyWith` cannot null out a field; cooldown clearing needs to.
   AiApiKeyEntry withDisabledUntil(int? value) {
     return AiApiKeyEntry(
