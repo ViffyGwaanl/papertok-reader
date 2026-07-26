@@ -2,8 +2,7 @@ import 'dart:async';
 
 import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
-import 'package:papertok_reader/models/ai_provider_meta.dart';
-import 'package:papertok_reader/service/ai/ai_models_service.dart';
+import 'package:ai_provider_kit/ai_provider_kit.dart';
 import 'package:papertok_reader/service/ai/tools/repository/books_repository.dart';
 import 'package:papertok_reader/utils/toast/common.dart';
 import 'package:papertok_reader/service/rag/ai_book_index_readiness.dart';

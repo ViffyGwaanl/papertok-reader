@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:ai_provider_kit/ai_provider_kit.dart';
 import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/enums/ai_dock_side.dart';
 import 'package:papertok_reader/enums/ai_pad_panel_mode.dart';
@@ -29,9 +30,7 @@ Map<String, dynamic> buildLocalAiSettingsJson() {
     if (stored.isEmpty) continue;
 
     // Remove secrets.
-    final safe = Map<String, dynamic>.from(stored);
-    safe.remove('api_key');
-    safe.remove('api_keys');
+    final safe = Map<String, dynamic>.from(AiProviderCenter.safeConfig(stored));
 
     // Only keep non-empty values.
     safe.removeWhere((k, v) => v == null || v.toString().trim().isEmpty);

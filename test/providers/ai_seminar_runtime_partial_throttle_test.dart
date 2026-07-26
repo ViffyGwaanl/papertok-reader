@@ -1,8 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:papertok_reader/config/shared_preference_provider.dart';
-import 'package:papertok_reader/models/ai_model_capability.dart';
-import 'package:papertok_reader/models/ai_provider_meta.dart';
+import 'package:ai_provider_kit/ai_provider_kit.dart';
 import 'package:papertok_reader/models/ai_seminar.dart';
 import 'package:papertok_reader/models/source_ref.dart';
 import 'package:papertok_reader/providers/ai_seminar_runtime.dart';

@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:papertok_reader/config/shared_preference_provider.dart';
-import 'package:papertok_reader/enums/ai_thinking_mode.dart';
+import 'package:ai_provider_kit/ai_provider_kit.dart';
 import 'package:papertok_reader/enums/ai_tool_scene.dart';
 import 'package:papertok_reader/models/ai_agent_governance.dart';
 import 'package:papertok_reader/providers/current_reading.dart';

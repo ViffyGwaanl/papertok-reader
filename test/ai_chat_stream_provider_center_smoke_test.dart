@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:papertok_reader/config/shared_preference_provider.dart';
 import 'package:papertok_reader/l10n/generated/L10n.dart';
 import 'package:papertok_reader/main.dart';
-import 'package:papertok_reader/models/ai_provider_meta.dart';
+import 'package:ai_provider_kit/ai_provider_kit.dart';
 import 'package:papertok_reader/widgets/ai/ai_chat_stream.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

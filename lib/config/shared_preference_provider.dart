@@ -38,8 +38,7 @@ import 'package:papertok_reader/models/reading_info.dart';
 import 'package:papertok_reader/models/reading_rules.dart';
 import 'package:papertok_reader/models/user_prompt.dart';
 import 'package:papertok_reader/models/share_prompt_preset.dart';
-import 'package:papertok_reader/models/ai_model_capability.dart';
-import 'package:papertok_reader/models/ai_provider_meta.dart';
+import 'package:ai_provider_kit/ai_provider_kit.dart';
 import 'package:papertok_reader/models/ai_seminar.dart';
 import 'package:papertok_reader/models/mcp_server_meta.dart';
 import 'package:papertok_reader/models/mcp_tool_meta.dart';
@@ -84,6 +83,17 @@ class Prefs extends ChangeNotifier {
   Prefs._internal() {
     initPrefs();
   }
+
+  /// Provider registry, per-provider config and model caches.
+  ///
+  /// Storage keys and value shapes are unchanged; this only moves the logic
+  /// into `ai_provider_kit` so other projects can reuse it. Change
+  /// notification and sync bookkeeping stay here, in the setters below.
+  late final AiProviderCenter aiProviderCenter = AiProviderCenter(
+    _PrefsAiProviderStore(this),
+    onDecodeError: (error, key) =>
+        AnxLog.severe('Failed to decode $key: $error'),
+  );
 
   static const String _chapterSplitSelectedRuleKey =
       'chapterSplitSelectedRuleId';
@@ -224,7 +234,7 @@ class Prefs extends ChangeNotifier {
     for (final String key in prefs.getKeys()) {
       // Skip ephemeral caches.
       if (_isAiSeminarRuntimeCacheKey(key) ||
-          key.startsWith(_aiModelsCacheV1Prefix) ||
+          key.startsWith(AiProviderCenter.modelsCacheKeyPrefix) ||
           key.startsWith(_mcpToolsCacheV1Prefix) ||
           key.startsWith(_mcpServerSecretV1Prefix)) {
         continue;
@@ -233,16 +243,14 @@ class Prefs extends ChangeNotifier {
       Object? value = prefs.get(key);
 
       // Never include AI API keys in plain backups.
-      if (key.startsWith('aiConfig_') && value is String) {
+      if (key.startsWith(AiProviderCenter.configKeyPrefix) && value is String) {
         try {
           final decoded = jsonDecode(value);
-          if (decoded is Map<String, dynamic>) {
-            decoded.remove('api_key');
-            decoded.remove('api_keys');
-            value = jsonEncode(decoded);
-          } else if (decoded is Map) {
-            final map = decoded.cast<String, dynamic>();
-            map.remove('api_key');
+          if (decoded is Map) {
+            final map = decoded.cast<String, dynamic>()
+              ..removeWhere(
+                (k, _) => AiProviderCenter.secretConfigKeys.contains(k),
+              );
             value = jsonEncode(map);
           }
         } catch (_) {
@@ -263,7 +271,7 @@ class Prefs extends ChangeNotifier {
       final String key = entry.key;
       if (key == prefsBackupVersionKey ||
           _isAiSeminarRuntimeCacheKey(key) ||
-          key.startsWith(_aiModelsCacheV1Prefix) ||
+          key.startsWith(AiProviderCenter.modelsCacheKeyPrefix) ||
           key.startsWith(_mcpToolsCacheV1Prefix) ||
           key.startsWith(_mcpServerSecretV1Prefix)) {
         continue;
@@ -851,26 +859,10 @@ class Prefs extends ChangeNotifier {
   /// - If user-selected provider is enabled, use it.
   /// - Else fallback to selectedAiService (if enabled).
   /// - Else fallback to the first enabled provider.
-  String get aiTranslateProviderIdEffective {
-    final preferred = aiTranslateProviderId.trim();
-    if (preferred.isNotEmpty) {
-      final meta = getAiProviderMeta(preferred);
-      if (meta != null && meta.enabled) return preferred;
-    }
-
-    final fallback = selectedAiService.trim();
-    final fallbackMeta = getAiProviderMeta(fallback);
-    if (fallback.isNotEmpty && fallbackMeta != null && fallbackMeta.enabled) {
-      return fallback;
-    }
-
-    for (final p in aiProvidersV1) {
-      if (p.enabled) return p.id;
-    }
-
-    // Last resort: keep app usable even if provider list is empty/corrupt.
-    return fallback.isNotEmpty ? fallback : preferred;
-  }
+  String get aiTranslateProviderIdEffective =>
+      aiProviderCenter.resolveEffectiveProviderId(
+        preferredId: aiTranslateProviderId,
+      );
 
   /// Model id used for AI translation.
   ///
@@ -922,25 +914,10 @@ class Prefs extends ChangeNotifier {
     notifyListeners();
   }
 
-  String get aiTitleProviderIdEffective {
-    final preferred = aiTitleProviderId.trim();
-    if (preferred.isNotEmpty) {
-      final meta = getAiProviderMeta(preferred);
-      if (meta != null && meta.enabled) return preferred;
-    }
-
-    final fallback = selectedAiService.trim();
-    final fallbackMeta = getAiProviderMeta(fallback);
-    if (fallback.isNotEmpty && fallbackMeta != null && fallbackMeta.enabled) {
-      return fallback;
-    }
-
-    for (final p in aiProvidersV1) {
-      if (p.enabled) return p.id;
-    }
-
-    return fallback.isNotEmpty ? fallback : preferred;
-  }
+  String get aiTitleProviderIdEffective =>
+      aiProviderCenter.resolveEffectiveProviderId(
+        preferredId: aiTitleProviderId,
+      );
 
   String get aiTitleModel {
     return prefs.getString(_aiTitleModelKey) ?? '';
@@ -1036,25 +1013,10 @@ Requirements:
   /// - If user-selected provider is enabled, use it.
   /// - Else fallback to selectedAiService (if enabled).
   /// - Else fallback to the first enabled provider.
-  String get aiImageAnalysisProviderIdEffective {
-    final preferred = aiImageAnalysisProviderId.trim();
-    if (preferred.isNotEmpty) {
-      final meta = getAiProviderMeta(preferred);
-      if (meta != null && meta.enabled) return preferred;
-    }
-
-    final fallback = selectedAiService.trim();
-    final fallbackMeta = getAiProviderMeta(fallback);
-    if (fallback.isNotEmpty && fallbackMeta != null && fallbackMeta.enabled) {
-      return fallback;
-    }
-
-    for (final p in aiProvidersV1) {
-      if (p.enabled) return p.id;
-    }
-
-    return fallback.isNotEmpty ? fallback : preferred;
-  }
+  String get aiImageAnalysisProviderIdEffective =>
+      aiProviderCenter.resolveEffectiveProviderId(
+        preferredId: aiImageAnalysisProviderId,
+      );
 
   /// Model id used for AI image analysis.
   ///
@@ -1232,40 +1194,14 @@ Requirements:
   /// - If followSelectedProvider=true: prefer selectedAiService (if enabled and OpenAI-like)
   /// - Else use explicit providerId (if enabled and OpenAI-like)
   /// - Else fallback to the first enabled OpenAI-like provider.
-  String get aiLibraryIndexProviderIdEffective {
-    String? candidate;
-    if (aiLibraryIndexFollowSelectedProvider) {
-      candidate = selectedAiService.trim();
-    } else {
-      candidate = aiLibraryIndexProviderId.trim();
-    }
-
-    bool isOpenAiLike(String id) {
-      final meta = getAiProviderMeta(id);
-      if (meta == null || !meta.enabled) return false;
-      return meta.type == AiProviderType.openaiCompatible ||
-          meta.type == AiProviderType.openaiResponses;
-    }
-
-    if (candidate.isNotEmpty && isOpenAiLike(candidate)) {
-      return candidate;
-    }
-
-    // Fallback: try selected service.
-    final selected = selectedAiService.trim();
-    if (selected.isNotEmpty && isOpenAiLike(selected)) return selected;
-
-    // Otherwise pick the first enabled OpenAI-like provider.
-    for (final p in aiProvidersV1) {
-      if (p.enabled &&
-          (p.type == AiProviderType.openaiCompatible ||
-              p.type == AiProviderType.openaiResponses)) {
-        return p.id;
-      }
-    }
-
-    return selected.isNotEmpty ? selected : candidate;
-  }
+  String get aiLibraryIndexProviderIdEffective =>
+      aiProviderCenter.resolveEffectiveProviderId(
+        preferredId: aiLibraryIndexFollowSelectedProvider
+            ? selectedAiService
+            : aiLibraryIndexProviderId,
+        // Embeddings and reranking only work against OpenAI-style endpoints.
+        accept: AiProviderCenter.acceptsOpenAiCompatible,
+      );
 
   /// Embedding model id used for indexing/search.
   ///
@@ -1957,65 +1893,40 @@ Requirements:
   }
 
   void saveAiConfig(String identifier, Map<String, String> config) {
-    final before = getAiConfig(identifier);
-    final beforeSafe = Map<String, String>.from(before)
-      ..remove('api_key')
-      ..remove('api_keys');
-    final afterSafe = Map<String, String>.from(config)
-      ..remove('api_key')
-      ..remove('api_keys');
-    if (!_safeAiConfigEquals(beforeSafe, afterSafe)) {
+    // Secrets are local-only, so a key change alone must not mark AI settings
+    // as needing a sync.
+    if (!_safeAiConfigEquals(
+      AiProviderCenter.safeConfig(getAiConfig(identifier)),
+      AiProviderCenter.safeConfig(config),
+    )) {
       touchAiSettingsUpdatedAt();
     }
 
-    prefs.setString('aiConfig_$identifier', jsonEncode(config));
+    aiProviderCenter.saveConfig(identifier, config);
     notifyListeners();
   }
 
-  Map<String, String> getAiConfig(String identifier) {
-    String? aiConfigJson = prefs.getString('aiConfig_$identifier');
-    if (aiConfigJson == null) {
-      return {};
-    }
-    Map<String, dynamic> decoded = jsonDecode(aiConfigJson);
-    return decoded.map((key, value) => MapEntry(key, value.toString()));
-  }
+  Map<String, String> getAiConfig(String identifier) =>
+      aiProviderCenter.configOf(identifier);
 
   set selectedAiService(String identifier) {
-    if ((prefs.getString('selectedAiService') ?? 'openai') != identifier) {
+    if (aiProviderCenter.defaultProviderId != identifier) {
       touchAiSettingsUpdatedAt();
     }
-    prefs.setString('selectedAiService', identifier);
+    aiProviderCenter.defaultProviderId = identifier;
     notifyListeners();
   }
 
-  String get selectedAiService {
-    return prefs.getString('selectedAiService') ?? 'openai';
-  }
+  String get selectedAiService => aiProviderCenter.defaultProviderId;
 
   // --- Provider Center (Cherry-style) ---
 
-  static const String _aiProvidersV1Key = 'aiProvidersV1';
+  bool get hasAiProvidersV1 => aiProviderCenter.hasProviders;
 
-  bool get hasAiProvidersV1 => prefs.containsKey(_aiProvidersV1Key);
-
-  List<AiProviderMeta> get aiProvidersV1 {
-    final raw = prefs.getString(_aiProvidersV1Key);
-    if (raw == null || raw.trim().isEmpty) {
-      return const [];
-    }
-
-    try {
-      return AiProviderMeta.decodeList(raw);
-    } catch (e) {
-      // Corrupted value - keep app usable.
-      AnxLog.severe('Failed to decode aiProvidersV1: $e');
-      return const [];
-    }
-  }
+  List<AiProviderMeta> get aiProvidersV1 => aiProviderCenter.providers;
 
   set aiProvidersV1(List<AiProviderMeta> providers) {
-    prefs.setString(_aiProvidersV1Key, AiProviderMeta.encodeList(providers));
+    aiProviderCenter.providers = providers;
     notifyListeners();
   }
 
@@ -2026,92 +1937,33 @@ Requirements:
   void ensureAiProvidersV1Initialized({
     required List<AiProviderMeta> builtIns,
   }) {
-    final existing = aiProvidersV1;
-    if (existing.isEmpty) {
-      aiProvidersV1 = builtIns;
-      return;
-    }
-
-    final byId = <String, AiProviderMeta>{
-      for (final p in existing) p.id: p,
-    };
-
-    final merged = <AiProviderMeta>[];
-
-    // Keep built-ins in a stable, well-known order.
-    for (final builtIn in builtIns) {
-      final current = byId.remove(builtIn.id);
-      if (current == null) {
-        merged.add(builtIn);
-        continue;
-      }
-
-      // Refresh non-sensitive display fields, but preserve user toggles.
-      merged.add(
-        current.copyWith(
-          name: builtIn.name,
-          type: builtIn.type,
-          isBuiltIn: true,
-          logoKey: builtIn.logoKey,
-        ),
-      );
-    }
-
-    // Append remaining providers (custom) in their existing order.
-    for (final p in existing) {
-      if (byId.containsKey(p.id)) {
-        merged.add(p);
-      }
-    }
-
-    // Write back only if changed.
-    if (AiProviderMeta.encodeList(merged) !=
-        AiProviderMeta.encodeList(existing)) {
-      aiProvidersV1 = merged;
+    if (aiProviderCenter.ensureInitialized(builtIns: builtIns)) {
+      notifyListeners();
     }
   }
 
-  AiProviderMeta? getAiProviderMeta(String id) {
-    for (final p in aiProvidersV1) {
-      if (p.id == id) return p;
-    }
-    return null;
-  }
+  AiProviderMeta? getAiProviderMeta(String id) =>
+      aiProviderCenter.providerById(id);
 
   void upsertAiProviderMeta(AiProviderMeta meta) {
-    final existing = List<AiProviderMeta>.from(aiProvidersV1);
-    final index = existing.indexWhere((p) => p.id == meta.id);
-    if (index >= 0) {
-      existing[index] = meta;
-    } else {
-      existing.add(meta);
-    }
-    aiProvidersV1 = existing;
+    aiProviderCenter.upsertProvider(meta);
+    notifyListeners();
   }
 
   void deleteAiProviderMeta(String id) {
-    final existing = aiProvidersV1;
-    if (existing.isEmpty) return;
-    aiProvidersV1 = existing.where((p) => p.id != id).toList(growable: false);
+    aiProviderCenter.deleteProvider(id);
+    notifyListeners();
   }
 
   void deleteAiConfig(String identifier) {
     // Removing config affects syncable settings.
-    if (prefs.containsKey('aiConfig_$identifier')) {
+    if (aiProviderCenter.hasConfig(identifier)) {
       touchAiSettingsUpdatedAt();
     }
-    prefs.remove('aiConfig_$identifier');
-    // Also clear caches bound to this provider.
-    prefs.remove(_aiModelsCacheKey(identifier));
-    prefs.remove(_aiModelCapabilitiesCacheKey(identifier));
+    // Also clears the caches bound to this provider.
+    aiProviderCenter.deleteConfig(identifier);
     notifyListeners();
   }
-
-  // --- Provider models cache (per-provider, local-only) ---
-
-  static const String _aiModelsCacheV1Prefix = 'aiModelsCacheV1_';
-  static const String _aiModelCapabilitiesCacheV1Prefix =
-      'aiModelCapabilitiesCacheV1_';
 
   // --- MCP (external tools) ---
 
@@ -2120,116 +1972,36 @@ Requirements:
   static const String _mcpServerSecretV1Prefix = 'mcpServerSecretV1_';
   static const String _mcpToolsCacheV1Prefix = 'mcpToolsCacheV1_';
 
-  static String _aiModelsCacheKey(String providerId) {
-    return '$_aiModelsCacheV1Prefix$providerId';
-  }
+  // --- Provider models cache (per-provider, local-only) ---
 
-  static String _aiModelCapabilitiesCacheKey(String providerId) {
-    return '$_aiModelCapabilitiesCacheV1Prefix$providerId';
-  }
-
-  ({int updatedAt, List<String> models})? getAiModelsCacheV1(
-      String providerId) {
-    final raw = prefs.getString(_aiModelsCacheKey(providerId));
-    if (raw == null || raw.trim().isEmpty) return null;
-
-    try {
-      final decoded = jsonDecode(raw);
-      if (decoded is! Map) return null;
-      final updatedAt = decoded['updatedAt'] is int
-          ? decoded['updatedAt'] as int
-          : DateTime.now().millisecondsSinceEpoch;
-      final modelsRaw = decoded['models'];
-      if (modelsRaw is! List) return null;
-      final models = modelsRaw
-          .map((e) => e?.toString())
-          .whereType<String>()
-          .map((e) => e.trim())
-          .where((e) => e.isNotEmpty)
-          .toSet()
-          .toList(growable: false)
-        ..sort();
-      return (updatedAt: updatedAt, models: models);
-    } catch (_) {
-      return null;
-    }
-  }
+  AiModelsCacheEntry? getAiModelsCacheV1(String providerId) =>
+      aiProviderCenter.modelsCache(providerId);
 
   void saveAiModelsCacheV1(String providerId, List<String> models) {
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final sanitized = models
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toSet()
-        .toList(growable: false)
-      ..sort();
-
-    prefs.setString(
-      _aiModelsCacheKey(providerId),
-      jsonEncode({
-        'updatedAt': now,
-        'models': sanitized,
-      }),
-    );
+    aiProviderCenter.saveModelsCache(providerId, models);
     notifyListeners();
   }
 
   void clearAiModelsCacheV1(String providerId) {
-    prefs.remove(_aiModelsCacheKey(providerId));
+    aiProviderCenter.clearModelsCache(providerId);
     notifyListeners();
   }
 
-  ({int updatedAt, List<AiModelCapability> models})?
-      getAiModelCapabilitiesCacheV1(String providerId) {
-    final raw = prefs.getString(_aiModelCapabilitiesCacheKey(providerId));
-    if (raw == null || raw.trim().isEmpty) return null;
-
-    try {
-      final decoded = jsonDecode(raw);
-      if (decoded is! Map) return null;
-      final updatedAt = decoded['updatedAt'] is int
-          ? decoded['updatedAt'] as int
-          : DateTime.now().millisecondsSinceEpoch;
-      final modelsRaw = decoded['models'];
-      if (modelsRaw is! List) return null;
-      final models = modelsRaw
-          .whereType<Map>()
-          .map(
-            (e) => AiModelCapability.fromJson(
-              e.map((key, value) => MapEntry(key.toString(), value)),
-            ),
-          )
-          .where((e) => e.id.isNotEmpty)
-          .toList(growable: false);
-      return (updatedAt: updatedAt, models: models);
-    } catch (_) {
-      return null;
-    }
-  }
+  AiModelCapabilitiesCacheEntry? getAiModelCapabilitiesCacheV1(
+    String providerId,
+  ) =>
+      aiProviderCenter.modelCapabilitiesCache(providerId);
 
   void saveAiModelCapabilitiesCacheV1(
     String providerId,
     List<AiModelCapability> models,
   ) {
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final sanitized = <String, AiModelCapability>{
-      for (final model in models)
-        if (model.id.trim().isNotEmpty) model.id.trim(): model,
-    }.values.toList(growable: false)
-      ..sort((a, b) => a.id.compareTo(b.id));
-
-    prefs.setString(
-      _aiModelCapabilitiesCacheKey(providerId),
-      jsonEncode({
-        'updatedAt': now,
-        'models': sanitized.map((e) => e.toJson()).toList(growable: false),
-      }),
-    );
+    aiProviderCenter.saveModelCapabilitiesCache(providerId, models);
     notifyListeners();
   }
 
   void clearAiModelCapabilitiesCacheV1(String providerId) {
-    prefs.remove(_aiModelCapabilitiesCacheKey(providerId));
+    aiProviderCenter.clearModelCapabilitiesCache(providerId);
     notifyListeners();
   }
 
@@ -4027,4 +3799,26 @@ Requirements:
     prefs.setString('localEmbeddingModel', model.trim());
     notifyListeners();
   }
+}
+
+/// Bridges [AiProviderCenter] onto this app's SharedPreferences instance.
+///
+/// Reads `prefs` lazily on each call because it is initialised asynchronously
+/// after the singleton is constructed.
+class _PrefsAiProviderStore extends AiProviderStore {
+  const _PrefsAiProviderStore(this._owner);
+
+  final Prefs _owner;
+
+  @override
+  String? read(String key) => _owner.prefs.getString(key);
+
+  @override
+  void write(String key, String value) => _owner.prefs.setString(key, value);
+
+  @override
+  void remove(String key) => _owner.prefs.remove(key);
+
+  @override
+  bool contains(String key) => _owner.prefs.containsKey(key);
 }

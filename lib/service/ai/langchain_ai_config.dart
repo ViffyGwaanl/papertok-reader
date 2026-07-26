@@ -1,12 +1,13 @@
-import 'dart:convert';
-
-import 'package:papertok_reader/enums/ai_thinking_mode.dart';
-import 'package:papertok_reader/models/ai_provider_meta.dart';
+import 'package:ai_provider_kit/ai_provider_kit.dart';
 import 'package:langchain_anthropic/langchain_anthropic.dart';
 import 'package:langchain_google/langchain_google.dart';
 import 'package:langchain_openai/langchain_openai.dart';
 
-/// Normalized configuration for LangChain-backed chat providers.
+/// LangChain-facing view of an [AiEndpointConfig].
+///
+/// Provider management (parsing, base-URL derivation, merging) lives in
+/// `ai_provider_kit`; this type adds only the mapping onto LangChain's option
+/// objects, so swapping client stacks does not touch provider handling.
 class LangchainAiConfig {
   LangchainAiConfig({
     required this.identifier,
@@ -26,15 +27,8 @@ class LangchainAiConfig {
   }) : headers = Map.unmodifiable(headers ?? const {});
 
   /// Maps a provider meta to the registry identifier used by LangchainAiRegistry.
-  static String registryIdentifierForProvider(AiProviderMeta? meta) {
-    if (meta == null) return 'openai';
-    return switch (meta.type) {
-      AiProviderType.anthropic => 'claude',
-      AiProviderType.gemini => 'gemini',
-      AiProviderType.openaiResponses => 'openai-responses',
-      AiProviderType.openaiCompatible => 'openai',
-    };
-  }
+  static String registryIdentifierForProvider(AiProviderMeta? meta) =>
+      registryIdentifierForAiProvider(meta);
 
   final String identifier;
   final String model;
@@ -153,51 +147,42 @@ class LangchainAiConfig {
     String identifier,
     Map<String, String> raw,
   ) {
-    final apiKey = raw['api_key'] ?? '';
-    final model = raw['model'] ?? '';
-    final url = raw['url'] ?? '';
-    final headers = _parseHeaders(raw['headers']);
-    final additional = _parseJson(raw['extra'] ?? raw['additional']);
+    return LangchainAiConfig.fromEndpoint(
+      AiEndpointConfig.fromRawConfig(identifier, raw),
+    );
+  }
 
-    double? parseDouble(String? value) =>
-        value == null ? null : double.tryParse(value.trim());
-    int? parseInt(String? value) =>
-        value == null ? null : int.tryParse(value.trim());
-
-    final thinkingMode =
-        aiThinkingModeFromString(raw['thinking_mode'] ?? 'auto');
-    final includeThoughtsRaw =
-        (raw['include_thoughts'] ?? 'false').trim().toLowerCase();
-    final includeThoughts = includeThoughtsRaw == 'true' ||
-        includeThoughtsRaw == '1' ||
-        includeThoughtsRaw == 'yes';
-
-    bool? responsesUsePreviousResponseId;
-    final prevValue = raw['responses_use_previous_response_id'];
-    if (prevValue != null && prevValue.trim().isNotEmpty) {
-      final prevRaw = prevValue.trim().toLowerCase();
-      responsesUsePreviousResponseId =
-          !(prevRaw == 'false' || prevRaw == '0' || prevRaw == 'no');
-    }
-
-    bool? responsesRequestReasoningSummary;
-    final reasoningValue = raw['responses_request_reasoning_summary'];
-    if (reasoningValue != null && reasoningValue.trim().isNotEmpty) {
-      final rawValue = reasoningValue.trim().toLowerCase();
-      responsesRequestReasoningSummary =
-          !(rawValue == 'false' || rawValue == '0' || rawValue == 'no');
-    }
-
+  factory LangchainAiConfig.fromEndpoint(AiEndpointConfig endpoint) {
     return LangchainAiConfig(
+      identifier: endpoint.identifier,
+      model: endpoint.model,
+      apiKey: endpoint.apiKey,
+      baseUrl: endpoint.baseUrl,
+      headers: endpoint.headers,
+      temperature: endpoint.temperature,
+      topP: endpoint.topP,
+      maxTokens: endpoint.maxTokens,
+      maxOutputTokens: endpoint.maxOutputTokens,
+      thinkingMode: endpoint.thinkingMode,
+      includeThoughts: endpoint.includeThoughts,
+      responsesUsePreviousResponseId: endpoint.responsesUsePreviousResponseId,
+      responsesRequestReasoningSummary:
+          endpoint.responsesRequestReasoningSummary,
+      additional: endpoint.additional,
+    );
+  }
+
+  AiEndpointConfig toEndpoint() {
+    return AiEndpointConfig(
       identifier: identifier,
-      apiKey: apiKey,
       model: model,
-      baseUrl: _deriveBaseUrl(url),
+      apiKey: apiKey,
+      baseUrl: baseUrl,
       headers: headers,
-      temperature: parseDouble(raw['temperature']),
-      topP: parseDouble(raw['top_p']),
-      maxTokens: parseInt(raw['max_tokens']),
-      maxOutputTokens: parseInt(raw['max_output_tokens']),
+      temperature: temperature,
+      topP: topP,
+      maxTokens: maxTokens,
+      maxOutputTokens: maxOutputTokens,
       thinkingMode: thinkingMode,
       includeThoughts: includeThoughts,
       responsesUsePreviousResponseId: responsesUsePreviousResponseId,
@@ -242,117 +227,11 @@ class LangchainAiConfig {
   }
 }
 
-Map<String, String> _parseHeaders(String? headersRaw) {
-  if (headersRaw == null || headersRaw.trim().isEmpty) {
-    return const {};
-  }
-
-  try {
-    final decoded = jsonDecode(headersRaw);
-    if (decoded is Map<String, dynamic>) {
-      return decoded.map((key, value) => MapEntry(key, value.toString()));
-    }
-  } catch (_) {
-    final entries = headersRaw.split(';');
-    final map = <String, String>{};
-    for (final entry in entries) {
-      final parts = entry.split('=');
-      if (parts.length == 2) {
-        map[parts[0].trim()] = parts[1].trim();
-      }
-    }
-    if (map.isNotEmpty) {
-      return map;
-    }
-  }
-
-  return const {};
-}
-
-Map<String, dynamic>? _parseJson(String? value) {
-  if (value == null || value.trim().isEmpty) {
-    return null;
-  }
-
-  try {
-    final decoded = jsonDecode(value);
-    if (decoded is Map<String, dynamic>) {
-      return decoded;
-    }
-  } catch (_) {}
-
-  return null;
-}
-
-String? _deriveBaseUrl(String? url) {
-  if (url == null || url.trim().isEmpty) {
-    return null;
-  }
-
-  final uri = Uri.tryParse(url.trim());
-  if (uri == null) {
-    return url.trim();
-  }
-
-  final removableSegments = {
-    'chat',
-    'messages',
-    'completions',
-    'responses',
-    'invoke',
-    'openai',
-  };
-
-  final segments = uri.pathSegments.toList(growable: true);
-  while (segments.isNotEmpty &&
-      removableSegments.contains(segments.last.toLowerCase())) {
-    segments.removeLast();
-  }
-
-  final cleaned = uri.replace(pathSegments: segments);
-  final base = cleaned.toString();
-  if (base.endsWith('/')) {
-    return base.substring(0, base.length - 1);
-  }
-  return base;
-}
-
 LangchainAiConfig mergeConfigs(
   LangchainAiConfig base,
   LangchainAiConfig override,
 ) {
-  final mergedHeaders = <String, String>{}
-    ..addAll(base.headers)
-    ..addAll(override.headers);
-
-  return base.copyWith(
-    model: override.model.isNotEmpty ? override.model : base.model,
-    apiKey: override.apiKey.isNotEmpty ? override.apiKey : base.apiKey,
-    baseUrl: override.baseUrl ?? base.baseUrl,
-    headers: mergedHeaders,
-    temperature: override.temperature ?? base.temperature,
-    topP: override.topP ?? base.topP,
-    maxTokens: override.maxTokens ?? base.maxTokens,
-    maxOutputTokens: override.maxOutputTokens ?? base.maxOutputTokens,
-    responsesUsePreviousResponseId: override.responsesUsePreviousResponseId ??
-        base.responsesUsePreviousResponseId,
-    responsesRequestReasoningSummary:
-        override.responsesRequestReasoningSummary ??
-            base.responsesRequestReasoningSummary,
-    additional: mergeMaps(base.additional, override.additional),
+  return LangchainAiConfig.fromEndpoint(
+    base.toEndpoint().mergedWith(override.toEndpoint()),
   );
-}
-
-Map<String, dynamic>? mergeMaps(
-  Map<String, dynamic>? base,
-  Map<String, dynamic>? override,
-) {
-  if (base == null && override == null) {
-    return null;
-  }
-
-  final map = <String, dynamic>{};
-  if (base != null) map.addAll(base);
-  if (override != null) map.addAll(override);
-  return map;
 }

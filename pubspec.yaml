@@ -104,6 +104,10 @@ dependencies:
   mongol: ^9.0.0
   introduction_screen: ^3.1.17
   # (removed) flutter_floating_bottom_bar
+  # Provider management (registry, keys, model catalog) extracted for reuse in
+  # other AI projects; deliberately knows nothing about langchain.
+  ai_provider_kit:
+    path: packages/ai_provider_kit
   langchain: ^0.8.1
   langchain_anthropic: ^0.3.1
   langchain_google: ^0.7.1+2
